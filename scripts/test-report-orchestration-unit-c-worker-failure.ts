@@ -24,9 +24,11 @@ import {
 } from "@/lib/llm/pro/delivery/decision-report-v2/batch2";
 import {
   setAfterGenerateModelHookForTests,
+  setQueueRepairPersistHookForTests,
   setQueueRepairSaveJobFailForTests,
   setValidatePageOutputHookForTests,
 } from "@/lib/llm/pro/delivery/decision-report-v2/batch2/page-generate";
+import { writePageBlobWithValidity } from "@/lib/llm/pro/delivery/decision-report-v2/batch2/job-store";
 import { reportPageGenerate } from "@/lib/inngest/functions/report-page-generate";
 import { reportPageRepair } from "@/lib/inngest/functions/report-page-repair";
 import {
@@ -41,6 +43,7 @@ import {
   readTask,
   resetBatch3KeysForTests,
 } from "@/lib/llm/pro/delivery/decision-report-v2/batch3";
+import { fenceAndClaimPageTask } from "@/lib/llm/pro/delivery/decision-report-v2/batch3/worker-guard";
 import {
   hashCanonicalPayload,
   reportPageDefinition,
@@ -157,6 +160,7 @@ async function cleanup(): Promise<void> {
   setAfterGenerateModelHookForTests(null);
   setValidatePageOutputHookForTests(null);
   setQueueRepairSaveJobFailForTests(null);
+  setQueueRepairPersistHookForTests(null);
 }
 
 async function boot(report_id: string, generation_id: string) {
@@ -562,6 +566,163 @@ async function main(): Promise<void> {
     );
     console.log(
       "C-T2c ok — Pending save fail releases Claim; retry can enter Repair",
+    );
+  }
+
+  // --- C-T2d: PageBlob Pending written, Meta fails → Path C handoff / resume ---
+  {
+    await cleanup();
+    const report_id = "rpt_uc_t2d";
+    const gen = await boot(report_id, "g_uc_t2d");
+    const { page_id, fingerprint } = await prepGenerate(
+      report_id,
+      gen.generation_id,
+    );
+
+    let modelCalls = 0;
+    setBatch2ModelInvokeForTests(async () => {
+      modelCalls += 1;
+      return {
+        content: "{ partial-write-needs-repair",
+        tokens_used: 1,
+        model_call_id: `mc_t2d_${modelCalls}`,
+      };
+    });
+
+    const cKey = finalizationClaimKey(report_id, gen.generation_id);
+    const lockDoc = {
+      report_id,
+      generation_id: gen.generation_id,
+      generation_epoch: gen.generation_epoch,
+      status: "sealed" as const,
+      sealed_at: new Date().toISOString(),
+      input_fingerprint: "ifp_t2d",
+      pages: [] as unknown[],
+    };
+
+    // Real partial write: PageBlob (repair_pending) succeeds, then throw before
+    // Meta — not a pre-save fail hook that skips PageBlob entirely.
+    setQueueRepairPersistHookForTests(async (job, pid) => {
+      const state = job.page_states.find((s) => s.page_id === pid);
+      assert.ok(state);
+      const written = await writePageBlobWithValidity({
+        report_id: job.report_id,
+        generation_id: job.generation_id,
+        page_id: pid,
+        state: { ...state! },
+        output: job.page_outputs[pid],
+        repair: job.repair_pending[pid] ?? null,
+        validity_rev: state!.validity_rev ?? 0,
+      });
+      if (!written.ok) return written;
+      // Block first Handoff so Path C returns retryable + durable Pending.
+      assert.ok((await casSet(cKey, null, lockDoc)).ok);
+      throw new Error("injected_meta_write_fail_after_page_blob");
+    });
+
+    const first = await runReportPageGenerateOnce({
+      event: {
+        report_id,
+        generation_id: gen.generation_id,
+        generation_epoch: gen.generation_epoch,
+        page_id,
+        locale: "en",
+        input_fingerprint: fingerprint,
+        upstream_output_fingerprints: {},
+      },
+      invocation_id: randomUUID(),
+      worker_id: "w_uc_t2d",
+    });
+    setQueueRepairPersistHookForTests(null);
+
+    // Durable Pending must be visible via reload (not memory snapshot).
+    const afterPartial = await loadJob(report_id, gen.generation_id);
+    assert.ok(afterPartial.ok && afterPartial.value);
+    assert.ok(
+      afterPartial.value!.repair_pending[page_id],
+      "PageBlob repair_pending must survive partial Meta failure",
+    );
+    assert.equal(
+      afterPartial.value!.page_states.find((s) => s.page_id === page_id)
+        ?.outcome,
+      "repair_queued",
+    );
+
+    // First attempt must not be permanently unrecoverable.
+    assert.equal(first.status, "failed");
+    assert.equal(first.status === "failed" ? first.retryable : false, true);
+    assert.equal(
+      first.status === "failed" ? first.code : "",
+      "finalization_locked",
+    );
+
+    const fenceHeld = await readPageFence(
+      report_id,
+      gen.generation_id,
+      page_id,
+    );
+    assert.equal(fenceHeld.value?.status, "claimed");
+
+    // Unlock finalization so Generate replay can finish Handoff.
+    assert.ok(
+      (
+        await casSet(cKey, JSON.stringify(lockDoc), {
+          ...lockDoc,
+          status: "delivered",
+        })
+      ).ok,
+    );
+
+    const modelBeforeResume = modelCalls;
+    const resumed = await runReportPageGenerateOnce({
+      event: {
+        report_id,
+        generation_id: gen.generation_id,
+        generation_epoch: gen.generation_epoch,
+        page_id,
+        locale: "en",
+        input_fingerprint: fingerprint,
+        upstream_output_fingerprints: {},
+      },
+      invocation_id: randomUUID(),
+      worker_id: "w_uc_t2d_resume",
+    });
+    assert.equal(
+      modelCalls,
+      modelBeforeResume,
+      "resume must not re-call Generate model",
+    );
+    assert.equal(resumed.status, "needs_repair");
+
+    const fenceOpen = await readPageFence(
+      report_id,
+      gen.generation_id,
+      page_id,
+    );
+    assert.equal(fenceOpen.value?.status, "open");
+
+    const jobKeep = await loadJob(report_id, gen.generation_id);
+    assert.ok(jobKeep.value?.repair_pending[page_id]);
+
+    const repairClaim = await fenceAndClaimPageTask({
+      report_id,
+      generation_id: gen.generation_id,
+      generation_epoch: gen.generation_epoch,
+      page_id,
+      task_type: "repair",
+      input_fingerprint: fingerprint,
+      upstream_output_fingerprints: {},
+      worker_id: "w_uc_t2d_repair",
+    });
+    assert.ok(repairClaim.ok, JSON.stringify(repairClaim));
+    assert.ok(
+      (await loadJob(report_id, gen.generation_id)).value?.repair_pending[
+        page_id
+      ],
+      "Pending remains until Repair Commit",
+    );
+    console.log(
+      "C-T2d ok — partial PageBlob write + Handoff resume without re-Generate",
     );
   }
 

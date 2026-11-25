@@ -104,8 +104,8 @@ export function setValidatePageOutputHookForTests(
 }
 
 /**
- * Unit C R2 test hook: force queueRepair's Pending saveJob to fail (no durable intent).
- * Production never sets this.
+ * Unit C R2 test hook: force queueRepair's Pending save to fail before any write
+ * (no durable intent). Production never sets this.
  */
 let queueRepairSaveJobFailForTests: { code: string; detail: string } | null =
   null;
@@ -114,6 +114,30 @@ export function setQueueRepairSaveJobFailForTests(
   fail: { code: string; detail: string } | null,
 ): void {
   queueRepairSaveJobFailForTests = fail;
+}
+
+/**
+ * Unit C R3 test hook: replace queueRepair persist. Use to simulate PageBlob
+ * written then Meta failure (partial write). Production never sets this.
+ */
+let queueRepairPersistHookForTests:
+  | ((
+      job: ReportBatch2JobRecord,
+      page_id: ReportPageId,
+    ) => Promise<{ ok: true; value: undefined } | { ok: false; code: string; detail: string }>)
+  | null = null;
+
+export function setQueueRepairPersistHookForTests(
+  fn:
+    | ((
+        job: ReportBatch2JobRecord,
+        page_id: ReportPageId,
+      ) => Promise<
+        { ok: true; value: undefined } | { ok: false; code: string; detail: string }
+      >)
+    | null,
+): void {
+  queueRepairPersistHookForTests = fn;
 }
 
 export async function runReportPageGenerateOnce(input: {
@@ -560,11 +584,11 @@ async function queueRepair(
     attempt_id: string;
   } | null,
 ): Promise<ReportBatch2WorkerResult | null> {
-  // Unit C R2: never leave Generate Claim claimed without a durable Pending
-  // or a completed handoff. Unexpected throws are handled below.
+  // Unit C R3: Pending durability and Claim release are independent.
+  // Path A: Pending saved + Handoff ok → needs_repair
+  // Path B: Pending not durable + our Claim → failAndRelease → retryable
+  // Path C: Pending durable + our Claim → handoff (or retryable true for resume)
   try {
-    // Unit B R1: persist Repair Pending BEFORE releasing Generate Fence so a
-    // crash after durable Pending can resume handoff (not the save-fail case).
     setRepairPending(job, page_id, {
       page_id,
       system: prep.system,
@@ -581,121 +605,216 @@ async function queueRepair(
 
     const forcedSaveFail = queueRepairSaveJobFailForTests;
     const saved = forcedSaveFail
-      ? ({ ok: false as const, code: forcedSaveFail.code, detail: forcedSaveFail.detail })
-      : await saveJob(job);
+      ? ({
+          ok: false as const,
+          code: forcedSaveFail.code,
+          detail: forcedSaveFail.detail,
+        })
+      : queueRepairPersistHookForTests
+        ? await queueRepairPersistHookForTests(job, page_id)
+        : await saveJob(job);
 
     if (!saved.ok) {
-      // No durable Repair intent — must release Generate Claim (Unit C R2).
-      clearRepairPending(job, page_id);
-      updatePageState(job, page_id, { outcome: "running" });
-      if (batch3Handoff) {
-        const { failAndReleasePageClaim } = await import(
-          "../batch3/claim-page-execution"
-        );
-        const released = await failAndReleasePageClaim({
-          report_id: batch3Handoff.report_id,
-          generation_id: batch3Handoff.generation_id,
-          generation_epoch: batch3Handoff.generation_epoch,
-          page_id: batch3Handoff.page_id,
-          task_key: batch3Handoff.task_key,
-          attempt_id: batch3Handoff.attempt_id,
-          detail: `queue_repair_save_failed: ${saved.code}: ${saved.detail}`,
-        });
-        if (!released.ok) {
-          return {
-            status: "failed",
-            code: released.code,
-            detail: `fail_release_failed: ${released.detail} (queue_repair_save=${saved.code}: ${saved.detail})`,
-            retryable: false,
-          };
-        }
-      }
-      return {
-        status: "failed",
-        code: saved.code,
-        detail: saved.detail,
-        retryable: isBatch2RetryableFailureCode(saved.code),
-      };
+      // Re-read store — Meta failure after PageBlob write is Path C, not Path B.
+      return resolveQueueRepairAfterPersistIssue({
+        job,
+        page_id,
+        batch3Handoff,
+        persist_code: saved.code,
+        persist_detail: saved.detail,
+      });
     }
 
-    // Pending durable — handoff Generate Claim → open Fence for Repair Claim.
     if (batch3Handoff) {
-      const { releasePageClaimForHandoff } = await import(
-        "../batch3/claim-page-execution"
-      );
-      const released = await releasePageClaimForHandoff(batch3Handoff);
-      if (!released.ok) {
-        // Unit B: keep Pending; resumeGenerateToRepairHandoffIfNeeded can finish.
-        return {
-          status: "failed",
-          code: released.code,
-          detail: released.detail,
-          retryable: false,
-        };
-      }
+      return completeGenerateToRepairHandoff(batch3Handoff);
     }
     return null;
   } catch (err) {
-    // Ambiguous mid-queueRepair failure: only fail-release if our Claim is still
-    // held AND Pending was not persisted (cannot resume handoff).
-    if (batch3Handoff) {
-      const { readPageFence } = await import("../batch3/page-fence");
-      const fence = await readPageFence(
-        batch3Handoff.report_id,
-        batch3Handoff.generation_id,
-        batch3Handoff.page_id,
-      );
-      const stillOurs =
-        fence.ok &&
-        fence.value?.status === "claimed" &&
-        fence.value.task_key === batch3Handoff.task_key &&
-        fence.value.attempt_id === batch3Handoff.attempt_id;
-      if (stillOurs) {
-        const reloaded = await loadJob(
-          batch3Handoff.report_id,
-          batch3Handoff.generation_id,
-        );
-        const pendingDurable =
-          reloaded.ok &&
-          !!reloaded.value?.repair_pending[batch3Handoff.page_id];
-        if (pendingDurable) {
-          // Unit B resume path — do not fail-release or clear Pending.
-          return {
-            status: "failed",
-            code: "post_process_error",
-            detail: err instanceof Error ? err.message : String(err),
-            retryable: false,
-          };
-        }
-        const { failAndReleasePageClaim } = await import(
-          "../batch3/claim-page-execution"
-        );
-        const released = await failAndReleasePageClaim({
-          report_id: batch3Handoff.report_id,
-          generation_id: batch3Handoff.generation_id,
-          generation_epoch: batch3Handoff.generation_epoch,
-          page_id: batch3Handoff.page_id,
-          task_key: batch3Handoff.task_key,
-          attempt_id: batch3Handoff.attempt_id,
-          detail: `queue_repair_exception: ${err instanceof Error ? err.message : String(err)}`,
-        });
-        if (!released.ok) {
-          return {
-            status: "failed",
-            code: released.code,
-            detail: `fail_release_failed: ${released.detail}`,
-            retryable: false,
-          };
-        }
-      }
-    }
+    return resolveQueueRepairAfterPersistIssue({
+      job,
+      page_id,
+      batch3Handoff,
+      persist_code: "post_process_error",
+      persist_detail: err instanceof Error ? err.message : String(err),
+    });
+  }
+}
+
+/** Fence still claimed by this Generate Attempt? */
+function fenceOwnedByGenerateHandoff(
+  fence: {
+    status: string;
+    task_key?: string | null;
+    attempt_id?: string | null;
+    generation_epoch?: number;
+  } | null | undefined,
+  handoff: {
+    task_key: string;
+    attempt_id: string;
+    generation_epoch: number;
+  },
+): boolean {
+  return (
+    !!fence &&
+    fence.status === "claimed" &&
+    fence.task_key === handoff.task_key &&
+    fence.attempt_id === handoff.attempt_id &&
+    fence.generation_epoch === handoff.generation_epoch
+  );
+}
+
+async function completeGenerateToRepairHandoff(batch3Handoff: {
+  report_id: string;
+  generation_id: string;
+  generation_epoch: number;
+  page_id: ReportPageId;
+  task_key: string;
+  attempt_id: string;
+}): Promise<ReportBatch2WorkerResult | null> {
+  const { releasePageClaimForHandoff } = await import(
+    "../batch3/claim-page-execution"
+  );
+  const released = await releasePageClaimForHandoff(batch3Handoff);
+  if (!released.ok) {
+    // Path C: keep durable Pending; Inngest retry → resumeGenerateToRepairHandoffIfNeeded.
     return {
       status: "failed",
-      code: "post_process_error",
-      detail: err instanceof Error ? err.message : String(err),
+      code: released.code,
+      detail: released.detail,
       retryable: true,
     };
   }
+  return null;
+}
+
+/**
+ * After saveJob fail / throw: re-read durable Job + Fence, then Path B or C.
+ * Never decide Pending durability from the in-memory job snapshot alone.
+ */
+async function resolveQueueRepairAfterPersistIssue(input: {
+  job: ReportBatch2JobRecord;
+  page_id: ReportPageId;
+  batch3Handoff: {
+    report_id: string;
+    generation_id: string;
+    generation_epoch: number;
+    page_id: ReportPageId;
+    task_key: string;
+    attempt_id: string;
+  } | null;
+  persist_code: string;
+  persist_detail: string;
+}): Promise<ReportBatch2WorkerResult | null> {
+  const { page_id, batch3Handoff, persist_code, persist_detail } = input;
+
+  if (!batch3Handoff) {
+    clearRepairPending(input.job, page_id);
+    updatePageState(input.job, page_id, { outcome: "running" });
+    return {
+      status: "failed",
+      code: persist_code,
+      detail: persist_detail,
+      retryable: isBatch2RetryableFailureCode(persist_code),
+    };
+  }
+
+  const { readPageFence } = await import("../batch3/page-fence");
+  const fence = await readPageFence(
+    batch3Handoff.report_id,
+    batch3Handoff.generation_id,
+    batch3Handoff.page_id,
+  );
+  if (!fence.ok) {
+    return {
+      status: "failed",
+      code: fence.code,
+      detail: fence.detail,
+      retryable: false,
+    };
+  }
+
+  // Fence no longer ours — do not fail-release another owner / committed page.
+  if (fence.value?.status === "committed") {
+    return { status: "completed" };
+  }
+  if (fence.value?.status === "open") {
+    // Already handed off (or never claimed) — Pending may exist for Repair.
+    const reloadedOpen = await loadJob(
+      batch3Handoff.report_id,
+      batch3Handoff.generation_id,
+    );
+    if (
+      reloadedOpen.ok &&
+      reloadedOpen.value?.repair_pending[batch3Handoff.page_id]
+    ) {
+      return null; // needs_repair
+    }
+    return {
+      status: "failed",
+      code: persist_code,
+      detail: persist_detail,
+      retryable: isBatch2RetryableFailureCode(persist_code),
+    };
+  }
+  if (
+    fence.value?.status === "claimed" &&
+    !fenceOwnedByGenerateHandoff(fence.value, batch3Handoff)
+  ) {
+    // Another task (e.g. Repair) owns Fence — do not release.
+    return null;
+  }
+
+  const stillOurs = fenceOwnedByGenerateHandoff(fence.value, batch3Handoff);
+  const reloaded = await loadJob(
+    batch3Handoff.report_id,
+    batch3Handoff.generation_id,
+  );
+  const pendingDurable =
+    reloaded.ok && !!reloaded.value?.repair_pending[batch3Handoff.page_id];
+
+  if (stillOurs && pendingDurable) {
+    // Path C: durable Pending + our Claim → finish handoff (or retryable resume).
+    return completeGenerateToRepairHandoff(batch3Handoff);
+  }
+
+  if (stillOurs && !pendingDurable) {
+    // Path B: no durable Pending — fail-release Generate Claim.
+    clearRepairPending(input.job, page_id);
+    updatePageState(input.job, page_id, { outcome: "running" });
+    const { failAndReleasePageClaim } = await import(
+      "../batch3/claim-page-execution"
+    );
+    const released = await failAndReleasePageClaim({
+      report_id: batch3Handoff.report_id,
+      generation_id: batch3Handoff.generation_id,
+      generation_epoch: batch3Handoff.generation_epoch,
+      page_id: batch3Handoff.page_id,
+      task_key: batch3Handoff.task_key,
+      attempt_id: batch3Handoff.attempt_id,
+      detail: `queue_repair_save_failed: ${persist_code}: ${persist_detail}`,
+    });
+    if (!released.ok) {
+      return {
+        status: "failed",
+        code: released.code,
+        detail: `fail_release_failed: ${released.detail} (queue_repair_save=${persist_code}: ${persist_detail})`,
+        retryable: false,
+      };
+    }
+    return {
+      status: "failed",
+      code: persist_code,
+      detail: persist_detail,
+      retryable: isBatch2RetryableFailureCode(persist_code),
+    };
+  }
+
+  return {
+    status: "failed",
+    code: persist_code,
+    detail: persist_detail,
+    retryable: true,
+  };
 }
 
 /**
@@ -768,10 +887,12 @@ async function resumeGenerateToRepairHandoffIfNeeded(input: {
     attempt_id: fence.value.attempt_id,
   });
   if (!released.ok) {
+    // Path C resume: keep durable Pending; platform must retry Generate.
     return {
       status: "failed",
       code: released.code,
       detail: released.detail,
+      retryable: true,
     };
   }
   return { status: "needs_repair" };
