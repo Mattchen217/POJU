@@ -26,6 +26,9 @@ import {
   setAfterGenerateModelHookForTests,
   setQueueRepairPersistHookForTests,
   setQueueRepairSaveJobFailForTests,
+  setResolveFenceReadFailOnceForTests,
+  setResumeFenceReadFailOnceForTests,
+  setResumeTaskReadFailOnceForTests,
   setValidatePageOutputHookForTests,
 } from "@/lib/llm/pro/delivery/decision-report-v2/batch2/page-generate";
 import { writePageBlobWithValidity } from "@/lib/llm/pro/delivery/decision-report-v2/batch2/job-store";
@@ -161,6 +164,9 @@ async function cleanup(): Promise<void> {
   setValidatePageOutputHookForTests(null);
   setQueueRepairSaveJobFailForTests(null);
   setQueueRepairPersistHookForTests(null);
+  setResolveFenceReadFailOnceForTests(null);
+  setResumeFenceReadFailOnceForTests(null);
+  setResumeTaskReadFailOnceForTests(null);
 }
 
 async function boot(report_id: string, generation_id: string) {
@@ -723,6 +729,482 @@ async function main(): Promise<void> {
     );
     console.log(
       "C-T2d ok — partial PageBlob write + Handoff resume without re-Generate",
+    );
+  }
+
+  // --- C-T2e: Persist issue + Fence read fail → failAndRelease (retryable) ---
+  {
+    await cleanup();
+    const report_id = "rpt_uc_t2e";
+    const gen = await boot(report_id, "g_uc_t2e");
+    const { page_id, fingerprint } = await prepGenerate(
+      report_id,
+      gen.generation_id,
+    );
+
+    let modelCalls = 0;
+    setBatch2ModelInvokeForTests(async () => {
+      modelCalls += 1;
+      return {
+        content: "{ t2e-needs-repair",
+        tokens_used: 1,
+        model_call_id: `mc_t2e_${modelCalls}`,
+      };
+    });
+
+    setQueueRepairPersistHookForTests(async (job, pid) => {
+      const state = job.page_states.find((s) => s.page_id === pid);
+      assert.ok(state);
+      const written = await writePageBlobWithValidity({
+        report_id: job.report_id,
+        generation_id: job.generation_id,
+        page_id: pid,
+        state: { ...state! },
+        output: job.page_outputs[pid],
+        repair: job.repair_pending[pid] ?? null,
+        validity_rev: state!.validity_rev ?? 0,
+      });
+      if (!written.ok) return written;
+      throw new Error("injected_meta_fail_t2e");
+    });
+    setResolveFenceReadFailOnceForTests({
+      code: "kv_read_failed",
+      detail: "injected_fence_read_fail_after_persist",
+    });
+
+    const first = await runReportPageGenerateOnce({
+      event: {
+        report_id,
+        generation_id: gen.generation_id,
+        generation_epoch: gen.generation_epoch,
+        page_id,
+        locale: "en",
+        input_fingerprint: fingerprint,
+        upstream_output_fingerprints: {},
+      },
+      invocation_id: randomUUID(),
+      worker_id: "w_uc_t2e",
+    });
+    setQueueRepairPersistHookForTests(null);
+    setResolveFenceReadFailOnceForTests(null);
+
+    assert.equal(first.status, "failed");
+    assert.equal(first.status === "failed" ? first.retryable : false, true);
+    assert.equal(
+      first.status === "failed" ? first.code : "",
+      "kv_read_failed",
+    );
+
+    const fence = await readPageFence(report_id, gen.generation_id, page_id);
+    assert.equal(fence.value?.status, "open");
+
+    const task_key = generateTaskKey({
+      report_id,
+      generation_id: gen.generation_id,
+      generation_epoch: gen.generation_epoch,
+      page_id,
+      input_fingerprint: fingerprint,
+    });
+    const task = await readTask(report_id, gen.generation_id, task_key);
+    assert.equal(task.value?.status, "failed");
+
+    const job = await loadJob(report_id, gen.generation_id);
+    assert.ok(job.value?.repair_pending[page_id]);
+    assert.equal(
+      job.value!.page_states.find((s) => s.page_id === page_id)?.outcome,
+      "repair_queued",
+    );
+
+    const modelBefore = modelCalls;
+    const resumed = await runReportPageGenerateOnce({
+      event: {
+        report_id,
+        generation_id: gen.generation_id,
+        generation_epoch: gen.generation_epoch,
+        page_id,
+        locale: "en",
+        input_fingerprint: fingerprint,
+        upstream_output_fingerprints: {},
+      },
+      invocation_id: randomUUID(),
+      worker_id: "w_uc_t2e_resume",
+    });
+    assert.equal(modelCalls, modelBefore, "resume must not re-Generate");
+    assert.equal(resumed.status, "needs_repair");
+
+    const repairClaim = await fenceAndClaimPageTask({
+      report_id,
+      generation_id: gen.generation_id,
+      generation_epoch: gen.generation_epoch,
+      page_id,
+      task_type: "repair",
+      input_fingerprint: fingerprint,
+      upstream_output_fingerprints: {},
+      worker_id: "w_uc_t2e_repair",
+    });
+    assert.ok(repairClaim.ok, JSON.stringify(repairClaim));
+    console.log(
+      "C-T2e ok — fence read fail after Pending persist → failAndRelease + resume",
+    );
+  }
+
+  // --- C-T2e2: Fence read fail with no durable Pending → re-Claim Generate ---
+  {
+    await cleanup();
+    const report_id = "rpt_uc_t2e2";
+    const gen = await boot(report_id, "g_uc_t2e2");
+    const { page_id, fingerprint } = await prepGenerate(
+      report_id,
+      gen.generation_id,
+    );
+
+    let modelCalls = 0;
+    setBatch2ModelInvokeForTests(async () => {
+      modelCalls += 1;
+      return {
+        content: "{ t2e2-needs-repair",
+        tokens_used: 1,
+        model_call_id: `mc_t2e2_${modelCalls}`,
+      };
+    });
+    setQueueRepairSaveJobFailForTests({
+      code: "kv_write_failed",
+      detail: "injected_no_pending_save_fail",
+    });
+    setResolveFenceReadFailOnceForTests({
+      code: "kv_read_failed",
+      detail: "injected_fence_read_no_pending",
+    });
+
+    const first = await runReportPageGenerateOnce({
+      event: {
+        report_id,
+        generation_id: gen.generation_id,
+        generation_epoch: gen.generation_epoch,
+        page_id,
+        locale: "en",
+        input_fingerprint: fingerprint,
+        upstream_output_fingerprints: {},
+      },
+      invocation_id: randomUUID(),
+      worker_id: "w_uc_t2e2",
+    });
+    setQueueRepairSaveJobFailForTests(null);
+    setResolveFenceReadFailOnceForTests(null);
+
+    assert.equal(first.status, "failed");
+    assert.equal(first.status === "failed" ? first.retryable : false, true);
+    assert.equal(
+      (await readPageFence(report_id, gen.generation_id, page_id)).value
+        ?.status,
+      "open",
+    );
+    assert.equal(
+      (await loadJob(report_id, gen.generation_id)).value?.repair_pending[
+        page_id
+      ],
+      undefined,
+    );
+
+    const modelBefore = modelCalls;
+    const retry = await runReportPageGenerateOnce({
+      event: {
+        report_id,
+        generation_id: gen.generation_id,
+        generation_epoch: gen.generation_epoch,
+        page_id,
+        locale: "en",
+        input_fingerprint: fingerprint,
+        upstream_output_fingerprints: {},
+      },
+      invocation_id: randomUUID(),
+      worker_id: "w_uc_t2e2_retry",
+    });
+    assert.ok(modelCalls > modelBefore, "must re-Claim Generate + re-model");
+    assert.equal(retry.status, "needs_repair");
+    assert.notEqual(retry.status, "skipped");
+    console.log(
+      "C-T2e2 ok — no Pending + fence read fail → release; retry re-Claims Generate",
+    );
+  }
+
+  // --- C-T2f: Resume Fence read fail → Handler Error (not NonRetriable) ---
+  {
+    await cleanup();
+    const report_id = "rpt_uc_t2f";
+    const gen = await boot(report_id, "g_uc_t2f");
+    const { page_id, fingerprint } = await prepGenerate(
+      report_id,
+      gen.generation_id,
+    );
+
+    let modelCalls = 0;
+    setBatch2ModelInvokeForTests(async () => {
+      modelCalls += 1;
+      return {
+        content: "{ t2f-needs-repair",
+        tokens_used: 1,
+        model_call_id: `mc_t2f_${modelCalls}`,
+      };
+    });
+
+    const cKey = finalizationClaimKey(report_id, gen.generation_id);
+    const lockDoc = {
+      report_id,
+      generation_id: gen.generation_id,
+      generation_epoch: gen.generation_epoch,
+      status: "sealed" as const,
+      sealed_at: new Date().toISOString(),
+      input_fingerprint: "ifp_t2f",
+      pages: [] as unknown[],
+    };
+
+    // Leave durable Pending + Generate still claimed (handoff blocked).
+    setQueueRepairPersistHookForTests(async (job, pid) => {
+      const state = job.page_states.find((s) => s.page_id === pid);
+      assert.ok(state);
+      const written = await writePageBlobWithValidity({
+        report_id: job.report_id,
+        generation_id: job.generation_id,
+        page_id: pid,
+        state: { ...state! },
+        output: job.page_outputs[pid],
+        repair: job.repair_pending[pid] ?? null,
+        validity_rev: state!.validity_rev ?? 0,
+      });
+      if (!written.ok) return written;
+      assert.ok((await casSet(cKey, null, lockDoc)).ok);
+      throw new Error("injected_meta_fail_t2f");
+    });
+    const setup = await runReportPageGenerateOnce({
+      event: {
+        report_id,
+        generation_id: gen.generation_id,
+        generation_epoch: gen.generation_epoch,
+        page_id,
+        locale: "en",
+        input_fingerprint: fingerprint,
+        upstream_output_fingerprints: {},
+      },
+      invocation_id: randomUUID(),
+      worker_id: "w_uc_t2f_setup",
+    });
+    setQueueRepairPersistHookForTests(null);
+    assert.equal(setup.status, "failed");
+    assert.equal(setup.status === "failed" ? setup.retryable : false, true);
+    assert.equal(
+      (await readPageFence(report_id, gen.generation_id, page_id)).value
+        ?.status,
+      "claimed",
+    );
+    assert.ok(
+      (await loadJob(report_id, gen.generation_id)).value?.repair_pending[
+        page_id
+      ],
+    );
+
+    // Unlock handoff path; inject resume Fence read fail once.
+    assert.ok(
+      (
+        await casSet(cKey, JSON.stringify(lockDoc), {
+          ...lockDoc,
+          status: "delivered",
+        })
+      ).ok,
+    );
+    setResumeFenceReadFailOnceForTests({
+      code: "kv_read_failed",
+      detail: "injected_resume_fence_read_fail",
+    });
+
+    const event = {
+      report_id,
+      generation_id: gen.generation_id,
+      generation_epoch: gen.generation_epoch,
+      page_id,
+      locale: "en" as const,
+      input_fingerprint: fingerprint,
+      upstream_output_fingerprints: {},
+    };
+    const fenceBeforeResume = await readPageFence(
+      report_id,
+      gen.generation_id,
+      page_id,
+    );
+    const heldTaskKey = fenceBeforeResume.value?.task_key;
+    const heldAttempt = fenceBeforeResume.value?.attempt_id;
+
+    await assert.rejects(
+      () => handleGenerateEvent(event),
+      (err: unknown) => {
+        assert.ok(err instanceof Error);
+        assert.equal(err instanceof NonRetriableError, false);
+        assert.match(String((err as Error).message), /kv_read_failed/);
+        return true;
+      },
+    );
+    setResumeFenceReadFailOnceForTests(null);
+
+    // Must not have stolen / wrongly released another Claim identity.
+    const fenceAfterFail = await readPageFence(
+      report_id,
+      gen.generation_id,
+      page_id,
+    );
+    assert.equal(fenceAfterFail.value?.status, "claimed");
+    assert.equal(fenceAfterFail.value?.task_key, heldTaskKey);
+    assert.equal(fenceAfterFail.value?.attempt_id, heldAttempt);
+    assert.ok(
+      (await loadJob(report_id, gen.generation_id)).value?.repair_pending[
+        page_id
+      ],
+    );
+
+    const modelBefore = modelCalls;
+    const second = await handleGenerateEvent(event);
+    assert.equal(second.status, "needs_repair");
+    assert.equal(modelCalls, modelBefore);
+    assert.equal(
+      (await readPageFence(report_id, gen.generation_id, page_id)).value
+        ?.status,
+      "open",
+    );
+    console.log(
+      "C-T2f ok — resume fence read fail → Error (not NonRetriable); replay handoff",
+    );
+  }
+
+  // --- C-T2g: Resume Task read fail → Handler Error (not NonRetriable) ---
+  {
+    await cleanup();
+    const report_id = "rpt_uc_t2g";
+    const gen = await boot(report_id, "g_uc_t2g");
+    const { page_id, fingerprint } = await prepGenerate(
+      report_id,
+      gen.generation_id,
+    );
+
+    let modelCalls = 0;
+    setBatch2ModelInvokeForTests(async () => {
+      modelCalls += 1;
+      return {
+        content: "{ t2g-needs-repair",
+        tokens_used: 1,
+        model_call_id: `mc_t2g_${modelCalls}`,
+      };
+    });
+
+    const cKey = finalizationClaimKey(report_id, gen.generation_id);
+    const lockDoc = {
+      report_id,
+      generation_id: gen.generation_id,
+      generation_epoch: gen.generation_epoch,
+      status: "sealed" as const,
+      sealed_at: new Date().toISOString(),
+      input_fingerprint: "ifp_t2g",
+      pages: [] as unknown[],
+    };
+
+    setQueueRepairPersistHookForTests(async (job, pid) => {
+      const state = job.page_states.find((s) => s.page_id === pid);
+      assert.ok(state);
+      const written = await writePageBlobWithValidity({
+        report_id: job.report_id,
+        generation_id: job.generation_id,
+        page_id: pid,
+        state: { ...state! },
+        output: job.page_outputs[pid],
+        repair: job.repair_pending[pid] ?? null,
+        validity_rev: state!.validity_rev ?? 0,
+      });
+      if (!written.ok) return written;
+      assert.ok((await casSet(cKey, null, lockDoc)).ok);
+      throw new Error("injected_meta_fail_t2g");
+    });
+    const setup = await runReportPageGenerateOnce({
+      event: {
+        report_id,
+        generation_id: gen.generation_id,
+        generation_epoch: gen.generation_epoch,
+        page_id,
+        locale: "en",
+        input_fingerprint: fingerprint,
+        upstream_output_fingerprints: {},
+      },
+      invocation_id: randomUUID(),
+      worker_id: "w_uc_t2g_setup",
+    });
+    setQueueRepairPersistHookForTests(null);
+    assert.equal(setup.status, "failed");
+    assert.equal(
+      (await readPageFence(report_id, gen.generation_id, page_id)).value
+        ?.status,
+      "claimed",
+    );
+
+    assert.ok(
+      (
+        await casSet(cKey, JSON.stringify(lockDoc), {
+          ...lockDoc,
+          status: "delivered",
+        })
+      ).ok,
+    );
+    setResumeTaskReadFailOnceForTests({
+      code: "kv_read_failed",
+      detail: "injected_resume_task_read_fail",
+    });
+
+    const event = {
+      report_id,
+      generation_id: gen.generation_id,
+      generation_epoch: gen.generation_epoch,
+      page_id,
+      locale: "en" as const,
+      input_fingerprint: fingerprint,
+      upstream_output_fingerprints: {},
+    };
+    const fenceBefore = await readPageFence(
+      report_id,
+      gen.generation_id,
+      page_id,
+    );
+
+    await assert.rejects(
+      () => handleGenerateEvent(event),
+      (err: unknown) => {
+        assert.ok(err instanceof Error);
+        assert.equal(err instanceof NonRetriableError, false);
+        assert.match(String((err as Error).message), /kv_read_failed/);
+        return true;
+      },
+    );
+    setResumeTaskReadFailOnceForTests(null);
+
+    const fenceAfterFail = await readPageFence(
+      report_id,
+      gen.generation_id,
+      page_id,
+    );
+    assert.equal(fenceAfterFail.value?.status, "claimed");
+    assert.equal(fenceAfterFail.value?.task_key, fenceBefore.value?.task_key);
+    assert.ok(
+      (await loadJob(report_id, gen.generation_id)).value?.repair_pending[
+        page_id
+      ],
+    );
+
+    const modelBefore = modelCalls;
+    const second = await handleGenerateEvent(event);
+    assert.equal(second.status, "needs_repair");
+    assert.equal(modelCalls, modelBefore);
+    assert.equal(
+      (await readPageFence(report_id, gen.generation_id, page_id)).value
+        ?.status,
+      "open",
+    );
+    console.log(
+      "C-T2g ok — resume task read fail → Error (not NonRetriable); replay handoff",
     );
   }
 

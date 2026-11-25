@@ -140,6 +140,35 @@ export function setQueueRepairPersistHookForTests(
   queueRepairPersistHookForTests = fn;
 }
 
+/**
+ * Unit C R4 test hooks: inject one-shot recovery read failures.
+ * Production never sets these.
+ */
+let resolveFenceReadFailOnceForTests: { code: string; detail: string } | null =
+  null;
+let resumeFenceReadFailOnceForTests: { code: string; detail: string } | null =
+  null;
+let resumeTaskReadFailOnceForTests: { code: string; detail: string } | null =
+  null;
+
+export function setResolveFenceReadFailOnceForTests(
+  fail: { code: string; detail: string } | null,
+): void {
+  resolveFenceReadFailOnceForTests = fail;
+}
+
+export function setResumeFenceReadFailOnceForTests(
+  fail: { code: string; detail: string } | null,
+): void {
+  resumeFenceReadFailOnceForTests = fail;
+}
+
+export function setResumeTaskReadFailOnceForTests(
+  fail: { code: string; detail: string } | null,
+): void {
+  resumeTaskReadFailOnceForTests = fail;
+}
+
 export async function runReportPageGenerateOnce(input: {
   event: ReportBatch2GenerateEventData;
   invocation_id: string;
@@ -719,17 +748,49 @@ async function resolveQueueRepairAfterPersistIssue(input: {
   }
 
   const { readPageFence } = await import("../batch3/page-fence");
-  const fence = await readPageFence(
-    batch3Handoff.report_id,
-    batch3Handoff.generation_id,
-    batch3Handoff.page_id,
-  );
+  const injectedFenceRead = resolveFenceReadFailOnceForTests;
+  if (injectedFenceRead) {
+    resolveFenceReadFailOnceForTests = null;
+  }
+  const fence = injectedFenceRead
+    ? ({
+        ok: false as const,
+        code: injectedFenceRead.code,
+        detail: injectedFenceRead.detail,
+      } as const)
+    : await readPageFence(
+        batch3Handoff.report_id,
+        batch3Handoff.generation_id,
+        batch3Handoff.page_id,
+      );
   if (!fence.ok) {
+    // Recovery read failed — do not NonRetriable-stuck with Claim held.
+    // Use known Generate identity; failAndRelease re-validates ownership.
+    const { failAndReleasePageClaim } = await import(
+      "../batch3/claim-page-execution"
+    );
+    const released = await failAndReleasePageClaim({
+      report_id: batch3Handoff.report_id,
+      generation_id: batch3Handoff.generation_id,
+      generation_epoch: batch3Handoff.generation_epoch,
+      page_id: batch3Handoff.page_id,
+      task_key: batch3Handoff.task_key,
+      attempt_id: batch3Handoff.attempt_id,
+      detail: `fence_read_failed_after_queue_repair_persist: ${fence.code}: ${fence.detail} (persist=${persist_code}: ${persist_detail})`,
+    });
+    if (!released.ok) {
+      return {
+        status: "failed",
+        code: released.code,
+        detail: `fail_release_failed: ${released.detail} (fence_read=${fence.code}: ${fence.detail}; persist=${persist_code}: ${persist_detail})`,
+        retryable: false,
+      };
+    }
     return {
       status: "failed",
       code: fence.code,
       detail: fence.detail,
-      retryable: false,
+      retryable: true,
     };
   }
 
@@ -838,13 +899,29 @@ async function resumeGenerateToRepairHandoffIfNeeded(input: {
 
   const { readPageFence } = await import("../batch3/page-fence");
   const { readTask } = await import("../batch3/task-store");
-  const fence = await readPageFence(
-    input.report_id,
-    input.generation_id,
-    input.page_id,
-  );
+  const injectedResumeFence = resumeFenceReadFailOnceForTests;
+  if (injectedResumeFence) {
+    resumeFenceReadFailOnceForTests = null;
+  }
+  const fence = injectedResumeFence
+    ? ({
+        ok: false as const,
+        code: injectedResumeFence.code,
+        detail: injectedResumeFence.detail,
+      } as const)
+    : await readPageFence(
+        input.report_id,
+        input.generation_id,
+        input.page_id,
+      );
   if (!fence.ok) {
-    return { status: "failed", code: fence.code, detail: fence.detail };
+    // Pending already durable — retry Generate resume; do not release blindly.
+    return {
+      status: "failed",
+      code: fence.code,
+      detail: fence.detail,
+      retryable: true,
+    };
   }
   if (!fence.value || fence.value.status === "open") {
     // Handoff already done — Repair can Claim.
@@ -861,13 +938,29 @@ async function resumeGenerateToRepairHandoffIfNeeded(input: {
     return { status: "skipped" };
   }
 
-  const task = await readTask(
-    input.report_id,
-    input.generation_id,
-    fence.value.task_key,
-  );
+  const injectedResumeTask = resumeTaskReadFailOnceForTests;
+  if (injectedResumeTask) {
+    resumeTaskReadFailOnceForTests = null;
+  }
+  const task = injectedResumeTask
+    ? ({
+        ok: false as const,
+        code: injectedResumeTask.code,
+        detail: injectedResumeTask.detail,
+      } as const)
+    : await readTask(
+        input.report_id,
+        input.generation_id,
+        fence.value.task_key,
+      );
   if (!task.ok) {
-    return { status: "failed", code: task.code, detail: task.detail };
+    // Pending durable — retry resume; do not clear Pending or steal Claim.
+    return {
+      status: "failed",
+      code: task.code,
+      detail: task.detail,
+      retryable: true,
+    };
   }
   // Only release if Generate still owns the Fence — never steal Repair / other.
   if (task.value && task.value.task_type !== "generate") {
