@@ -581,6 +581,7 @@ local expectAttempt = ARGV[4]
 local nowIso = ARGV[5]
 local ttl = tonumber(ARGV[6])
 
+-- Validate ALL authority state before any SET (no partial writes on failure).
 local claimCur = redis.call("GET", claimKey)
 ${FINALIZATION_LOCK_LUA_SNIPPET}
 if __fin_lock == -10 then return -10 end
@@ -599,10 +600,33 @@ if tcur == false or tcur == nil then return -2 end
 local tok, task = pcall(cjson.decode, tcur)
 if not tok or not task then return -2 end
 if task.attempt_id ~= expectAttempt then return -3 end
-if task.status == "completed" then
-  -- Idempotent handoff: ensure fence is open for generate.
-else
-  if task.status ~= "running" then return -5 end
+if task.status ~= "completed" and task.status ~= "running" then return -5 end
+
+local fcur = redis.call("GET", fenceKey)
+if fcur == false or fcur == nil then return -8 end
+local fok, fence = pcall(cjson.decode, fcur)
+if not fok or not fence then return -8 end
+
+-- Idempotent: fence already open → optionally complete task, no fence rewrite.
+if fence.status == "open" then
+  if task.status == "running" then
+    task.status = "completed"
+    task.lease_expires_at = cjson.null
+    task.lease_expires_ms = cjson.null
+    task.completed_at = nowIso
+    task.updated_at = nowIso
+    redis.call("SET", taskKvKey, cjson.encode(task), "EX", ttl)
+  end
+  return 1
+end
+
+if fence.status == "committed" or fence.status == "stale" then return -8 end
+if fence.status ~= "claimed" then return -8 end
+if fence.task_key ~= expectTaskKey then return -15 end
+if fence.attempt_id ~= expectAttempt then return -3 end
+
+-- All checks passed — write Task + Fence together.
+if task.status == "running" then
   task.status = "completed"
   task.lease_expires_at = cjson.null
   task.lease_expires_ms = cjson.null
@@ -610,16 +634,6 @@ else
   task.updated_at = nowIso
   redis.call("SET", taskKvKey, cjson.encode(task), "EX", ttl)
 end
-
-local fcur = redis.call("GET", fenceKey)
-if fcur == false or fcur == nil then return -8 end
-local fok, fence = pcall(cjson.decode, fcur)
-if not fok or not fence then return -8 end
-if fence.status == "open" then return 1 end
-if fence.status == "committed" or fence.status == "stale" then return -8 end
-if fence.status ~= "claimed" then return -8 end
-if fence.task_key ~= expectTaskKey then return -15 end
-if fence.attempt_id ~= expectAttempt then return -3 end
 
 fence.status = "open"
 fence.attempt_id = cjson.null
@@ -689,6 +703,7 @@ export async function releaseApplicabilityClaimForGenerate(input: {
         };
       }
 
+      // Validate Task + Fence fully before any write (Memory ≡ Redis).
       const task = ops.getJson(tKey) as TaskRecord | null;
       if (!task) {
         return {
@@ -704,6 +719,13 @@ export async function releaseApplicabilityClaimForGenerate(input: {
           detail: "applicability attempt mismatch",
         };
       }
+      if (task.status !== "completed" && task.status !== "running") {
+        return {
+          ok: false as const,
+          code: "invalid_state" as const,
+          detail: `cannot handoff task status=${task.status}`,
+        };
+      }
 
       const fence = ops.getJson(fKey) as PageFence | null;
       if (!fence) {
@@ -714,25 +736,17 @@ export async function releaseApplicabilityClaimForGenerate(input: {
         };
       }
 
-      if (task.status !== "completed") {
-        if (task.status !== "running") {
-          return {
-            ok: false as const,
-            code: "invalid_state" as const,
-            detail: `cannot handoff task status=${task.status}`,
-          };
-        }
-        ops.setJson(tKey, {
-          ...task,
-          status: "completed" as const,
-          lease_expires_at: null,
-          lease_expires_ms: null,
-          completed_at: nowIso,
-          updated_at: nowIso,
-        });
-      }
-
       if (fence.status === "open") {
+        if (task.status === "running") {
+          ops.setJson(tKey, {
+            ...task,
+            status: "completed" as const,
+            lease_expires_at: null,
+            lease_expires_ms: null,
+            completed_at: nowIso,
+            updated_at: nowIso,
+          });
+        }
         return { ok: true as const, fence };
       }
       if (fence.status === "committed" || fence.status === "stale") {
@@ -764,6 +778,16 @@ export async function releaseApplicabilityClaimForGenerate(input: {
         };
       }
 
+      if (task.status === "running") {
+        ops.setJson(tKey, {
+          ...task,
+          status: "completed" as const,
+          lease_expires_at: null,
+          lease_expires_ms: null,
+          completed_at: nowIso,
+          updated_at: nowIso,
+        });
+      }
       const nextFence: PageFence = {
         ...fence,
         status: "open",

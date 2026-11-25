@@ -3,7 +3,6 @@ import { evaluatePage07Applicability } from "../page07/applicability";
 import {
   buildFace07ProductionContext,
   synthesizeFace07StatusPage,
-  validateFace07ProductionOutput,
 } from "../page07/production";
 import { REPORT_BATCH2_EVENTS } from "./events";
 import {
@@ -16,6 +15,142 @@ import type {
   ReportBatch2ApplicabilityEventData,
   ReportBatch2ApplicabilityResult,
 } from "./types";
+
+type BuiltTerminalPage =
+  | { ok: true; page: unknown; output_fp: string }
+  | { ok: false; code: string; detail: string };
+
+/** Test-only: force context build / status validation outcomes. */
+let page07StatusBuildHookForTests:
+  | null
+  | (() => BuiltTerminalPage | null) = null;
+
+export function setPage07StatusBuildHookForTests(
+  hook: (() => BuiltTerminalPage | null) | null,
+): void {
+  page07StatusBuildHookForTests = hook;
+}
+
+/** Test-only: make the next handoff call fail once (or always while set). */
+let page07HandoffFailHookForTests:
+  | null
+  | (() => { ok: false; code: string; detail: string } | null) = null;
+
+export function setPage07HandoffFailHookForTests(
+  hook: (() => { ok: false; code: string; detail: string } | null) | null,
+): void {
+  page07HandoffFailHookForTests = hook;
+}
+
+/**
+ * Status-page validation (equivalent gate for system-synthesized terminals).
+ * validateFace07ProductionOutput is LLM-path oriented and intentionally rejects
+ * insufficient_information contexts — do not use it as a fail-open fallback.
+ */
+function validateFace07StatusPage(input: {
+  page: unknown;
+  expected_status: "not_applicable" | "insufficient_information";
+}): BuiltTerminalPage {
+  if (!input.page || typeof input.page !== "object") {
+    return {
+      ok: false,
+      code: "page07_status_validation_failed",
+      detail: "status page is not an object",
+    };
+  }
+  const page = input.page as Record<string, unknown>;
+  if (page.page !== "07" || page.face !== "07") {
+    return {
+      ok: false,
+      code: "page07_status_validation_failed",
+      detail: "status page missing page/face=07",
+    };
+  }
+  if (page.schema_version !== "face07-v2") {
+    return {
+      ok: false,
+      code: "page07_status_validation_failed",
+      detail: `unexpected schema_version=${String(page.schema_version)}`,
+    };
+  }
+  if (page.applicability_status !== input.expected_status) {
+    return {
+      ok: false,
+      code: "page07_status_validation_failed",
+      detail: `applicability_status=${String(page.applicability_status)} expected ${input.expected_status}`,
+    };
+  }
+  const expectedGen =
+    input.expected_status === "not_applicable"
+      ? "skipped_not_applicable"
+      : "insufficient_information";
+  if (page.generation_status !== expectedGen) {
+    return {
+      ok: false,
+      code: "page07_status_validation_failed",
+      detail: `generation_status=${String(page.generation_status)} expected ${expectedGen}`,
+    };
+  }
+  if (typeof page.applicability_reason !== "string" || !page.applicability_reason.trim()) {
+    return {
+      ok: false,
+      code: "page07_status_validation_failed",
+      detail: "missing applicability_reason",
+    };
+  }
+  return {
+    ok: true,
+    page: input.page,
+    output_fp: hashCanonicalPayload(input.page),
+  };
+}
+
+/**
+ * Build + validate a Page07 status page. Fail closed — never Commit unvalidated
+ * synthesized content.
+ */
+function buildValidatedStatusPage(input: {
+  job: import("./types").ReportBatch2JobRecord;
+  applicability: ReturnType<typeof evaluatePage07Applicability>;
+  expected_status: "not_applicable" | "insufficient_information";
+}): BuiltTerminalPage {
+  if (page07StatusBuildHookForTests) {
+    const forced = page07StatusBuildHookForTests();
+    if (forced) return forced;
+  }
+  const built = buildFace07ProductionContext({
+    report_id: input.job.inputs.report_id,
+    locale: input.job.locale,
+    dc: input.job.inputs.dc,
+    pack: input.job.inputs.pack,
+    chart_fact_pack: input.job.inputs.chart_fact_pack ?? null,
+    page01: input.job.page_outputs["01"],
+    page02: input.job.page_outputs["02"],
+    page04: input.job.page_outputs["04"],
+    page05: input.job.page_outputs["05"],
+    page06: input.job.page_outputs["06"],
+    authorized_partner_profile: input.job.inputs.authorized_partner_profile,
+  });
+  if (!built.ok) {
+    return {
+      ok: false,
+      code: "page07_context_build_failed",
+      detail: `buildFace07ProductionContext failed: ${built.reason}`,
+    };
+  }
+  const synthesized = synthesizeFace07StatusPage({
+    locale: input.job.locale,
+    applicability: input.applicability,
+    architecture: built.ctx.architecture,
+  });
+  // Status pages use a dedicated structural gate (same rules both terminals).
+  // LLM-path validateFace07ProductionOutput intentionally rejects
+  // insufficient_information contexts — not used for system status pages.
+  return validateFace07StatusPage({
+    page: synthesized,
+    expected_status: input.expected_status,
+  });
+}
 
 export async function runReportPage07ApplicabilityGate(input: {
   event: ReportBatch2ApplicabilityEventData;
@@ -33,6 +168,102 @@ export async function runReportPage07ApplicabilityGate(input: {
 
   const page_id = "07";
   const state = job.page_states.find((s) => s.page_id === page_id);
+  const epoch = input.event.generation_epoch ?? job.generation_epoch;
+  const input_fingerprint = hashCanonicalPayload({
+    gate: "page07",
+    upstream: input.event.upstream_output_fingerprints,
+  });
+
+  /**
+   * Resume applicability → generate handoff when judgment already saved as
+   * applicable but Fence was never released (crash / handoff failure).
+   */
+  async function resumeApplicableHandoffIfNeeded(): Promise<
+    ReportBatch2ApplicabilityResult | null
+  > {
+    if (state?.applicability_status !== "applicable") return null;
+    // Terminal generate already ran / page finished — safe skip.
+    if (
+      state.outcome &&
+      state.outcome !== "pending" &&
+      state.outcome !== "repair_queued"
+    ) {
+      return { status: "skipped" };
+    }
+    if (typeof epoch !== "number") {
+      return { status: "skipped" };
+    }
+    const { readPageFence } = await import("../batch3/page-fence");
+    const { readTask } = await import("../batch3/task-store");
+    const { releaseApplicabilityClaimForGenerate } = await import(
+      "../batch3/claim-page-execution"
+    );
+    const fence = await readPageFence(
+      input.event.report_id,
+      input.event.generation_id,
+      page_id,
+    );
+    if (!fence.ok) {
+      return { status: "failed", code: fence.code, detail: fence.detail };
+    }
+    if (!fence.value || fence.value.status === "open") {
+      // Handoff already done (or never claimed) — Generate can proceed.
+      return { status: "skipped" };
+    }
+    if (
+      fence.value.status === "committed" ||
+      fence.value.status === "stale"
+    ) {
+      return { status: "skipped" };
+    }
+    if (fence.value.status !== "claimed" || !fence.value.task_key || !fence.value.attempt_id) {
+      return { status: "skipped" };
+    }
+    const task = await readTask(
+      input.event.report_id,
+      input.event.generation_id,
+      fence.value.task_key,
+    );
+    if (!task.ok) {
+      return { status: "failed", code: task.code, detail: task.detail };
+    }
+    // Another task_type (e.g. generate) already owns the fence — do not steal.
+    if (task.value && task.value.task_type !== "applicability") {
+      return { status: "skipped" };
+    }
+    const released = await releaseApplicabilityClaimForGenerate({
+      report_id: input.event.report_id,
+      generation_id: input.event.generation_id,
+      generation_epoch: epoch,
+      page_id,
+      task_key: fence.value.task_key,
+      attempt_id: fence.value.attempt_id,
+    });
+    if (!released.ok) {
+      return {
+        status: "failed",
+        code: released.code,
+        detail: released.detail,
+      };
+    }
+    return { status: "applicable", applicability_status: "applicable" };
+  }
+
+  // Terminal applicability results already committed — skip.
+  if (
+    state?.applicability_status === "not_applicable" ||
+    state?.applicability_status === "insufficient_information"
+  ) {
+    return { status: "skipped" };
+  }
+
+  // applicable judgment may still need handoff completion.
+  if (state?.applicability_status === "applicable") {
+    const resumed = await resumeApplicableHandoffIfNeeded();
+    if (resumed) return resumed;
+    return { status: "skipped" };
+  }
+
   if (state?.applicability_status) {
     return { status: "skipped" };
   }
@@ -52,11 +283,6 @@ export async function runReportPage07ApplicabilityGate(input: {
     attempt_id: string;
     validity_rev: number;
   } | null = null;
-  const epoch = input.event.generation_epoch ?? job.generation_epoch;
-  const input_fingerprint = hashCanonicalPayload({
-    gate: "page07",
-    upstream: input.event.upstream_output_fingerprints,
-  });
   if (typeof epoch === "number") {
     const { assertGenerationActive } = await import("../batch3/generation-store");
     const fence = await assertGenerationActive({
@@ -91,14 +317,14 @@ export async function runReportPage07ApplicabilityGate(input: {
     };
   }
 
-  /**
-   * applicable → release Fence for subsequent generate Claim (different task_key).
-   * Must not leave Fence claimed under the applicability task_key.
-   */
   async function handoffForGenerate(): Promise<
     { ok: true } | { ok: false; code: string; detail: string }
   > {
     if (!batch3Attempt || typeof epoch !== "number") return { ok: true };
+    if (page07HandoffFailHookForTests) {
+      const forced = page07HandoffFailHookForTests();
+      if (forced) return forced;
+    }
     const { releaseApplicabilityClaimForGenerate } = await import(
       "../batch3/claim-page-execution"
     );
@@ -116,10 +342,6 @@ export async function runReportPage07ApplicabilityGate(input: {
     return { ok: true };
   }
 
-  /**
-   * Terminal status pages must Authority-Commit like any formal page result.
-   * commitPageResult writes Fence/Provenance/Authority + PageBlob under the claim.
-   */
   async function authorityCommitTerminal(inputCommit: {
     page: unknown;
     output_fp: string;
@@ -127,7 +349,6 @@ export async function runReportPage07ApplicabilityGate(input: {
     applicability_status: "not_applicable" | "insufficient_information";
   }): Promise<{ ok: true } | { ok: false; code: string; detail: string }> {
     if (!batch3Attempt || typeof epoch !== "number") {
-      // Legacy path without Batch3 generation_epoch — keep Batch2-only write.
       const { setPageOutput } = await import("./job-store");
       setPageOutput(job, page_id, inputCommit.page, inputCommit.output_fp);
       updatePageState(job, page_id, {
@@ -181,9 +402,6 @@ export async function runReportPage07ApplicabilityGate(input: {
       return { ok: false, code: committed.code, detail: committed.detail };
     }
 
-    // Sync in-memory view only — blob already written by commitPageResult.
-    // Do NOT updatePageState/setPageOutput here: that would dirty the page and
-    // cause saveJob to rewrite the blob with a stale expected rev.
     job.page_outputs[page_id] = inputCommit.page;
     const idx = job.page_states.findIndex((s) => s.page_id === page_id);
     if (idx >= 0) {
@@ -196,7 +414,6 @@ export async function runReportPage07ApplicabilityGate(input: {
         input_fingerprint,
       };
     }
-    // Persist invocation log / meta only.
     const saved = await saveJob(job);
     if (!saved.ok) {
       return { ok: false, code: saved.code, detail: saved.detail };
@@ -234,41 +451,17 @@ export async function runReportPage07ApplicabilityGate(input: {
   }
 
   if (applicability.status === "not_applicable") {
-    const built = buildFace07ProductionContext({
-      report_id: job.inputs.report_id,
-      locale: job.locale,
-      dc: job.inputs.dc,
-      pack: job.inputs.pack,
-      chart_fact_pack: job.inputs.chart_fact_pack ?? null,
-      page01: job.page_outputs["01"],
-      page02: job.page_outputs["02"],
-      page04: job.page_outputs["04"],
-      page05: job.page_outputs["05"],
-      page06: job.page_outputs["06"],
-      authorized_partner_profile: job.inputs.authorized_partner_profile,
-    });
-    const architecture =
-      built.ok && built.ctx.architecture ? built.ctx.architecture : undefined;
-    const synthesized = synthesizeFace07StatusPage({
-      locale: job.locale,
+    const built = buildValidatedStatusPage({
+      job,
       applicability,
-      architecture,
+      expected_status: "not_applicable",
     });
-    let page: unknown = synthesized;
-    if (built.ok) {
-      const validated = validateFace07ProductionOutput({
-        raw: synthesized,
-        locale: job.locale,
-        ctx: built.ctx,
-      });
-      if (validated.ok) {
-        page = validated.page;
-      }
+    if (!built.ok) {
+      return { status: "failed", code: built.code, detail: built.detail };
     }
-    const output_fp = hashCanonicalPayload(page);
     const committed = await authorityCommitTerminal({
-      page,
-      output_fp,
+      page: built.page,
+      output_fp: built.output_fp,
       outcome: "skipped_not_applicable",
       applicability_status: "not_applicable",
     });
@@ -282,43 +475,19 @@ export async function runReportPage07ApplicabilityGate(input: {
     };
   }
 
-  // insufficient_information — same Authority Commit rule as not_applicable.
+  // insufficient_information — same validate-then-commit rule.
   {
-    const built = buildFace07ProductionContext({
-      report_id: job.inputs.report_id,
-      locale: job.locale,
-      dc: job.inputs.dc,
-      pack: job.inputs.pack,
-      chart_fact_pack: job.inputs.chart_fact_pack ?? null,
-      page01: job.page_outputs["01"],
-      page02: job.page_outputs["02"],
-      page04: job.page_outputs["04"],
-      page05: job.page_outputs["05"],
-      page06: job.page_outputs["06"],
-      authorized_partner_profile: job.inputs.authorized_partner_profile,
-    });
-    const architecture =
-      built.ok && built.ctx.architecture ? built.ctx.architecture : undefined;
-    const synthesized = synthesizeFace07StatusPage({
-      locale: job.locale,
+    const built = buildValidatedStatusPage({
+      job,
       applicability,
-      architecture,
+      expected_status: "insufficient_information",
     });
-    let page: unknown = synthesized;
-    if (built.ok) {
-      const validated = validateFace07ProductionOutput({
-        raw: synthesized,
-        locale: job.locale,
-        ctx: built.ctx,
-      });
-      if (validated.ok) {
-        page = validated.page;
-      }
+    if (!built.ok) {
+      return { status: "failed", code: built.code, detail: built.detail };
     }
-    const output_fp = hashCanonicalPayload(page);
     const committed = await authorityCommitTerminal({
-      page,
-      output_fp,
+      page: built.page,
+      output_fp: built.output_fp,
       outcome: "insufficient_information",
       applicability_status: "insufficient_information",
     });

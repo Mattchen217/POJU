@@ -20,16 +20,23 @@ import {
   resetBatch2JobStoreForTests,
   type ReportBatch2JobInputs,
 } from "@/lib/llm/pro/delivery/decision-report-v2/batch2";
-import { runReportPage07ApplicabilityGate } from "@/lib/llm/pro/delivery/decision-report-v2/batch2/page07-gate";
+import {
+  runReportPage07ApplicabilityGate,
+  setPage07HandoffFailHookForTests,
+  setPage07StatusBuildHookForTests,
+} from "@/lib/llm/pro/delivery/decision-report-v2/batch2/page07-gate";
 import { fenceAndClaimPageTask } from "@/lib/llm/pro/delivery/decision-report-v2/batch3/worker-guard";
 import { commitPageResult } from "@/lib/llm/pro/delivery/decision-report-v2/batch3/fenced-commit";
+import { releaseApplicabilityClaimForGenerate } from "@/lib/llm/pro/delivery/decision-report-v2/batch3/claim-page-execution";
 import {
   activateGeneration,
   allocateGeneration,
+  casSet,
   ensurePageFence,
   readPageFence,
   readPageProvenance,
   readAuthorityPageOutput,
+  readTask,
   resetBatch3KeysForTests,
 } from "@/lib/llm/pro/delivery/decision-report-v2/batch3";
 import {
@@ -93,6 +100,8 @@ function inputs(report_id: string, dc: DecisionContext): ReportBatch2JobInputs {
 async function cleanup(): Promise<void> {
   await resetBatch2JobStoreForTests();
   await resetBatch3KeysForTests();
+  setPage07StatusBuildHookForTests(null);
+  setPage07HandoffFailHookForTests(null);
 }
 
 async function bootWithUpstream(
@@ -362,7 +371,277 @@ async function main(): Promise<void> {
     console.log("A3 ok — insufficient_information Authority Commit + Page08 Claim");
   }
 
+  // --- R1-A1. Context / Validator fail → no Authority Output ---
+  for (const kind of ["context", "validator"] as const) {
+    await cleanup();
+    const report_id = `rpt_ua_r1_${kind}`;
+    const gen = await bootWithUpstream(
+      report_id,
+      `g_ua_r1_${kind}`,
+      baseDc({
+        question: "Should I take a solo promotion and keep my runway?",
+      }),
+    );
+    setPage07StatusBuildHookForTests(() =>
+      kind === "context"
+        ? {
+            ok: false,
+            code: "page07_context_build_failed",
+            detail: "forced context failure",
+          }
+        : {
+            ok: false,
+            code: "page07_status_validation_failed",
+            detail: "forced validator failure",
+          },
+    );
+    const gate = await runReportPage07ApplicabilityGate({
+      event: {
+        report_id,
+        generation_id: gen.generation_id,
+        generation_epoch: gen.generation_epoch,
+        page_id: "07",
+        locale: "en",
+        upstream_output_fingerprints: upstreamFps(),
+      },
+      invocation_id: randomUUID(),
+      worker_id: `w_r1_${kind}`,
+    });
+    assert.equal(gate.status, "failed", JSON.stringify(gate));
+    const auth = await readAuthorityPageOutput(
+      report_id,
+      gen.generation_id,
+      "07",
+    );
+    assert.ok(auth.ok);
+    assert.equal(auth.value, null);
+    const fence = await readPageFence(report_id, gen.generation_id, "07");
+    assert.notEqual(fence.value?.status, "committed");
+    console.log(`R1-A1 ok — ${kind} failure does not Authority-Commit`);
+  }
+
+  // --- R1-A2. applicable saved, handoff fails, retry resumes handoff ---
+  {
+    await cleanup();
+    const report_id = "rpt_ua_r1_handoff";
+    const gen = await bootWithUpstream(
+      report_id,
+      "g_ua_r1_handoff",
+      baseDc({
+        question:
+          "Should I form a partnership with a co-founder for this venture?",
+      }),
+    );
+    let failOnce = true;
+    setPage07HandoffFailHookForTests(() => {
+      if (!failOnce) return null;
+      failOnce = false;
+      return {
+        ok: false,
+        code: "conflict",
+        detail: "forced handoff failure",
+      };
+    });
+    const first = await runReportPage07ApplicabilityGate({
+      event: {
+        report_id,
+        generation_id: gen.generation_id,
+        generation_epoch: gen.generation_epoch,
+        page_id: "07",
+        locale: "en",
+        upstream_output_fingerprints: upstreamFps(),
+      },
+      invocation_id: randomUUID(),
+      worker_id: "w_r1_h1",
+    });
+    assert.equal(first.status, "failed", JSON.stringify(first));
+    const mid = await loadJob(report_id, gen.generation_id);
+    assert.equal(
+      mid.value?.page_states.find((s) => s.page_id === "07")?.applicability_status,
+      "applicable",
+    );
+    const fenceMid = await readPageFence(report_id, gen.generation_id, "07");
+    assert.equal(fenceMid.value?.status, "claimed");
+
+    setPage07HandoffFailHookForTests(null);
+    const second = await runReportPage07ApplicabilityGate({
+      event: {
+        report_id,
+        generation_id: gen.generation_id,
+        generation_epoch: gen.generation_epoch,
+        page_id: "07",
+        locale: "en",
+        upstream_output_fingerprints: upstreamFps(),
+      },
+      invocation_id: randomUUID(),
+      worker_id: "w_r1_h2",
+    });
+    assert.equal(second.status, "applicable", JSON.stringify(second));
+    const fenceOpen = await readPageFence(report_id, gen.generation_id, "07");
+    assert.equal(fenceOpen.value?.status, "open");
+
+    const generateClaim = await fenceAndClaimPageTask({
+      report_id,
+      generation_id: gen.generation_id,
+      generation_epoch: gen.generation_epoch,
+      page_id: "07",
+      task_type: "generate",
+      input_fingerprint: hashCanonicalPayload({ page07: "after_resume" }),
+      upstream_output_fingerprints: upstreamFps(),
+      worker_id: "w_r1_gen",
+    });
+    assert.ok(generateClaim.ok, JSON.stringify(generateClaim));
+
+    // Repeat gate must not steal generate ownership
+    const third = await runReportPage07ApplicabilityGate({
+      event: {
+        report_id,
+        generation_id: gen.generation_id,
+        generation_epoch: gen.generation_epoch,
+        page_id: "07",
+        locale: "en",
+        upstream_output_fingerprints: upstreamFps(),
+      },
+      invocation_id: randomUUID(),
+      worker_id: "w_r1_h3",
+    });
+    assert.equal(third.status, "skipped");
+    const fenceStill = await readPageFence(report_id, gen.generation_id, "07");
+    assert.equal(fenceStill.value?.task_key, generateClaim.value?.task_key);
+    console.log("R1-A2 ok — handoff resume after applicable+fail");
+  }
+
+  // --- R1-A3. Handoff atomic: fence mismatch must not complete task ---
+  {
+    await cleanup();
+    const report_id = "rpt_ua_r1_atomic";
+    const gen = await bootWithUpstream(
+      report_id,
+      "g_ua_r1_atomic",
+      baseDc({
+        question:
+          "Should I form a partnership with a co-founder for this venture?",
+      }),
+    );
+    await ensurePageFence({
+      report_id,
+      generation_id: gen.generation_id,
+      generation_epoch: gen.generation_epoch,
+      page_id: "07",
+    });
+    const claimed = await fenceAndClaimPageTask({
+      report_id,
+      generation_id: gen.generation_id,
+      generation_epoch: gen.generation_epoch,
+      page_id: "07",
+      task_type: "applicability",
+      input_fingerprint: hashCanonicalPayload({ gate: "atomic" }),
+      upstream_output_fingerprints: upstreamFps(),
+      worker_id: "w_atomic",
+    });
+    assert.ok(claimed.ok);
+    if (!claimed.ok) throw new Error("claim");
+    const fenceBefore = await readPageFence(report_id, gen.generation_id, "07");
+    const taskBefore = await readTask(
+      report_id,
+      gen.generation_id,
+      claimed.value.task_key,
+    );
+    assert.equal(taskBefore.value?.status, "running");
+
+    // Corrupt fence task_key while keeping attempt — handoff must fail closed.
+    const fKey = `report-batch3:${report_id}:${gen.generation_id}:fence:07`;
+    const corrupted = {
+      ...fenceBefore.value!,
+      task_key: "foreign_task_key",
+    };
+    assert.ok(
+      (await casSet(fKey, JSON.stringify(fenceBefore.value), corrupted)).ok,
+    );
+
+    const released = await releaseApplicabilityClaimForGenerate({
+      report_id,
+      generation_id: gen.generation_id,
+      generation_epoch: gen.generation_epoch,
+      page_id: "07",
+      task_key: claimed.value.task_key,
+      attempt_id: claimed.value.attempt_id,
+    });
+    assert.equal(released.ok, false);
+    assert.equal(released.ok ? "" : released.code, "task_conflict");
+
+    const taskAfter = await readTask(
+      report_id,
+      gen.generation_id,
+      claimed.value.task_key,
+    );
+    assert.equal(taskAfter.value?.status, "running");
+    const fenceAfter = await readPageFence(report_id, gen.generation_id, "07");
+    assert.equal(fenceAfter.value?.status, "claimed");
+    assert.equal(fenceAfter.value?.task_key, "foreign_task_key");
+    console.log("R1-A3 ok — fence mismatch leaves Task running (no partial write)");
+  }
+
+  // R1-A3b: fence already committed → task remains running
+  {
+    await cleanup();
+    const report_id = "rpt_ua_r1_atomic_c";
+    const gen = await bootWithUpstream(
+      report_id,
+      "g_ua_r1_atomic_c",
+      baseDc({
+        question:
+          "Should I form a partnership with a co-founder for this venture?",
+      }),
+    );
+    await ensurePageFence({
+      report_id,
+      generation_id: gen.generation_id,
+      generation_epoch: gen.generation_epoch,
+      page_id: "07",
+    });
+    const claimed = await fenceAndClaimPageTask({
+      report_id,
+      generation_id: gen.generation_id,
+      generation_epoch: gen.generation_epoch,
+      page_id: "07",
+      task_type: "applicability",
+      input_fingerprint: hashCanonicalPayload({ gate: "atomic_c" }),
+      upstream_output_fingerprints: upstreamFps(),
+      worker_id: "w_atomic_c",
+    });
+    assert.ok(claimed.ok);
+    if (!claimed.ok) throw new Error("claim");
+    const fenceBefore = await readPageFence(report_id, gen.generation_id, "07");
+    const fKey = `report-batch3:${report_id}:${gen.generation_id}:fence:07`;
+    assert.ok(
+      (
+        await casSet(fKey, JSON.stringify(fenceBefore.value), {
+          ...fenceBefore.value!,
+          status: "committed",
+        })
+      ).ok,
+    );
+    const released = await releaseApplicabilityClaimForGenerate({
+      report_id,
+      generation_id: gen.generation_id,
+      generation_epoch: gen.generation_epoch,
+      page_id: "07",
+      task_key: claimed.value.task_key,
+      attempt_id: claimed.value.attempt_id,
+    });
+    assert.equal(released.ok, false);
+    const taskAfter = await readTask(
+      report_id,
+      gen.generation_id,
+      claimed.value.task_key,
+    );
+    assert.equal(taskAfter.value?.status, "running");
+    console.log("R1-A3b ok — committed fence refuses handoff without task write");
+  }
+
   console.log("UNIT_A_PAGE07: PASS");
+  console.log("REDIS_INTEGRATION: NOT_VERIFIED");
 }
 
 main().catch((err) => {
