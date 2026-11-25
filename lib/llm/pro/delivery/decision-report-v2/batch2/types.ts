@@ -67,6 +67,8 @@ export type RepairPendingPayload = {
 export type ReportBatch2JobRecord = {
   report_id: string;
   generation_id: string;
+  /** Batch3 fencing token; absent on legacy Batch2-only jobs. */
+  generation_epoch?: number;
   locale: string;
   page_states: ReportPageRuntimeState[];
   page_outputs: ReportBatch2PageOutputs;
@@ -83,6 +85,7 @@ export type ReportBatch2OrchestrateEventData = {
   report_id: string;
   generation_id: string;
   locale: string;
+  generation_epoch?: number;
 };
 
 export type ReportBatch2GenerateEventData = {
@@ -92,6 +95,7 @@ export type ReportBatch2GenerateEventData = {
   locale: string;
   input_fingerprint: string;
   upstream_output_fingerprints: ReportUpstreamOutputFingerprints;
+  generation_epoch?: number;
 };
 
 export type ReportBatch2RepairEventData = {
@@ -100,6 +104,7 @@ export type ReportBatch2RepairEventData = {
   page_id: ReportPageId;
   locale: string;
   input_fingerprint: string;
+  generation_epoch?: number;
 };
 
 export type ReportBatch2ApplicabilityEventData = {
@@ -108,6 +113,14 @@ export type ReportBatch2ApplicabilityEventData = {
   page_id: "07";
   locale: string;
   upstream_output_fingerprints: ReportUpstreamOutputFingerprints;
+  generation_epoch?: number;
+};
+
+export type ReportBatch2RecoverEventData = {
+  report_id: string;
+  generation_id: string;
+  generation_epoch: number;
+  locale: string;
 };
 
 export type ReportBatch2WorkerResult =

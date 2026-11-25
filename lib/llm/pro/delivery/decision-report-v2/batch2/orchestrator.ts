@@ -77,6 +77,19 @@ export async function runReportBatch2OrchestratorTick(input: {
     return { ok: false, code: "job_not_found", detail: "batch2 job missing" };
   }
 
+  // Batch3: refuse dispatch from superseded / inactive generations.
+  if (typeof job.generation_epoch === "number") {
+    const { assertGenerationActive } = await import("../batch3/generation-store");
+    const fence = await assertGenerationActive({
+      report_id: job.report_id,
+      generation_id: job.generation_id,
+      generation_epoch: job.generation_epoch,
+    });
+    if (!fence.ok) {
+      return { ok: false, code: fence.code, detail: fence.detail };
+    }
+  }
+
   const ready = resolveReportReadyState(job.page_states);
   const dispatched: ReportBatch2EventPayload[] = [];
   const upstreamAll = collectOutputFingerprints(job);
@@ -90,6 +103,7 @@ export async function runReportBatch2OrchestratorTick(input: {
       generation_id: job.generation_id,
       locale: job.locale,
       upstream_output_fingerprints: upstreamAll,
+      generation_epoch: job.generation_epoch,
     });
     pendingSend.push(payload);
     updatePageState(job, page_id, { outcome: "queued" });
@@ -125,6 +139,7 @@ export async function runReportBatch2OrchestratorTick(input: {
       locale: job.locale,
       input_fingerprint: fp.result.fingerprint,
       upstream_output_fingerprints: upstream,
+      generation_epoch: job.generation_epoch,
     });
     pendingSend.push(payload);
     updatePageState(job, page_id, {
@@ -150,9 +165,44 @@ export async function runReportBatch2OrchestratorTick(input: {
   }
 
   if (pendingSend.length) {
-    const send = await sendReportBatch2Events(pendingSend);
-    if (!send.ok) {
-      return send;
+    // Batch3 outbox: persist intent before send when epoch is present.
+    if (typeof job.generation_epoch === "number") {
+      const { enqueueDispatchIntent, markIntentFailed, markIntentSent } =
+        await import("../batch3/dispatch-intent");
+      const intents = [];
+      for (const payload of pendingSend) {
+        const intent = await enqueueDispatchIntent({
+          report_id: job.report_id,
+          generation_id: job.generation_id,
+          generation_epoch: job.generation_epoch,
+          event_name: payload.name,
+          page_id: "page_id" in payload.data ? payload.data.page_id : null,
+          input_fingerprint:
+            "input_fingerprint" in payload.data
+              ? String(payload.data.input_fingerprint ?? "")
+              : null,
+          payload: { ...payload.data },
+        });
+        if (!intent.ok) {
+          return { ok: false, code: intent.code, detail: intent.detail };
+        }
+        intents.push(intent.value);
+      }
+      const send = await sendReportBatch2Events(pendingSend);
+      if (!send.ok) {
+        for (const intent of intents) {
+          await markIntentFailed(intent, send.detail);
+        }
+        return send;
+      }
+      for (const intent of intents) {
+        await markIntentSent(intent);
+      }
+    } else {
+      const send = await sendReportBatch2Events(pendingSend);
+      if (!send.ok) {
+        return send;
+      }
     }
   }
 
@@ -166,7 +216,7 @@ export async function startReportBatch2Production(input: {
   inputs: ReportBatch2JobInputs;
   persist_kv?: boolean;
 }): Promise<
-  | { ok: true; report_id: string; generation_id: string }
+  | { ok: true; report_id: string; generation_id: string; generation_epoch?: number }
   | { ok: false; code: string; detail: string }
 > {
   void input.persist_kv;
@@ -190,14 +240,36 @@ export async function startReportBatch2Production(input: {
   const generation_id = (input.generation_id?.trim() || randomUUID()).trim();
   const report_id = input.report_id.trim();
 
+  // Batch3 fencing: allocate monotonic epoch and activate before events.
+  const { allocateGeneration, activateGeneration } = await import("../batch3/generation-store");
+  const allocated = await allocateGeneration({
+    report_id,
+    locale: input.locale,
+    generation_id,
+  });
+  if (!allocated.ok) {
+    return { ok: false, code: allocated.code, detail: allocated.detail };
+  }
+  const generation_epoch = allocated.value.generation_epoch;
+  const gid = allocated.value.generation_id;
+
+  const activated = await activateGeneration({
+    record: allocated.value,
+    job_id: report_id,
+  });
+  if (!activated.ok) {
+    return { ok: false, code: activated.code, detail: activated.detail };
+  }
+
   // Persist full initial Job (incl. orchestrating) BEFORE any event — never
   // write a stale create-time snapshot after workers may have started.
   const created = await createJobAndPersist({
     report_id,
-    generation_id,
+    generation_id: gid,
     locale: input.locale,
     inputs: input.inputs,
     status: "orchestrating",
+    generation_epoch,
   });
   if (!created.ok) {
     return { ok: false, code: created.code, detail: created.detail };
@@ -205,12 +277,13 @@ export async function startReportBatch2Production(input: {
 
   const payload = buildOrchestratePayload({
     report_id,
-    generation_id,
+    generation_id: gid,
     locale: input.locale,
+    generation_epoch,
   });
   const send = await sendReportBatch2Events([payload]);
   if (!send.ok) {
-    await updateJobStatus(report_id, generation_id, "failed").catch(() => undefined);
+    await updateJobStatus(report_id, gid, "failed").catch(() => undefined);
     return {
       ok: false,
       code: send.code,
@@ -218,7 +291,7 @@ export async function startReportBatch2Production(input: {
     };
   }
 
-  return { ok: true, report_id, generation_id };
+  return { ok: true, report_id, generation_id: gid, generation_epoch };
 }
 
 export function pageIdsFromDispatched(

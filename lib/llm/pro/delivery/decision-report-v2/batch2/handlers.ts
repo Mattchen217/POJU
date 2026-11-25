@@ -68,6 +68,7 @@ export async function handleGenerateEvent(data: ReportBatch2GenerateEventData): 
           page_id: data.page_id,
           locale: data.locale,
           input_fingerprint: pending.input_fingerprint,
+          generation_epoch: data.generation_epoch,
         }),
       ]);
     }

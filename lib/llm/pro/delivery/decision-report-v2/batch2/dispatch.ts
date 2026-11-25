@@ -71,6 +71,7 @@ export function buildOrchestratePayload(input: {
   report_id: string;
   generation_id: string;
   locale: string;
+  generation_epoch?: number;
 }): { name: typeof REPORT_BATCH2_EVENTS.ORCHESTRATE; data: ReportBatch2OrchestrateEventData } {
   return {
     name: REPORT_BATCH2_EVENTS.ORCHESTRATE,
@@ -78,6 +79,7 @@ export function buildOrchestratePayload(input: {
       report_id: input.report_id.trim(),
       generation_id: input.generation_id.trim(),
       locale: input.locale.trim(),
+      generation_epoch: input.generation_epoch,
     },
   };
 }
@@ -89,6 +91,7 @@ export function buildGeneratePayload(input: {
   locale: string;
   input_fingerprint: string;
   upstream_output_fingerprints: ReportUpstreamOutputFingerprints;
+  generation_epoch?: number;
 }): { name: typeof REPORT_BATCH2_EVENTS.GENERATE; data: ReportBatch2GenerateEventData } {
   return {
     name: REPORT_BATCH2_EVENTS.GENERATE,
@@ -99,6 +102,7 @@ export function buildGeneratePayload(input: {
       locale: input.locale.trim(),
       input_fingerprint: input.input_fingerprint.trim(),
       upstream_output_fingerprints: input.upstream_output_fingerprints,
+      generation_epoch: input.generation_epoch,
     },
   };
 }
@@ -109,6 +113,7 @@ export function buildRepairPayload(input: {
   page_id: ReportPageId;
   locale: string;
   input_fingerprint: string;
+  generation_epoch?: number;
 }): { name: typeof REPORT_BATCH2_EVENTS.REPAIR; data: ReportBatch2RepairEventData } {
   return {
     name: REPORT_BATCH2_EVENTS.REPAIR,
@@ -118,6 +123,7 @@ export function buildRepairPayload(input: {
       page_id: input.page_id,
       locale: input.locale.trim(),
       input_fingerprint: input.input_fingerprint.trim(),
+      generation_epoch: input.generation_epoch,
     },
   };
 }
@@ -127,6 +133,7 @@ export function buildApplicabilityPayload(input: {
   generation_id: string;
   locale: string;
   upstream_output_fingerprints: ReportUpstreamOutputFingerprints;
+  generation_epoch?: number;
 }): {
   name: typeof REPORT_BATCH2_EVENTS.APPLICABILITY;
   data: ReportBatch2ApplicabilityEventData;
@@ -139,6 +146,7 @@ export function buildApplicabilityPayload(input: {
       page_id: "07",
       locale: input.locale.trim(),
       upstream_output_fingerprints: input.upstream_output_fingerprints,
+      generation_epoch: input.generation_epoch,
     },
   };
 }

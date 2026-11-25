@@ -620,7 +620,7 @@ async function main(): Promise<void> {
 
   // --- F. Registration + maxDuration ---
   {
-    assert.equal(reportBatch2InngestFunctions.length, 4);
+    assert.ok(reportBatch2InngestFunctions.length >= 4);
     for (const meta of REPORT_BATCH2_FUNCTION_META) {
       assert.ok(reportBatch2InngestFunctions.some((fn) => fn.id() === meta.id));
     }

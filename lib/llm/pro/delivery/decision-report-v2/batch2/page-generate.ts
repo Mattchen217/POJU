@@ -212,6 +212,36 @@ export async function runReportPageGenerateOnce(input: {
     return { status: "failed", code: runningSaved.code, detail: runningSaved.detail };
   }
 
+  // Batch3: fence + claim before model. Skip when legacy jobs lack epoch.
+  let batch3Attempt: { task_key: string; attempt_id: string } | null = null;
+  const epoch = input.event.generation_epoch ?? job.generation_epoch;
+  if (typeof epoch === "number") {
+    const { fenceAndClaimPageTask } = await import("../batch3/worker-guard");
+    const claimed = await fenceAndClaimPageTask({
+      report_id: input.event.report_id,
+      generation_id: input.event.generation_id,
+      generation_epoch: epoch,
+      page_id,
+      task_type: "generate",
+      input_fingerprint: fp.result.fingerprint,
+      upstream_output_fingerprints: input.event.upstream_output_fingerprints,
+      worker_id: input.worker_id ?? "report-page-generate",
+    });
+    if (!claimed.ok) {
+      if (claimed.code === "already_completed" || claimed.code === "already_claimed") {
+        return { status: "skipped" };
+      }
+      if (claimed.code === "stale_generation") {
+        return { status: "failed", code: claimed.code, detail: claimed.detail };
+      }
+      return { status: "failed", code: claimed.code, detail: claimed.detail };
+    }
+    batch3Attempt = {
+      task_key: claimed.value.task_key,
+      attempt_id: claimed.value.attempt_id,
+    };
+  }
+
   const started_at = new Date().toISOString();
   const invoke = getBatch2ModelInvoke();
   let model_call_id: string | null = null;
@@ -294,6 +324,44 @@ export async function runReportPageGenerateOnce(input: {
   }
 
   const output_fp = hashCanonicalPayload(validated.page);
+  if (batch3Attempt && typeof epoch === "number") {
+    const { commitPageResult } = await import("../batch3/fenced-commit");
+    const { reportPageDefinition } = await import("../orchestration");
+    const def = reportPageDefinition(page_id);
+    const committed = await commitPageResult({
+      report_id: input.event.report_id,
+      generation_id: input.event.generation_id,
+      generation_epoch: epoch,
+      page_id,
+      attempt_id: batch3Attempt.attempt_id,
+      task_key: batch3Attempt.task_key,
+      output: validated.page,
+      output_fingerprint: output_fp,
+      state_patch: {
+        outcome: "completed",
+        input_fingerprint: fp.result.fingerprint,
+      },
+      provenance: {
+        report_id: input.event.report_id,
+        generation_id: input.event.generation_id,
+        generation_epoch: epoch,
+        page_id,
+        input_fingerprint: fp.result.fingerprint,
+        upstream_output_fingerprints: input.event.upstream_output_fingerprints,
+        page_contract_version: def.production_version,
+        prompt_version: def.prompt_version,
+        validator_version: def.validator_version,
+        output_fingerprint: output_fp,
+        attempt_id: batch3Attempt.attempt_id,
+        task_key: batch3Attempt.task_key,
+      },
+    });
+    if (!committed.ok) {
+      return { status: "failed", code: committed.code, detail: committed.detail };
+    }
+    return { status: "completed" };
+  }
+
   setPageOutput(job, page_id, validated.page, output_fp);
   updatePageState(job, page_id, {
     outcome: "completed",

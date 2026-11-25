@@ -39,6 +39,7 @@ export type JobStoreResult<T> =
 type JobMeta = {
   report_id: string;
   generation_id: string;
+  generation_epoch?: number;
   locale: string;
   inputs: ReportBatch2JobInputs;
   status: ReportBatch2JobStatus;
@@ -304,6 +305,7 @@ function assembleJob(
   const job: ReportBatch2JobRecord = {
     report_id: meta.report_id,
     generation_id: meta.generation_id,
+    generation_epoch: meta.generation_epoch,
     locale: meta.locale,
     page_states,
     page_outputs,
@@ -522,6 +524,7 @@ export async function saveJob(
       const meta: JobMeta = {
         report_id: job.report_id,
         generation_id: job.generation_id,
+        generation_epoch: job.generation_epoch ?? live?.generation_epoch,
         locale: job.locale,
         inputs: live?.inputs ?? job.inputs,
         status: job.status,
@@ -593,6 +596,7 @@ export async function createJobAndPersist(input: {
   locale: string;
   inputs: ReportBatch2JobInputs;
   status?: ReportBatch2JobStatus;
+  generation_epoch?: number;
 }): Promise<JobStoreResult<ReportBatch2JobRecord>> {
   if (!isReportBatch2SharedStoreAvailable()) return storeUnavailable();
   const now = new Date().toISOString();
@@ -601,6 +605,7 @@ export async function createJobAndPersist(input: {
   const meta: JobMeta = {
     report_id,
     generation_id,
+    generation_epoch: input.generation_epoch,
     locale: input.locale.trim(),
     inputs: input.inputs,
     status: input.status ?? "pending",
@@ -704,6 +709,7 @@ export async function createJob(input: {
   inputs: ReportBatch2JobInputs;
   persist_kv?: boolean;
   status?: ReportBatch2JobStatus;
+  generation_epoch?: number;
 }): Promise<JobStoreResult<ReportBatch2JobRecord>> {
   void input.persist_kv;
   return createJobAndPersist(input);

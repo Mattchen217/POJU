@@ -228,3 +228,17 @@ export {
   type ReportBatch2JobRecord,
   type ReportBatch2JobInputs,
 } from "./batch2";
+export {
+  allocateGeneration,
+  activateGeneration,
+  assertGenerationActive,
+  computeTaskKey,
+  claimTask,
+  ensureQueuedTask,
+  commitPageResult,
+  invalidateFromPage,
+  runReportBatch3Recovery,
+  enqueueDispatchIntent,
+  resetBatch3KeysForTests,
+  fenceAndClaimPageTask,
+} from "./batch3";

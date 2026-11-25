@@ -410,11 +410,15 @@ async function main(): Promise<void> {
   {
     await cleanup();
     const checks = inspectReportBatch2FunctionRegistration();
-    assert.equal(checks.length, 4);
+    assert.ok(checks.length >= 4);
     for (const c of checks) {
       assert.equal(c.registered, true, c.id);
     }
-    assert.equal(reportBatch2InngestFunctions.length, 4);
+    assert.ok(reportBatch2InngestFunctions.length >= 4);
+    assert.ok(
+      reportBatch2InngestFunctions.some((fn) => fn.id() === "report-page-recovery"),
+      "Batch3 recovery Function must be registered",
+    );
 
     const genSrc = readFileSync(
       join(process.cwd(), "lib/inngest/functions/report-page-generate.ts"),

@@ -47,6 +47,56 @@ export async function runReportPage07ApplicabilityGate(input: {
     };
   }
 
+  // Batch3 fencing before gate mutation (no LLM).
+  let batch3Attempt: { task_key: string; attempt_id: string } | null = null;
+  const epoch = input.event.generation_epoch ?? job.generation_epoch;
+  if (typeof epoch === "number") {
+    const { assertGenerationActive } = await import("../batch3/generation-store");
+    const fence = await assertGenerationActive({
+      report_id: input.event.report_id,
+      generation_id: input.event.generation_id,
+      generation_epoch: epoch,
+    });
+    if (!fence.ok) {
+      return { status: "failed", code: fence.code, detail: fence.detail };
+    }
+    const { fenceAndClaimPageTask } = await import("../batch3/worker-guard");
+    const claimed = await fenceAndClaimPageTask({
+      report_id: input.event.report_id,
+      generation_id: input.event.generation_id,
+      generation_epoch: epoch,
+      page_id,
+      task_type: "applicability",
+      input_fingerprint: hashCanonicalPayload({
+        gate: "page07",
+        upstream: input.event.upstream_output_fingerprints,
+      }),
+      upstream_output_fingerprints: input.event.upstream_output_fingerprints,
+      worker_id: input.worker_id ?? "report-page-applicability",
+    });
+    if (!claimed.ok) {
+      if (claimed.code === "already_completed" || claimed.code === "already_claimed") {
+        return { status: "skipped" };
+      }
+      return { status: "failed", code: claimed.code, detail: claimed.detail };
+    }
+    batch3Attempt = {
+      task_key: claimed.value.task_key,
+      attempt_id: claimed.value.attempt_id,
+    };
+  }
+
+  async function completeApplicabilityTask(): Promise<void> {
+    if (!batch3Attempt || typeof epoch !== "number") return;
+    const { completeTask } = await import("../batch3/task-store");
+    await completeTask({
+      report_id: input.event.report_id,
+      generation_id: input.event.generation_id,
+      task_key: batch3Attempt.task_key,
+      attempt_id: batch3Attempt.attempt_id,
+    });
+  }
+
   const started_at = new Date().toISOString();
   const applicability = evaluatePage07Applicability(job.inputs.dc);
 
@@ -69,6 +119,7 @@ export async function runReportPage07ApplicabilityGate(input: {
     if (!saved.ok) {
       return { status: "failed", code: saved.code, detail: saved.detail };
     }
+    await completeApplicabilityTask();
     return { status: "applicable", applicability_status: "applicable" };
   }
 
@@ -115,6 +166,7 @@ export async function runReportPage07ApplicabilityGate(input: {
     if (!saved.ok) {
       return { status: "failed", code: saved.code, detail: saved.detail };
     }
+    await completeApplicabilityTask();
     return {
       status: "not_applicable",
       applicability_status: "not_applicable",
@@ -167,6 +219,7 @@ export async function runReportPage07ApplicabilityGate(input: {
   if (!saved.ok) {
     return { status: "failed", code: saved.code, detail: saved.detail };
   }
+  await completeApplicabilityTask();
   return {
     status: "insufficient_information",
     applicability_status: "insufficient_information",

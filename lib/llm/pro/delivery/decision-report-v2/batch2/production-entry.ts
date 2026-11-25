@@ -131,7 +131,7 @@ export async function startFinalDeliveryReportBatch2(
   job_id: string,
   input: FinalDeliveryJobInput,
 ): Promise<
-  | { ok: true; generation_id: string; reused?: boolean }
+  | { ok: true; generation_id: string; generation_epoch?: number; reused?: boolean }
   | { ok: false; code: string; detail: string }
 > {
   if (!shouldRunReportBatch2ForFinalDelivery(input)) {
@@ -177,39 +177,59 @@ export async function startFinalDeliveryReportBatch2(
   const built = buildBatch2InputsFromFinalDelivery(job_id, input, lab);
   if (!built.ok) return built;
 
-  // 1) Persist Job  2) Write pointer  3) Send ORCHESTRATE
-  // Workers must not run before pointer is queryable.
+  // Batch3: allocate epoch + activate (also writes Batch2 pointer), then Job, then event.
+  const { allocateGeneration, activateGeneration } = await import("../batch3/generation-store");
+  const allocated = await allocateGeneration({
+    report_id: job_id,
+    locale: input.locale,
+    generation_id,
+  });
+  if (!allocated.ok) {
+    return { ok: false, code: allocated.code, detail: allocated.detail };
+  }
+  const activated = await activateGeneration({
+    record: allocated.value,
+    job_id,
+  });
+  if (!activated.ok) {
+    return { ok: false, code: activated.code, detail: activated.detail };
+  }
+  const generation_epoch = allocated.value.generation_epoch;
+  const gid = allocated.value.generation_id;
+
   const created = await createJobAndPersist({
     report_id: job_id,
-    generation_id,
+    generation_id: gid,
     locale: input.locale,
     inputs: built.inputs,
     status: "orchestrating",
+    generation_epoch,
   });
   if (!created.ok) {
     return { ok: false, code: created.code, detail: created.detail };
   }
 
-  const pointer: ReportBatch2ActivePointer = {
+  // Mirror Batch2 pointer (activateGeneration already wrote; reinforce for readers)
+  const ptrWrite = await writeActivePointer(job_id, {
     report_id: job_id,
-    generation_id,
+    generation_id: gid,
     started_at: new Date().toISOString(),
-  };
-  const ptrWrite = await writeActivePointer(job_id, pointer);
+  });
   if (!ptrWrite.ok) {
-    await updateJobStatus(job_id, generation_id, "failed").catch(() => undefined);
+    await updateJobStatus(job_id, gid, "failed").catch(() => undefined);
     return ptrWrite;
   }
 
   const send = await sendReportBatch2Events([
     buildOrchestratePayload({
       report_id: job_id,
-      generation_id,
+      generation_id: gid,
       locale: input.locale,
+      generation_epoch,
     }),
   ]);
   if (!send.ok) {
-    await updateJobStatus(job_id, generation_id, "failed").catch(() => undefined);
+    await updateJobStatus(job_id, gid, "failed").catch(() => undefined);
     return {
       ok: false,
       code: send.code,
@@ -217,7 +237,7 @@ export async function startFinalDeliveryReportBatch2(
     };
   }
 
-  return { ok: true, generation_id };
+  return { ok: true, generation_id: gid, generation_epoch };
 }
 
 export async function mergeReportBatch2IntoV3Lab(
