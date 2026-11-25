@@ -39,7 +39,7 @@ import {
 } from "../page08/production";
 import { REPORT_BATCH2_EVENTS } from "./events";
 import {
-  appendInvocationLog,
+  appendInvocationLogAndPersist,
   clearRepairPending,
   loadJob,
   saveJob,
@@ -198,7 +198,8 @@ export async function runReportPageRepairOnce(input: {
     model_call_id = model.model_call_id;
     rawText = model.content?.trim() ?? "";
   } catch (err) {
-    appendInvocationLog(job, {
+    // Persist invocation before failRepair (do not rely on post-commit saveJob).
+    await appendInvocationLogAndPersist(job, {
       page_id,
       event_name: REPORT_BATCH2_EVENTS.REPAIR,
       worker_id: input.worker_id ?? "report-page-repair",
@@ -213,7 +214,9 @@ export async function runReportPageRepairOnce(input: {
     );
   }
 
-  appendInvocationLog(job, {
+  // Persist invocation log independently BEFORE clearRepairPending dirties the
+  // page blob — Authority Commit must not be followed by a stale saveJob(job).
+  const logged = await appendInvocationLogAndPersist(job, {
     page_id,
     event_name: REPORT_BATCH2_EVENTS.REPAIR,
     worker_id: input.worker_id ?? "report-page-repair",
@@ -222,7 +225,11 @@ export async function runReportPageRepairOnce(input: {
     started_at,
     ended_at: new Date().toISOString(),
   });
+  if (!logged.ok) {
+    return { status: "failed", code: logged.code, detail: logged.detail };
+  }
 
+  // Memory-only until failRepair save (release ok) or Authority Commit blob write.
   clearRepairPending(job, page_id);
 
   if (scareRedlineSnippet(rawText)) {
@@ -282,8 +289,8 @@ export async function runReportPageRepairOnce(input: {
     if (!committed.ok) {
       return failRepair(committed.code, committed.detail);
     }
-    // Authority Commit already persisted completed + cleared repair on the page
-    // blob. Do not saveJob the pre-commit in-memory "running" snapshot (stale rev).
+    // Pending cleared by Authority PageBlob (repair: null). Never saveJob the
+    // pre-commit running snapshot (would attempt stale_page_write).
     return { status: "completed" };
   }
 

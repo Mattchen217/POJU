@@ -957,6 +957,7 @@ async function main(): Promise<void> {
       model_call_id: "mc_repair_b8",
     }));
 
+    const repairInvocationId = randomUUID();
     const repairResult = await runReportPageRepairOnce({
       event: {
         report_id,
@@ -966,7 +967,7 @@ async function main(): Promise<void> {
         locale: "en",
         input_fingerprint: fp.result.fingerprint,
       },
-      invocation_id: randomUUID(),
+      invocation_id: repairInvocationId,
       worker_id: "w_ub_b8_repair",
     });
     assert.equal(
@@ -993,8 +994,26 @@ async function main(): Promise<void> {
       jobDone.value!.page_states.find((s) => s.page_id === page_id)?.outcome,
       "completed",
     );
+    assert.equal(
+      hashCanonicalPayload(jobDone.value!.page_outputs[page_id]),
+      repairFp,
+      "PageBlob output must match Repair Authority Output",
+    );
+    const repairInv = jobDone.value!.invocation_log.filter(
+      (e) =>
+        e.event_name === "report/page.repair.requested" &&
+        e.page_id === page_id &&
+        e.invocation_id === repairInvocationId,
+    );
+    assert.equal(
+      repairInv.length,
+      1,
+      `expected persisted repair invocation_log, got ${JSON.stringify(jobDone.value!.invocation_log)}`,
+    );
+    assert.equal(repairInv[0]!.worker_id, "w_ub_b8_repair");
+    assert.equal(repairInv[0]!.model_call_id, "mc_repair_b8");
     console.log(
-      "B8 ok — Repair Worker Validator + Authority Commit closed loop",
+      "B8 ok — Repair Worker Validator + Authority Commit + invocation_log",
     );
   }
 
