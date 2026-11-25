@@ -4,6 +4,7 @@
  */
 
 import {
+  bindPageValidityRev,
   getJob,
   saveJob,
   updatePageState,
@@ -259,6 +260,7 @@ export async function invalidateFromPage(input: {
       applicability_status: page_id === "07" ? null : undefined,
     });
     delete job.page_outputs[page_id];
+    bindPageValidityRev(job, page_id, auth.value.validity_rev, null);
 
     for (const dep of requiredDependentsOf(page_id)) {
       if (!visited.has(dep)) queue.push(dep);

@@ -10,6 +10,8 @@ export * from "./dispatch-intent";
 export * from "./recovery";
 export * from "./worker-guard";
 export * from "./page-fence";
+export * from "./auth-output";
+export * from "./persist-page-blob";
 
 // Explicit re-exports used by tests / workers
 export { writePageProvenance, readPageProvenance } from "./provenance";
@@ -17,3 +19,5 @@ export { listPendingIntents, markIntentFailed, markIntentSent } from "./dispatch
 export { readActiveGeneration } from "./generation-store";
 export { ensurePageFence, readPageFence } from "./page-fence";
 export { invalidatePageAuthority } from "./invalidation";
+export { readAuthorityPageOutput } from "./auth-output";
+export { persistPageBlobUnderCommittedFence } from "./persist-page-blob";

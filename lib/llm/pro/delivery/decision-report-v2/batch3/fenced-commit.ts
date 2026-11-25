@@ -6,12 +6,6 @@
 
 import type { ReportPageId, ReportPageRuntimeState } from "../orchestration/types";
 import {
-  getJob,
-  saveJob,
-  setPageOutput,
-  updatePageState,
-} from "../batch2/job-store";
-import {
   evalTxn,
   isMemoryAtomicAvailable,
   kvGet,
@@ -19,8 +13,14 @@ import {
   trackBatch3Key,
   ttlSeconds,
 } from "./kv-cas";
+import {
+  authOutputKey,
+  type AuthorityPageOutput,
+  writeAuthorityPageOutput,
+} from "./auth-output";
 import { generationStoreKeys } from "./generation-store";
 import { fingerprintsMatch, pageFenceKey } from "./page-fence";
+import { persistPageBlobUnderCommittedFence } from "./persist-page-blob";
 import type {
   ActiveGenerationPointer,
   Batch3FailCode,
@@ -51,6 +51,7 @@ local activeKey = KEYS[1]
 local taskKey = KEYS[2]
 local fenceKey = KEYS[3]
 local provKey = KEYS[4]
+local authOutKey = KEYS[5]
 local expectGenId = ARGV[1]
 local expectEpoch = tonumber(ARGV[2])
 local expectAttempt = ARGV[3]
@@ -59,7 +60,8 @@ local expectInputFp = ARGV[5]
 local nextTaskJson = ARGV[6]
 local nextFenceJson = ARGV[7]
 local nextProvJson = ARGV[8]
-local ttl = tonumber(ARGV[9])
+local nextAuthOutJson = ARGV[9]
+local ttl = tonumber(ARGV[10])
 
 local cur = redis.call("GET", activeKey)
 if cur == false or cur == nil then return -1 end
@@ -91,11 +93,12 @@ if tonumber(fence.generation_epoch) ~= expectEpoch then return -1 end
 redis.call("SET", taskKey, nextTaskJson, "EX", ttl)
 redis.call("SET", fenceKey, nextFenceJson, "EX", ttl)
 redis.call("SET", provKey, nextProvJson, "EX", ttl)
+redis.call("SET", authOutKey, nextAuthOutJson, "EX", ttl)
 return 1
 `;
 
 type CommitAuthResult =
-  | { ok: true; provenance: PageProvenance }
+  | { ok: true; provenance: PageProvenance; authority_output: AuthorityPageOutput }
   | { ok: false; code: Exclude<Batch3FailCode, "success">; detail: string };
 
 function buildProvenance(
@@ -161,6 +164,8 @@ function commitAuthorityMemory(input: {
   task_key: string;
   output_fingerprint: string;
   validity_rev: number;
+  output: unknown;
+  state_patch: Partial<ReportPageRuntimeState>;
   provenanceBase: Omit<
     PageProvenance,
     "stale" | "stale_reason" | "completed_at" | "validity_rev" | "output_fingerprint" | "attempt_id" | "task_key"
@@ -170,12 +175,27 @@ function commitAuthorityMemory(input: {
   const tKey = taskKeyPath(input.report_id, input.generation_id, input.task_key);
   const fKey = pageFenceKey(input.report_id, input.generation_id, input.page_id);
   const pKey = provKey(input.report_id, input.generation_id, input.page_id);
+  const oKey = authOutputKey(input.report_id, input.generation_id, input.page_id);
   trackBatch3Key(aKey);
   trackBatch3Key(tKey);
   trackBatch3Key(fKey);
   trackBatch3Key(pKey);
+  trackBatch3Key(oKey);
 
   const provenance = buildProvenance(input, input.provenanceBase);
+  const authority_output: AuthorityPageOutput = {
+    report_id: input.report_id.trim(),
+    generation_id: input.generation_id.trim(),
+    generation_epoch: input.generation_epoch,
+    page_id: input.page_id,
+    validity_rev: input.validity_rev,
+    attempt_id: input.attempt_id,
+    task_key: input.task_key,
+    output_fingerprint: input.output_fingerprint,
+    output: input.output,
+    state_patch: input.state_patch,
+    completed_at: provenance.completed_at,
+  };
 
   const ran = runMemoryAtomic((ops) => {
     const active = ops.getJson(aKey) as ActiveGenerationPointer | null;
@@ -294,7 +314,8 @@ function commitAuthorityMemory(input: {
     ops.setJson(fKey, nextFence);
     ops.setJson(pKey, provenance);
     ops.setJson(tKey, nextTask);
-    return { ok: true as const, provenance };
+    ops.setJson(oKey, authority_output);
+    return { ok: true as const, provenance, authority_output };
   });
 
   if (!ran.ok) return { ok: false, code: ran.code, detail: ran.detail };
@@ -310,6 +331,8 @@ async function commitAuthorityRedis(input: {
   task_key: string;
   output_fingerprint: string;
   validity_rev: number;
+  output: unknown;
+  state_patch: Partial<ReportPageRuntimeState>;
   provenanceBase: Omit<
     PageProvenance,
     "stale" | "stale_reason" | "completed_at" | "validity_rev" | "output_fingerprint" | "attempt_id" | "task_key"
@@ -331,6 +354,19 @@ async function commitAuthorityRedis(input: {
 
   const provenance = buildProvenance(input, input.provenanceBase);
   const now = provenance.completed_at;
+  const authority_output: AuthorityPageOutput = {
+    report_id: input.report_id.trim(),
+    generation_id: input.generation_id.trim(),
+    generation_epoch: input.generation_epoch,
+    page_id: input.page_id,
+    validity_rev: input.validity_rev,
+    attempt_id: input.attempt_id,
+    task_key: input.task_key,
+    output_fingerprint: input.output_fingerprint,
+    output: input.output,
+    state_patch: input.state_patch,
+    completed_at: now,
+  };
   const fence = await kvGet<PageFence>(
     pageFenceKey(input.report_id, input.generation_id, input.page_id),
   );
@@ -359,10 +395,12 @@ async function commitAuthorityRedis(input: {
   const tKey = taskKeyPath(input.report_id, input.generation_id, input.task_key);
   const fKey = pageFenceKey(input.report_id, input.generation_id, input.page_id);
   const pKey = provKey(input.report_id, input.generation_id, input.page_id);
+  const oKey = authOutputKey(input.report_id, input.generation_id, input.page_id);
+  trackBatch3Key(oKey);
 
   const evaled = await evalTxn(
     FENCED_COMMIT_LUA,
-    [aKey, tKey, fKey, pKey],
+    [aKey, tKey, fKey, pKey, oKey],
     [
       input.generation_id.trim(),
       String(input.generation_epoch),
@@ -372,12 +410,13 @@ async function commitAuthorityRedis(input: {
       JSON.stringify(nextTask),
       JSON.stringify(nextFence),
       JSON.stringify(provenance),
+      JSON.stringify(authority_output),
       String(ttlSeconds()),
     ],
   );
   if (!evaled.ok) return evaled;
   const code = Number(evaled.value);
-  if (code === 1) return { ok: true, provenance };
+  if (code === 1) return { ok: true, provenance, authority_output };
   return mapLuaCode(code);
 }
 
@@ -398,6 +437,8 @@ export async function commitPageResult(input: {
     completed_at?: string;
     validity_rev?: number;
   };
+  /** Test hook: pause after authority commit before blob persist. */
+  _test_after_authority?: () => Promise<void> | void;
 }): Promise<Batch3Result<{ provenance: PageProvenance }>> {
   let validity_rev = input.provenance.validity_rev;
   if (typeof validity_rev !== "number") {
@@ -432,6 +473,8 @@ export async function commitPageResult(input: {
     task_key: input.task_key,
     output_fingerprint: input.output_fingerprint,
     validity_rev,
+    output: input.output,
+    state_patch: input.state_patch,
     provenanceBase,
   };
 
@@ -441,45 +484,42 @@ export async function commitPageResult(input: {
 
   if (!auth.ok) return auth;
 
-  // Persist Batch2 page blob only after authority commit; re-check fence.
-  const fenceCheck = await kvGet<PageFence>(
-    pageFenceKey(input.report_id, input.generation_id, input.page_id),
-  );
-  if (!fenceCheck.ok) return fenceCheck;
-  if (
-    !fenceCheck.value ||
-    fenceCheck.value.status !== "committed" ||
-    fenceCheck.value.validity_rev !== validity_rev ||
-    fenceCheck.value.attempt_id !== input.attempt_id
-  ) {
-    return {
-      ok: false,
-      code: "stale_page",
-      detail: "page fence changed after atomic authority commit",
-    };
+  // Ensure auth-output exists even if Redis path omitted it somehow
+  if (!isMemoryAtomicAvailable()) {
+    await writeAuthorityPageOutput(auth.authority_output);
   }
 
-  const job = await getJob(input.report_id, input.generation_id);
-  if (!job) {
-    return {
-      ok: false,
-      code: "kv_write_failed",
-      detail: "authority committed but batch2 job missing — recovery can replay page blob",
-    };
+  if (input._test_after_authority) {
+    await input._test_after_authority();
   }
 
-  setPageOutput(job, input.page_id, input.output, input.output_fingerprint);
-  updatePageState(job, input.page_id, {
-    ...input.state_patch,
+  const state: ReportPageRuntimeState = {
+    page_id: input.page_id,
     outcome: input.state_patch.outcome ?? "completed",
     output_fingerprint: input.output_fingerprint,
+    input_fingerprint:
+      input.state_patch.input_fingerprint ??
+      input.provenance.input_fingerprint,
+    ...input.state_patch,
+  };
+
+  // Atomic fence-gated blob persist — invalidation cannot be overwritten by late completed.
+  const persisted = await persistPageBlobUnderCommittedFence({
+    report_id: input.report_id,
+    generation_id: input.generation_id,
+    page_id: input.page_id,
+    validity_rev,
+    attempt_id: input.attempt_id,
+    output_fingerprint: input.output_fingerprint,
+    state,
+    output: input.output,
   });
-  const saved = await saveJob(job);
-  if (!saved.ok) {
+  if (!persisted.ok) {
+    // Authority remains committed; Recovery can replay from auth-output.
     return {
       ok: false,
-      code: saved.code === "kv_unavailable" ? "kv_unavailable" : "kv_write_failed",
-      detail: `${saved.detail} (authority committed; page blob persist failed)`,
+      code: persisted.code,
+      detail: `${persisted.detail} (authority committed; recovery can replay page blob)`,
     };
   }
 

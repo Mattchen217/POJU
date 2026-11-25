@@ -47,11 +47,18 @@ type JobMeta = {
   updated_at: string;
 };
 
-type PageBlob = {
+export type PageBlob = {
   rev: number;
   state: ReportPageRuntimeState;
   output?: unknown;
   repair?: RepairPendingPayload | null;
+  /**
+   * Batch3 page-fence validity_rev bound to this blob.
+   * Completed outputs with a lower rev must never overwrite a newer fence generation.
+   */
+  validity_rev?: number;
+  /** Fingerprint recorded when blob was written under a committed fence. */
+  authority_output_fingerprint?: string | null;
 };
 
 type JobDirty = {
@@ -61,6 +68,9 @@ type JobDirty = {
   pendingInvocation: InvocationLogEntry[];
   /** rev observed at load (or last successful write) per page */
   pageRev: Map<ReportPageId, number>;
+  /** Batch3 fence validity_rev to persist with the next page write */
+  pageValidityRev: Map<ReportPageId, number>;
+  pageAuthorityFp: Map<ReportPageId, string>;
 };
 
 const dirtyByJob = new WeakMap<object, JobDirty>();
@@ -135,8 +145,13 @@ function ensureDirty(job: ReportBatch2JobRecord): JobDirty {
       pendingDispatch: [],
       pendingInvocation: [],
       pageRev: new Map(),
+      pageValidityRev: new Map(),
+      pageAuthorityFp: new Map(),
     };
     dirtyByJob.set(job, d);
+  } else {
+    if (!d.pageValidityRev) d.pageValidityRev = new Map();
+    if (!d.pageAuthorityFp) d.pageAuthorityFp = new Map();
   }
   return d;
 }
@@ -246,14 +261,22 @@ function outcomeRank(outcome: string | undefined): number {
  * Same-page guard for rev-mismatch (stale concurrent writer) only.
  * Matching-rev writes from the same load lineage may move outcome freely
  * (e.g. queued → pending after applicability).
+ *
+ * Batch3: never allow a lower validity_rev blob to overwrite a higher one —
+ * that closes the invalidation vs late-completed race.
  */
 function mayReplacePageStateOnConflict(
-  current: ReportPageRuntimeState | undefined,
+  current: PageBlob | undefined,
   next: ReportPageRuntimeState,
+  nextValidityRev: number | undefined,
 ): boolean {
   if (!current) return true;
-  if (current.page_id !== next.page_id) return false;
-  return outcomeRank(next.outcome) > outcomeRank(current.outcome);
+  if (current.state.page_id !== next.page_id) return false;
+  const curFence = current.validity_rev ?? 0;
+  const nextFence = nextValidityRev ?? 0;
+  if (nextFence < curFence) return false;
+  if (nextFence > curFence) return true;
+  return outcomeRank(next.outcome) > outcomeRank(current.state.outcome);
 }
 
 export function clearBatch2JobMemoryOverlay(
@@ -280,6 +303,8 @@ function assembleJob(
     pendingDispatch: [] as DispatchLogEntry[],
     pendingInvocation: [] as InvocationLogEntry[],
     pageRev: new Map<ReportPageId, number>(),
+    pageValidityRev: new Map<ReportPageId, number>(),
+    pageAuthorityFp: new Map<ReportPageId, string>(),
   };
 
   for (const page_id of REPORT_PAGE_IDS) {
@@ -287,6 +312,12 @@ function assembleJob(
     if (blob) {
       page_states.push(blob.state);
       dirty.pageRev.set(page_id, blob.rev);
+      if (typeof blob.validity_rev === "number") {
+        dirty.pageValidityRev.set(page_id, blob.validity_rev);
+      }
+      if (blob.authority_output_fingerprint) {
+        dirty.pageAuthorityFp.set(page_id, blob.authority_output_fingerprint);
+      }
       if (blob.output !== undefined) {
         page_outputs[page_id] = blob.output;
       }
@@ -375,20 +406,36 @@ async function writePageBlob(
     const current = await store.get<PageBlob>(key);
     if (current) {
       if (current.rev !== expectedRev) {
-        // Stale concurrent writer: only accept strictly higher-progress outcomes.
-        if (!mayReplacePageStateOnConflict(current.state, blob.state)) {
+        // Stale concurrent writer: only accept when fence rev / outcome allow it.
+        if (
+          !mayReplacePageStateOnConflict(
+            current,
+            blob.state,
+            blob.validity_rev,
+          )
+        ) {
           return {
             ok: false,
             code: "stale_page_write",
-            detail: `page ${page_id} refuse stale write (stored rev=${current.rev} expected=${expectedRev} outcome ${current.state.outcome}→${blob.state.outcome})`,
+            detail: `page ${page_id} refuse stale write (stored rev=${current.rev} expected=${expectedRev} fence ${current.validity_rev ?? 0}→${blob.validity_rev ?? 0} outcome ${current.state.outcome}→${blob.state.outcome})`,
           };
         }
+      } else if (
+        (blob.validity_rev ?? 0) < (current.validity_rev ?? 0)
+      ) {
+        return {
+          ok: false,
+          code: "stale_page_write",
+          detail: `page ${page_id} refuse lower validity_rev ${blob.validity_rev ?? 0} < ${current.validity_rev ?? 0}`,
+        };
       }
       const next: PageBlob = {
         rev: current.rev + 1,
         state: blob.state,
         output: blob.output,
         repair: blob.repair ?? null,
+        validity_rev: blob.validity_rev,
+        authority_output_fingerprint: blob.authority_output_fingerprint ?? null,
       };
       const ok = await casSet(key, JSON.stringify(current), next);
       if (!ok) {
@@ -413,6 +460,8 @@ async function writePageBlob(
       state: blob.state,
       output: blob.output,
       repair: blob.repair ?? null,
+      validity_rev: blob.validity_rev,
+      authority_output_fingerprint: blob.authority_output_fingerprint ?? null,
     };
     const ok = await casSet(key, null, next);
     if (!ok) {
@@ -500,6 +549,11 @@ export async function saveJob(
           state: { ...state },
           output: job.page_outputs[page_id],
           repair: job.repair_pending[page_id] ?? null,
+          validity_rev: dirty.pageValidityRev.get(page_id),
+          authority_output_fingerprint:
+            dirty.pageAuthorityFp.get(page_id) ??
+            state.output_fingerprint ??
+            null,
         },
       );
       if (!written.ok) return written;
@@ -742,6 +796,7 @@ export function setPageOutput(
   page_id: ReportPageId,
   schema: unknown,
   output_fingerprint: string,
+  opts?: { validity_rev?: number },
 ): void {
   job.page_outputs[page_id] = schema;
   updatePageState(job, page_id, {
@@ -749,6 +804,72 @@ export function setPageOutput(
     input_fingerprint: job.page_states.find((s) => s.page_id === page_id)
       ?.input_fingerprint,
   });
+  const dirty = ensureDirty(job);
+  if (typeof opts?.validity_rev === "number") {
+    dirty.pageValidityRev.set(page_id, opts.validity_rev);
+    dirty.pageAuthorityFp.set(page_id, output_fingerprint);
+  }
+}
+
+/** Bind Batch3 fence validity_rev for the next page persist (e.g. invalidation clear). */
+export function bindPageValidityRev(
+  job: ReportBatch2JobRecord,
+  page_id: ReportPageId,
+  validity_rev: number,
+  authority_output_fingerprint?: string | null,
+): void {
+  const dirty = ensureDirty(job);
+  dirty.pages.add(page_id);
+  dirty.pageValidityRev.set(page_id, validity_rev);
+  if (authority_output_fingerprint) {
+    dirty.pageAuthorityFp.set(page_id, authority_output_fingerprint);
+  } else {
+    dirty.pageAuthorityFp.delete(page_id);
+  }
+  touch(job);
+}
+
+/**
+ * Direct page-blob write used by Batch3 authority persist / recovery replay.
+ * Respects validity_rev ordering — lower rev cannot overwrite higher.
+ */
+export async function writePageBlobWithValidity(input: {
+  report_id: string;
+  generation_id: string;
+  page_id: ReportPageId;
+  state: ReportPageRuntimeState;
+  output?: unknown;
+  repair?: RepairPendingPayload | null;
+  validity_rev: number;
+  authority_output_fingerprint?: string | null;
+}): Promise<JobStoreResult<number>> {
+  if (!isReportBatch2SharedStoreAvailable()) return storeUnavailable();
+  const key = pageKey(input.report_id, input.generation_id, input.page_id);
+  trackKey(key);
+  const store = kvStore();
+  const current = await store.get<PageBlob>(key);
+  const expectedRev = current?.rev ?? 0;
+  return writePageBlob(
+    input.report_id,
+    input.generation_id,
+    input.page_id,
+    expectedRev,
+    {
+      state: input.state,
+      output: input.output,
+      repair: input.repair ?? null,
+      validity_rev: input.validity_rev,
+      authority_output_fingerprint: input.authority_output_fingerprint ?? null,
+    },
+  );
+}
+
+export function pageBlobKey(
+  report_id: string,
+  generation_id: string,
+  page_id: ReportPageId,
+): string {
+  return pageKey(report_id, generation_id, page_id);
 }
 
 export function setRepairPending(

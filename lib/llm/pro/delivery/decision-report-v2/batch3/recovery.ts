@@ -13,8 +13,9 @@ import {
 import { REPORT_BATCH2_EVENTS } from "../batch2/events";
 import { loadJob } from "../batch2/job-store";
 import { runReportBatch2OrchestratorTick } from "../batch2/orchestrator";
-import { resolveReportReadyState } from "../orchestration";
+import { REPORT_PAGE_IDS, resolveReportReadyState } from "../orchestration";
 import type { ReportPageId } from "../orchestration/types";
+import { readAuthorityPageOutput } from "./auth-output";
 import {
   enqueueDispatchIntent,
   listPendingIntents,
@@ -23,6 +24,8 @@ import {
   readIntent,
 } from "./dispatch-intent";
 import { assertGenerationActive, readGeneration } from "./generation-store";
+import { readPageFence } from "./page-fence";
+import { persistPageBlobUnderCommittedFence } from "./persist-page-blob";
 import type { Batch3Result } from "./types";
 import { DEFAULT_RECOVERY_LIMIT } from "./types";
 
@@ -32,6 +35,7 @@ export type RecoveryAction = {
     | "resend_intent"
     | "dispatch_ready"
     | "dispatch_repair"
+    | "replay_page_blob"
     | "skipped_superseded"
     | "skipped_completed"
     | "job_missing";
@@ -114,6 +118,84 @@ export async function runReportBatch3Recovery(input: {
 
   const job = loaded.value;
   const locale = input.locale ?? job.locale;
+
+  // 0) Replay authority-committed pages whose Batch2 blob is missing / mismatched
+  for (const page_id of REPORT_PAGE_IDS) {
+    if (actions.length >= limit) {
+      return {
+        ok: true,
+        value: { recovery_id, actions, stopped_reason: "limit_reached" },
+      };
+    }
+    const fence = await readPageFence(
+      input.report_id,
+      input.generation_id,
+      page_id,
+    );
+    if (!fence.ok) return fence;
+    if (!fence.value || fence.value.status !== "committed") continue;
+    if (fence.value.generation_epoch !== input.generation_epoch) continue;
+
+    const auth = await readAuthorityPageOutput(
+      input.report_id,
+      input.generation_id,
+      page_id,
+    );
+    if (!auth.ok) return auth;
+    if (!auth.value) continue;
+    if (auth.value.validity_rev !== fence.value.validity_rev) continue;
+    if (auth.value.output_fingerprint !== fence.value.output_fingerprint) continue;
+
+    const st = job.page_states.find((s) => s.page_id === page_id);
+    const blobOk =
+      st?.outcome === "completed" &&
+      st.output_fingerprint === fence.value.output_fingerprint &&
+      job.page_outputs[page_id] != null;
+    if (blobOk) {
+      actions.push({
+        kind: "skipped_completed",
+        detail: `page ${page_id} blob already matches authority`,
+        page_id,
+      });
+      continue;
+    }
+
+    const state = {
+      page_id,
+      outcome: (auth.value.state_patch.outcome ?? "completed") as
+        | "completed"
+        | "pending",
+      output_fingerprint: auth.value.output_fingerprint,
+      input_fingerprint: auth.value.state_patch.input_fingerprint,
+      ...auth.value.state_patch,
+    };
+    const replayed = await persistPageBlobUnderCommittedFence({
+      report_id: input.report_id,
+      generation_id: input.generation_id,
+      page_id,
+      validity_rev: fence.value.validity_rev,
+      attempt_id: fence.value.attempt_id ?? auth.value.attempt_id,
+      output_fingerprint: auth.value.output_fingerprint,
+      state,
+      output: auth.value.output,
+    });
+    if (!replayed.ok) {
+      if (replayed.code === "stale_page") {
+        actions.push({
+          kind: "skipped_superseded",
+          detail: `replay refused for ${page_id}: ${replayed.detail}`,
+          page_id,
+        });
+        continue;
+      }
+      return replayed;
+    }
+    actions.push({
+      kind: "replay_page_blob",
+      detail: `restored page ${page_id} from authority output`,
+      page_id,
+    });
+  }
 
   // 1) Pending / failed intents
   const pending = await listPendingIntents({

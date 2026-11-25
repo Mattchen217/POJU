@@ -54,9 +54,9 @@ local newEpoch = tonumber(ARGV[1])
 local newGenId = ARGV[2]
 local newPointerJson = ARGV[3]
 local newGenJson = ARGV[4]
-local prevGenJson = ARGV[5]
-local b2Json = ARGV[6]
-local ttl = tonumber(ARGV[7])
+local b2Json = ARGV[5]
+local ttl = tonumber(ARGV[6])
+local nowIso = ARGV[7]
 
 local cur = redis.call("GET", activeKey)
 if cur ~= false and cur ~= nil then
@@ -79,10 +79,22 @@ if grec.status == "superseded" or grec.status == "completed" or grec.status == "
   return -2
 end
 
-if prevGenKey ~= "" and prevGenJson ~= "" then
+-- Re-read previous generation inside Lua; never overwrite terminal statuses
+-- with a pre-built superseded snapshot from before the script ran.
+if prevGenKey ~= "" then
   local pcur = redis.call("GET", prevGenKey)
   if pcur ~= false and pcur ~= nil then
-    redis.call("SET", prevGenKey, prevGenJson, "EX", ttl)
+    local pok, prev = pcall(cjson.decode, pcur)
+    if pok and prev then
+      local st = prev.status
+      if st ~= "superseded" and st ~= "completed" and st ~= "failed" and st ~= "cancelled" then
+        prev.status = "superseded"
+        prev.updated_at = nowIso
+        prev.superseded_at = nowIso
+        prev.superseded_by = newGenId
+        redis.call("SET", prevGenKey, cjson.encode(prev), "EX", ttl)
+      end
+    end
   end
 end
 
@@ -282,23 +294,9 @@ export async function activateGeneration(input: {
   }
 
   let prevKey = "";
-  let prevGenJson = "";
   if (live.value?.generation_id) {
     prevKey = genKey(report_id, live.value.generation_id);
-    const prev = await kvGet<GenerationRecord>(prevKey);
-    if (!prev.ok) return prev;
-    if (prev.value && !TERMINAL.has(prev.value.status)) {
-      prevGenJson = JSON.stringify({
-        ...prev.value,
-        status: "superseded",
-        updated_at: now,
-        superseded_at: now,
-        superseded_by: record.generation_id,
-      });
-      trackBatch3Key(prevKey);
-    } else {
-      prevKey = "";
-    }
+    trackBatch3Key(prevKey);
   }
 
   const evaled = await evalTxn(
@@ -309,9 +307,9 @@ export async function activateGeneration(input: {
       record.generation_id,
       JSON.stringify(pointer),
       JSON.stringify(activeRec),
-      prevGenJson,
       JSON.stringify(b2Pointer),
       String(KV_TTL.REPORT_BATCH2_JOB),
+      now,
     ],
   );
   if (!evaled.ok) return evaled;
