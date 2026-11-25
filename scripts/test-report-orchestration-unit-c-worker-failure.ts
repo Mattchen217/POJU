@@ -22,7 +22,10 @@ import {
   setBatch2ModelInvokeForTests,
   type ReportBatch2JobInputs,
 } from "@/lib/llm/pro/delivery/decision-report-v2/batch2";
-import { setAfterGenerateModelHookForTests } from "@/lib/llm/pro/delivery/decision-report-v2/batch2/page-generate";
+import {
+  setAfterGenerateModelHookForTests,
+  setValidatePageOutputHookForTests,
+} from "@/lib/llm/pro/delivery/decision-report-v2/batch2/page-generate";
 import { reportPageGenerate } from "@/lib/inngest/functions/report-page-generate";
 import { reportPageRepair } from "@/lib/inngest/functions/report-page-repair";
 import {
@@ -151,6 +154,7 @@ async function cleanup(): Promise<void> {
   await resetBatch3KeysForTests();
   setBatch2ModelInvokeForTests(null);
   setAfterGenerateModelHookForTests(null);
+  setValidatePageOutputHookForTests(null);
 }
 
 async function boot(report_id: string, generation_id: string) {
@@ -336,6 +340,130 @@ async function main(): Promise<void> {
     const task = await readTask(report_id, gen.generation_id, task_key);
     assert.equal(task.value?.status, "failed");
     console.log("C-T2 ok — post-process exception releases Claim");
+  }
+
+  // --- C-T2b: exception inside real validatePageOutput path releases Claim ---
+  {
+    await cleanup();
+    const report_id = "rpt_uc_t2b";
+    const gen = await boot(report_id, "g_uc_t2b");
+    const { page_id, fingerprint } = await prepGenerate(
+      report_id,
+      gen.generation_id,
+    );
+    // Valid-enough JSON to pass parsePageJson and enter validatePageOutput.
+    setBatch2ModelInvokeForTests(async () => ({
+      content: JSON.stringify({
+        page: "01",
+        face: "01",
+        schema_version: "face01-v2",
+        core_judgment: { text: "x", claim_ids: [] },
+      }),
+      tokens_used: 1,
+      model_call_id: "mc_t2b",
+    }));
+    setValidatePageOutputHookForTests(() => {
+      throw new Error("injected_validator_path_exception");
+    });
+
+    const result = await runReportPageGenerateOnce({
+      event: {
+        report_id,
+        generation_id: gen.generation_id,
+        generation_epoch: gen.generation_epoch,
+        page_id,
+        locale: "en",
+        input_fingerprint: fingerprint,
+        upstream_output_fingerprints: {},
+      },
+      invocation_id: randomUUID(),
+      worker_id: "w_uc_t2b",
+    });
+    setValidatePageOutputHookForTests(null);
+
+    assert.equal(result.status, "failed");
+    assert.equal(
+      result.status === "failed" ? result.code : "",
+      "post_process_error",
+    );
+    assert.match(
+      result.status === "failed" ? result.detail : "",
+      /injected_validator_path_exception/,
+    );
+    assert.equal(result.status === "failed" ? result.retryable : false, true);
+
+    const fence = await readPageFence(report_id, gen.generation_id, page_id);
+    assert.equal(fence.value?.status, "open");
+    assert.equal(fence.value?.task_key, null);
+
+    const task_key = generateTaskKey({
+      report_id,
+      generation_id: gen.generation_id,
+      generation_epoch: gen.generation_epoch,
+      page_id,
+      input_fingerprint: fingerprint,
+    });
+    const task = await readTask(report_id, gen.generation_id, task_key);
+    assert.equal(task.value?.status, "failed");
+
+    const job = await loadJob(report_id, gen.generation_id);
+    assert.equal(
+      job.value?.page_states.find((s) => s.page_id === page_id)?.outcome,
+      "running",
+    );
+
+    // Handler must throw retryable Error (not swallow as success).
+    setValidatePageOutputHookForTests(() => {
+      throw new Error("injected_validator_path_exception");
+    });
+    await assert.rejects(
+      () =>
+        handleGenerateEvent({
+          report_id,
+          generation_id: gen.generation_id,
+          generation_epoch: gen.generation_epoch,
+          page_id,
+          locale: "en",
+          input_fingerprint: fingerprint,
+          upstream_output_fingerprints: {},
+        }),
+      (err: unknown) => {
+        assert.ok(err instanceof Error);
+        assert.equal(err instanceof NonRetriableError, false);
+        assert.match(err.message, /post_process_error/);
+        return true;
+      },
+    );
+    setValidatePageOutputHookForTests(null);
+
+    // Retry can obtain a new Attempt after Fence was opened.
+    setBatch2ModelInvokeForTests(async () => ({
+      content: "{ broken-on-retry",
+      tokens_used: 1,
+      model_call_id: "mc_t2b_retry",
+    }));
+    const retry = await runReportPageGenerateOnce({
+      event: {
+        report_id,
+        generation_id: gen.generation_id,
+        generation_epoch: gen.generation_epoch,
+        page_id,
+        locale: "en",
+        input_fingerprint: fingerprint,
+        upstream_output_fingerprints: {},
+      },
+      invocation_id: randomUUID(),
+      worker_id: "w_uc_t2b_retry",
+    });
+    assert.equal(retry.status, "needs_repair");
+    const taskAfter = await readTask(report_id, gen.generation_id, task_key);
+    // Generate handoff completes the generate task; Fence open for Repair.
+    assert.equal(taskAfter.value?.status, "completed");
+    const fenceAfter = await readPageFence(report_id, gen.generation_id, page_id);
+    assert.equal(fenceAfter.value?.status, "open");
+    console.log(
+      "C-T2b ok — Validator-path throw releases Claim; handler throws; retry Claims",
+    );
   }
 
   // --- C-T3: Repair fail-release failure keeps Pending (Unit B regression) ---

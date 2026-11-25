@@ -88,6 +88,20 @@ export function setAfterGenerateModelHookForTests(
   afterGenerateModelHookForTests = fn;
 }
 
+/**
+ * Unit C R1 test hook: runs at the start of validatePageOutput (real Validator path).
+ * Production never sets this.
+ */
+let validatePageOutputHookForTests:
+  | ((page_id: ReportPageId, raw: unknown) => void)
+  | null = null;
+
+export function setValidatePageOutputHookForTests(
+  fn: ((page_id: ReportPageId, raw: unknown) => void) | null,
+): void {
+  validatePageOutputHookForTests = fn;
+}
+
 export async function runReportPageGenerateOnce(input: {
   event: ReportBatch2GenerateEventData;
   invocation_id: string;
@@ -379,7 +393,27 @@ export async function runReportPageGenerateOnce(input: {
     );
   }
 
-  const parsed = parsePageJson(page_id, rawText);
+  // Unit C R1: unexpected throws from parse / validate must release Claim.
+  // Normal null / !.ok paths fall through to Repair Handoff (Unit B) unchanged.
+  let parsed: unknown | null;
+  let validated:
+    | { ok: true; page: unknown }
+    | { ok: false; issues: unknown[] };
+  try {
+    parsed = parsePageJson(page_id, rawText);
+    if (parsed != null) {
+      validated = validatePageOutput(page_id, parsed, prep.ctx, job.locale);
+    } else {
+      validated = { ok: false, issues: [] };
+    }
+  } catch (err) {
+    return failGenerateAfterClaim(
+      "post_process_error",
+      err instanceof Error ? err.message : String(err),
+      { terminal_batch2: false },
+    );
+  }
+
   if (parsed == null) {
     const repairQueued = await queueRepair(
       job,
@@ -403,7 +437,6 @@ export async function runReportPageGenerateOnce(input: {
     return { status: "needs_repair" };
   }
 
-  const validated = validatePageOutput(page_id, parsed, prep.ctx, job.locale);
   if (!validated.ok) {
     const repairQueued = await queueRepair(
       job,
@@ -427,60 +460,74 @@ export async function runReportPageGenerateOnce(input: {
     return { status: "needs_repair" };
   }
 
-  const output_fp = hashCanonicalPayload(validated.page);
-  if (batch3Attempt && typeof epoch === "number") {
-    const { commitPageResult } = await import("../batch3/fenced-commit");
-    const { reportPageDefinition } = await import("../orchestration");
-    const def = reportPageDefinition(page_id);
-    const committed = await commitPageResult({
-      report_id: input.event.report_id,
-      generation_id: input.event.generation_id,
-      generation_epoch: epoch,
-      page_id,
-      attempt_id: batch3Attempt.attempt_id,
-      task_key: batch3Attempt.task_key,
-      output: validated.page,
-      output_fingerprint: output_fp,
-      state_patch: {
-        outcome: "completed",
-        input_fingerprint: fp.result.fingerprint,
-      },
-      provenance: {
+  // Fingerprint + Authority Commit: unexpected throws release Claim; !.ok uses
+  // failGenerateAfterClaim; success must never fail-release.
+  try {
+    const output_fp = hashCanonicalPayload(validated.page);
+    if (batch3Attempt && typeof epoch === "number") {
+      const { commitPageResult } = await import("../batch3/fenced-commit");
+      const { reportPageDefinition } = await import("../orchestration");
+      const def = reportPageDefinition(page_id);
+      const committed = await commitPageResult({
         report_id: input.event.report_id,
         generation_id: input.event.generation_id,
         generation_epoch: epoch,
         page_id,
-        input_fingerprint: fp.result.fingerprint,
-        upstream_output_fingerprints: input.event.upstream_output_fingerprints,
-        page_contract_version: def.production_version,
-        prompt_version: def.prompt_version,
-        validator_version: def.validator_version,
-        output_fingerprint: output_fp,
         attempt_id: batch3Attempt.attempt_id,
         task_key: batch3Attempt.task_key,
-        validity_rev: batch3Attempt.validity_rev,
-      },
-    });
-    if (!committed.ok) {
-      return failGenerateAfterClaim(committed.code, committed.detail, {
-        // Structural / identity failures are terminal; KV blips may retry.
-        terminal_batch2: !isBatch2RetryableFailureCode(committed.code),
+        output: validated.page,
+        output_fingerprint: output_fp,
+        state_patch: {
+          outcome: "completed",
+          input_fingerprint: fp.result.fingerprint,
+        },
+        provenance: {
+          report_id: input.event.report_id,
+          generation_id: input.event.generation_id,
+          generation_epoch: epoch,
+          page_id,
+          input_fingerprint: fp.result.fingerprint,
+          upstream_output_fingerprints: input.event.upstream_output_fingerprints,
+          page_contract_version: def.production_version,
+          prompt_version: def.prompt_version,
+          validator_version: def.validator_version,
+          output_fingerprint: output_fp,
+          attempt_id: batch3Attempt.attempt_id,
+          task_key: batch3Attempt.task_key,
+          validity_rev: batch3Attempt.validity_rev,
+        },
       });
+      if (!committed.ok) {
+        return failGenerateAfterClaim(committed.code, committed.detail, {
+          terminal_batch2: !isBatch2RetryableFailureCode(committed.code),
+        });
+      }
+      return { status: "completed" };
+    }
+
+    setPageOutput(job, page_id, validated.page, output_fp);
+    updatePageState(job, page_id, {
+      outcome: "completed",
+      output_fingerprint: output_fp,
+      input_fingerprint: fp.result.fingerprint,
+    });
+    const doneSaved = await saveJob(job);
+    if (!doneSaved.ok) {
+      return {
+        status: "failed",
+        code: doneSaved.code,
+        detail: doneSaved.detail,
+        retryable: isBatch2RetryableFailureCode(doneSaved.code),
+      };
     }
     return { status: "completed" };
+  } catch (err) {
+    return failGenerateAfterClaim(
+      "post_process_error",
+      err instanceof Error ? err.message : String(err),
+      { terminal_batch2: false },
+    );
   }
-
-  setPageOutput(job, page_id, validated.page, output_fp);
-  updatePageState(job, page_id, {
-    outcome: "completed",
-    output_fingerprint: output_fp,
-    input_fingerprint: fp.result.fingerprint,
-  });
-  const doneSaved = await saveJob(job);
-  if (!doneSaved.ok) {
-    return { status: "failed", code: doneSaved.code, detail: doneSaved.detail };
-  }
-  return { status: "completed" };
 }
 
 async function queueRepair(
@@ -647,6 +694,8 @@ function validatePageOutput(
 ):
   | { ok: true; page: unknown }
   | { ok: false; issues: unknown[] } {
+  // Real Validator entry — Unit C R1 tests may inject throws here.
+  validatePageOutputHookForTests?.(page_id, raw);
   switch (page_id) {
     case "01":
       return validateFace01ProductionOutput({
