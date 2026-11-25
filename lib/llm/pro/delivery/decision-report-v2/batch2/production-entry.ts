@@ -16,6 +16,7 @@ import type { FinalDeliveryJobInput } from "@/lib/poju/xhigh-job-types";
 import type { DecisionContext } from "@/lib/poju/decision-context/types";
 import {
   buildOrchestratePayload,
+  buildRecoverPayload,
   isReportBatch2InngestConfigured,
   sendReportBatch2Events,
 } from "./dispatch";
@@ -163,7 +164,43 @@ export async function startFinalDeliveryReportBatch2(
   const generation_id = `${job_id}:batch2`;
   if (existing.status === "found") {
     if (existing.pointer.generation_id === generation_id) {
-      // Same generation already started — do not recreate Job or re-dispatch.
+      // Same generation already started — do not recreate Job or re-allocate.
+      // Unit D: if still in-flight, re-trigger Recovery so a prior dispatch
+      // failure can be healed on stage retry.
+      const loaded = await loadJob(job_id, generation_id);
+      if (loaded.ok && loaded.value?.status === "completed") {
+        return {
+          ok: true,
+          generation_id,
+          generation_epoch: loaded.value.generation_epoch,
+          reused: true,
+        };
+      }
+      const epoch =
+        loaded.ok && loaded.value
+          ? loaded.value.generation_epoch
+          : undefined;
+      if (typeof epoch === "number" && Number.isFinite(epoch)) {
+        const recover = await sendReportBatch2Events([
+          buildRecoverPayload({
+            report_id: job_id,
+            generation_id,
+            generation_epoch: epoch,
+            locale: input.locale,
+          }),
+        ]);
+        if (!recover.ok) {
+          throw new Error(
+            `reused_generation_recover_failed:${recover.code}:${recover.detail}`,
+          );
+        }
+        return {
+          ok: true,
+          generation_id,
+          generation_epoch: epoch,
+          reused: true,
+        };
+      }
       return { ok: true, generation_id, reused: true };
     }
     return {
@@ -243,12 +280,22 @@ export async function startFinalDeliveryReportBatch2(
   const send = await sendReportBatch2Events([payload]);
   if (!send.ok) {
     await markIntentFailed(intent.value, send.detail);
-    await updateJobStatus(job_id, gid, "failed").catch(() => undefined);
-    return {
-      ok: false,
-      code: send.code,
-      detail: `${send.detail} (pointer retained; job status=failed; intent retained)`,
-    };
+    // Unit D: Job + Intent durable → RECOVER. Do not fail production (would
+    // race failProductionV3Job against an already-started Recovery).
+    const recover = await sendReportBatch2Events([
+      buildRecoverPayload({
+        report_id: job_id,
+        generation_id: gid,
+        generation_epoch,
+        locale: input.locale,
+      }),
+    ]);
+    if (recover.ok) {
+      return { ok: true, generation_id: gid, generation_epoch };
+    }
+    throw new Error(
+      `orchestrate_dispatch_failed:${send.code}:${send.detail}; recover_trigger_failed:${recover.code}:${recover.detail}`,
+    );
   }
   await markIntentSent(intent.value);
 

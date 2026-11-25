@@ -373,12 +373,22 @@ export async function startReportBatch2Production(input: {
   const send = await sendReportBatch2Events([payload]);
   if (!send.ok) {
     await markIntentFailed(intent.value, send.detail);
-    await updateJobStatus(report_id, gid, "failed").catch(() => undefined);
-    return {
-      ok: false,
-      code: send.code,
-      detail: `${send.detail} (job left status=failed after event send failure; intent retained)`,
-    };
+    // Unit D: durable Job + failed Intent → trigger Recovery (do not fail production).
+    const { buildRecoverPayload } = await import("./dispatch");
+    const recover = await sendReportBatch2Events([
+      buildRecoverPayload({
+        report_id,
+        generation_id: gid,
+        generation_epoch,
+        locale: input.locale,
+      }),
+    ]);
+    if (recover.ok) {
+      return { ok: true, report_id, generation_id: gid, generation_epoch };
+    }
+    throw new Error(
+      `orchestrate_dispatch_failed:${send.code}:${send.detail}; recover_trigger_failed:${recover.code}:${recover.detail}`,
+    );
   }
   await markIntentSent(intent.value);
 

@@ -291,14 +291,16 @@ export async function runReportBatch3Recovery(input: {
       },
     ]);
     if (!send.ok) {
-      await markIntentFailed(intent, send.detail);
+      const marked = await markIntentFailed(intent, send.detail);
+      if (!marked.ok) return marked;
       return {
         ok: false,
-        code: "kv_write_failed",
-        detail: send.detail,
+        code: "dispatch_failed",
+        detail: `dispatch_failed:${send.code}:${send.detail}`,
       };
     }
-    await markIntentSent(intent);
+    const markedSent = await markIntentSent(intent);
+    if (!markedSent.ok) return markedSent;
     actions.push({
       kind: "resend_intent",
       detail: intent.intent_id,
@@ -343,10 +345,16 @@ export async function runReportBatch3Recovery(input: {
     if (!intent.ok) return intent;
     const send = await sendReportBatch2Events([payload]);
     if (!send.ok) {
-      await markIntentFailed(intent.value, send.detail);
-      continue;
+      const marked = await markIntentFailed(intent.value, send.detail);
+      if (!marked.ok) return marked;
+      return {
+        ok: false,
+        code: "dispatch_failed",
+        detail: `dispatch_failed:${send.code}:${send.detail}`,
+      };
     }
-    await markIntentSent(intent.value);
+    const markedSent = await markIntentSent(intent.value);
+    if (!markedSent.ok) return markedSent;
     actions.push({ kind: "dispatch_repair", detail: "repair_pending", page_id });
   }
 

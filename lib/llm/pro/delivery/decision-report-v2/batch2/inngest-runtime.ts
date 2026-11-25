@@ -79,20 +79,10 @@ async function invokeHandlerAdapterBody(
     case REPORT_BATCH2_EVENTS.APPLICABILITY:
       return runReportPageApplicabilityInngestStep(ctx);
     case REPORT_BATCH2_EVENTS.RECOVER: {
-      const { runReportBatch3Recovery } = await import("../batch3/recovery");
-      const report_id = String(data.report_id ?? "").trim();
-      const generation_id = String(data.generation_id ?? "").trim();
-      const generation_epoch = Number(data.generation_epoch);
-      const locale = String(data.locale ?? "en");
-      if (!report_id || !generation_id || !Number.isFinite(generation_epoch)) {
-        return { skipped: true, reason: "invalid_recover_event" };
-      }
-      return runReportBatch3Recovery({
-        report_id,
-        generation_id,
-        generation_epoch,
-        locale,
-      });
+      const { runReportPageRecoveryInngestStep } = await import(
+        "@/lib/inngest/functions/report-page-recovery"
+      );
+      return runReportPageRecoveryInngestStep({ event: { data } });
     }
     default:
       throw new Error(`unknown batch2 event: ${eventName}`);

@@ -197,7 +197,9 @@ export type Batch3FailCode =
   | "cascade_incomplete"
   | "dependency_not_ready"
   | "limit_reached"
-  | "job_missing";
+  | "job_missing"
+  /** Recovery (or dispatch path) failed to send an Inngest event. */
+  | "dispatch_failed";
 
 export type Batch3Result<T> =
   | { ok: true; value: T }

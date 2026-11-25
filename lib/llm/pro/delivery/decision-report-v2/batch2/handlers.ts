@@ -3,7 +3,10 @@ import { NonRetriableError } from "inngest";
 
 import {
   buildOrchestratePayload,
+  buildRecoverPayload,
   buildRepairPayload,
+  getReportBatch2EventSenderForTests,
+  isReportBatch2InngestConfigured,
   sendReportBatch2Events,
 } from "./dispatch";
 import { runReportBatch2OrchestratorTick } from "./orchestrator";
@@ -35,27 +38,117 @@ export function throwForBatch2WorkerFailure(
   throw new NonRetriableError(msg);
 }
 
+function finiteEpoch(value: unknown): number | undefined {
+  return typeof value === "number" && Number.isFinite(value) ? value : undefined;
+}
+
+/** True when Recovery can actually be scheduled (Inngest or test sender). */
+function hasBatch2EventBus(): boolean {
+  return (
+    !!getReportBatch2EventSenderForTests() || isReportBatch2InngestConfigured()
+  );
+}
+
+async function triggerRecoverOrThrow(input: {
+  report_id: string;
+  generation_id: string;
+  generation_epoch: number;
+  locale: string;
+  prior: string;
+}): Promise<void> {
+  const recover = await sendReportBatch2Events([
+    buildRecoverPayload({
+      report_id: input.report_id,
+      generation_id: input.generation_id,
+      generation_epoch: input.generation_epoch,
+      locale: input.locale,
+    }),
+  ]);
+  if (!recover.ok) {
+    throw new Error(
+      `${input.prior}; recover_trigger_failed:${recover.code}:${recover.detail}`,
+    );
+  }
+}
+
+/**
+ * After Generate/Repair/Applicability: continue DAG via ORCHESTRATE.
+ * On send failure with a valid epoch, trigger RECOVER (Unit D).
+ */
 async function maybeContinueOrchestration(
   report_id: string,
   generation_id: string,
   locale: string,
+  generation_epoch?: number,
 ): Promise<void> {
   const loaded = await loadJob(report_id, generation_id);
-  if (!loaded.ok || !loaded.value) return;
-  await sendReportBatch2Events([
-    buildOrchestratePayload({ report_id, generation_id, locale }),
+  const epoch =
+    finiteEpoch(generation_epoch) ??
+    (loaded.ok && loaded.value
+      ? finiteEpoch(loaded.value.generation_epoch)
+      : undefined);
+
+  if (!loaded.ok || !loaded.value) {
+    if (epoch === undefined) return;
+    // Job read failed but caller has epoch — still attempt follow-up / Recovery.
+  }
+
+  const send = await sendReportBatch2Events([
+    buildOrchestratePayload({
+      report_id,
+      generation_id,
+      locale,
+      generation_epoch: epoch,
+    }),
   ]);
+  if (send.ok) return;
+
+  // No event bus → cannot schedule Recovery (MEMORY_KV unit tests without sender).
+  if (!hasBatch2EventBus()) return;
+
+  const prior = `orchestrate_followup_failed:${send.code}:${send.detail}`;
+  if (epoch === undefined) {
+    throw new Error(prior);
+  }
+  await triggerRecoverOrThrow({
+    report_id,
+    generation_id,
+    generation_epoch: epoch,
+    locale,
+    prior,
+  });
 }
 
 export async function handleOrchestrateEvent(
   data: ReportBatch2OrchestrateEventData,
-): Promise<{ ok: boolean; dispatched_count: number; detail?: string }> {
+): Promise<{
+  ok: boolean;
+  dispatched_count: number;
+  detail?: string;
+  recovery_triggered?: boolean;
+}> {
   const tick = await runReportBatch2OrchestratorTick({
     report_id: data.report_id,
     generation_id: data.generation_id,
   });
   if (!tick.ok) {
-    return { ok: false, dispatched_count: 0, detail: tick.detail };
+    const epoch = finiteEpoch(data.generation_epoch);
+    if (epoch === undefined || !hasBatch2EventBus()) {
+      return { ok: false, dispatched_count: 0, detail: tick.detail };
+    }
+    await triggerRecoverOrThrow({
+      report_id: data.report_id,
+      generation_id: data.generation_id,
+      generation_epoch: epoch,
+      locale: data.locale,
+      prior: `orchestrate_tick_failed:${tick.detail}`,
+    });
+    return {
+      ok: false,
+      dispatched_count: 0,
+      detail: tick.detail,
+      recovery_triggered: true,
+    };
   }
   return { ok: true, dispatched_count: tick.dispatched.length };
 }
@@ -79,7 +172,7 @@ export async function handleGenerateEvent(data: ReportBatch2GenerateEventData): 
         ? loaded.value.repair_pending[data.page_id]
         : undefined;
     if (pending) {
-      await sendReportBatch2Events([
+      const sent = await sendReportBatch2Events([
         buildRepairPayload({
           report_id: data.report_id,
           generation_id: data.generation_id,
@@ -89,6 +182,23 @@ export async function handleGenerateEvent(data: ReportBatch2GenerateEventData): 
           generation_epoch: data.generation_epoch,
         }),
       ]);
+      if (!sent.ok) {
+        // Pending + handoff already durable — trigger Recovery to resend REPAIR.
+        if (hasBatch2EventBus()) {
+          const epoch = finiteEpoch(data.generation_epoch);
+          const prior = `repair_dispatch_failed:${sent.code}:${sent.detail}`;
+          if (epoch === undefined) {
+            throw new Error(prior);
+          }
+          await triggerRecoverOrThrow({
+            report_id: data.report_id,
+            generation_id: data.generation_id,
+            generation_epoch: epoch,
+            locale: data.locale,
+            prior,
+          });
+        }
+      }
     }
     return { ok: true, status: "needs_repair", continued: false };
   }
@@ -106,6 +216,7 @@ export async function handleGenerateEvent(data: ReportBatch2GenerateEventData): 
       data.report_id,
       data.generation_id,
       data.locale,
+      data.generation_epoch,
     );
     throwForBatch2WorkerFailure("generate", result);
   }
@@ -115,6 +226,7 @@ export async function handleGenerateEvent(data: ReportBatch2GenerateEventData): 
       data.report_id,
       data.generation_id,
       data.locale,
+      data.generation_epoch,
     );
     return { ok: true, status: result.status, continued: true };
   }
@@ -142,11 +254,17 @@ export async function handleRepairEvent(data: ReportBatch2RepairEventData): Prom
       data.report_id,
       data.generation_id,
       data.locale,
+      data.generation_epoch,
     );
     throwForBatch2WorkerFailure("repair", result);
   }
 
-  await maybeContinueOrchestration(data.report_id, data.generation_id, data.locale);
+  await maybeContinueOrchestration(
+    data.report_id,
+    data.generation_id,
+    data.locale,
+    data.generation_epoch,
+  );
   return {
     ok: true,
     status: result.status,
@@ -168,7 +286,12 @@ export async function handleApplicabilityEvent(
     return { ok: false, status: "failed", continued: false };
   }
 
-  await maybeContinueOrchestration(data.report_id, data.generation_id, data.locale);
+  await maybeContinueOrchestration(
+    data.report_id,
+    data.generation_id,
+    data.locale,
+    data.generation_epoch,
+  );
   return {
     ok: true,
     status: result.status,
@@ -178,16 +301,31 @@ export async function handleApplicabilityEvent(
 
 export async function runReportPageOrchestrateInngestStep(input: {
   event: { data: Record<string, unknown> };
-}): Promise<{ ok: boolean; dispatched_count: number; detail?: string; skipped?: boolean; reason?: string }> {
+}): Promise<{
+  ok: boolean;
+  dispatched_count: number;
+  detail?: string;
+  skipped?: boolean;
+  reason?: string;
+  recovery_triggered?: boolean;
+}> {
   const report_id = String(input.event.data.report_id ?? "").trim();
   const generation_id = String(input.event.data.generation_id ?? "").trim();
   if (!report_id || !generation_id) {
     return { ok: true, dispatched_count: 0, skipped: true, reason: "missing_job_ids" };
   }
+  const epochRaw = input.event.data.generation_epoch;
+  const generation_epoch =
+    typeof epochRaw === "number"
+      ? epochRaw
+      : typeof epochRaw === "string" && epochRaw.trim() !== ""
+        ? Number(epochRaw)
+        : undefined;
   return handleOrchestrateEvent({
     report_id,
     generation_id,
     locale: String(input.event.data.locale ?? "en"),
+    generation_epoch: finiteEpoch(generation_epoch),
   });
 }
 
@@ -200,6 +338,13 @@ export async function runReportPageGenerateInngestStep(input: {
   if (!report_id || !generation_id || !page_id) {
     return { skipped: true, reason: "invalid_generate_event" };
   }
+  const epochRaw = input.event.data.generation_epoch;
+  const generation_epoch =
+    typeof epochRaw === "number"
+      ? epochRaw
+      : typeof epochRaw === "string" && epochRaw.trim() !== ""
+        ? Number(epochRaw)
+        : undefined;
   return handleGenerateEvent({
     report_id,
     generation_id,
@@ -207,7 +352,9 @@ export async function runReportPageGenerateInngestStep(input: {
     locale: String(input.event.data.locale ?? "en"),
     input_fingerprint: String(input.event.data.input_fingerprint ?? ""),
     upstream_output_fingerprints:
-      (input.event.data.upstream_output_fingerprints as ReportBatch2GenerateEventData["upstream_output_fingerprints"]) ?? {},
+      (input.event.data.upstream_output_fingerprints as ReportBatch2GenerateEventData["upstream_output_fingerprints"]) ??
+      {},
+    generation_epoch: finiteEpoch(generation_epoch),
   });
 }
 
@@ -220,12 +367,20 @@ export async function runReportPageRepairInngestStep(input: {
   if (!report_id || !generation_id || !page_id) {
     return { skipped: true, reason: "invalid_repair_event" };
   }
+  const epochRaw = input.event.data.generation_epoch;
+  const generation_epoch =
+    typeof epochRaw === "number"
+      ? epochRaw
+      : typeof epochRaw === "string" && epochRaw.trim() !== ""
+        ? Number(epochRaw)
+        : undefined;
   return handleRepairEvent({
     report_id,
     generation_id,
     page_id: page_id as ReportBatch2RepairEventData["page_id"],
     locale: String(input.event.data.locale ?? "en"),
     input_fingerprint: String(input.event.data.input_fingerprint ?? ""),
+    generation_epoch: finiteEpoch(generation_epoch),
   });
 }
 
@@ -237,12 +392,21 @@ export async function runReportPageApplicabilityInngestStep(input: {
   if (!report_id || !generation_id) {
     return { skipped: true, reason: "invalid_applicability_event" };
   }
+  const epochRaw = input.event.data.generation_epoch;
+  const generation_epoch =
+    typeof epochRaw === "number"
+      ? epochRaw
+      : typeof epochRaw === "string" && epochRaw.trim() !== ""
+        ? Number(epochRaw)
+        : undefined;
   return handleApplicabilityEvent({
     report_id,
     generation_id,
     page_id: "07",
     locale: String(input.event.data.locale ?? "en"),
     upstream_output_fingerprints:
-      (input.event.data.upstream_output_fingerprints as ReportBatch2ApplicabilityEventData["upstream_output_fingerprints"]) ?? {},
+      (input.event.data.upstream_output_fingerprints as ReportBatch2ApplicabilityEventData["upstream_output_fingerprints"]) ??
+      {},
+    generation_epoch: finiteEpoch(generation_epoch),
   });
 }

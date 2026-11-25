@@ -6,6 +6,7 @@ import type {
   ReportBatch2ApplicabilityEventData,
   ReportBatch2GenerateEventData,
   ReportBatch2OrchestrateEventData,
+  ReportBatch2RecoverEventData,
   ReportBatch2RepairEventData,
 } from "./types";
 
@@ -147,6 +148,33 @@ export function buildApplicabilityPayload(input: {
       locale: input.locale.trim(),
       upstream_output_fingerprints: input.upstream_output_fingerprints,
       generation_epoch: input.generation_epoch,
+    },
+  };
+}
+
+/**
+ * Unit D: Recovery event payload. generation_epoch must be a finite number —
+ * never emit RECOVER without a valid epoch.
+ */
+export function buildRecoverPayload(input: {
+  report_id: string;
+  generation_id: string;
+  generation_epoch: number;
+  locale: string;
+}): { name: typeof REPORT_BATCH2_EVENTS.RECOVER; data: ReportBatch2RecoverEventData } {
+  if (
+    typeof input.generation_epoch !== "number" ||
+    !Number.isFinite(input.generation_epoch)
+  ) {
+    throw new Error("invalid_recover_payload:generation_epoch_required");
+  }
+  return {
+    name: REPORT_BATCH2_EVENTS.RECOVER,
+    data: {
+      report_id: input.report_id.trim(),
+      generation_id: input.generation_id.trim(),
+      generation_epoch: input.generation_epoch,
+      locale: input.locale.trim(),
     },
   };
 }
