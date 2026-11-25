@@ -51,12 +51,13 @@ import {
 import { REPORT_BATCH2_EVENTS } from "./events";
 import {
   appendInvocationLog,
-  getJob,
+  loadJob,
   saveJob,
   setPageOutput,
   setRepairPending,
   updatePageState,
 } from "./job-store";
+import type { ReportBatch2JobRecord } from "./types";
 import { getBatch2ModelInvoke } from "./model-invoke";
 import {
   assertPageDepsReady,
@@ -82,7 +83,11 @@ export async function runReportPageGenerateOnce(input: {
   invocation_id: string;
   worker_id?: string;
 }): Promise<ReportBatch2WorkerResult> {
-  const job = getJob(input.event.report_id, input.event.generation_id);
+  const loaded = await loadJob(input.event.report_id, input.event.generation_id);
+  if (!loaded.ok) {
+    return { status: "failed", code: loaded.code, detail: loaded.detail };
+  }
+  const job = loaded.value;
   if (!job) {
     return { status: "failed", code: "job_not_found", detail: "batch2 job missing" };
   }
@@ -120,7 +125,10 @@ export async function runReportPageGenerateOnce(input: {
   if (!deps.ok) {
     updatePageState(job, page_id, { outcome: "failed" });
     job.status = "failed";
-    saveJob(job);
+    const saved = await saveJob(job);
+    if (!saved.ok) {
+      return { status: "failed", code: saved.code, detail: saved.detail };
+    }
     return { status: "failed", code: deps.code, detail: deps.detail };
   }
 
@@ -128,7 +136,10 @@ export async function runReportPageGenerateOnce(input: {
   if (prep.build_fail) {
     updatePageState(job, page_id, { outcome: "failed" });
     job.status = "failed";
-    saveJob(job);
+    const saved = await saveJob(job);
+    if (!saved.ok) {
+      return { status: "failed", code: saved.code, detail: saved.detail };
+    }
     return {
       status: "failed",
       code: prep.build_fail.code,
@@ -140,14 +151,20 @@ export async function runReportPageGenerateOnce(input: {
   if (!fp.ok) {
     updatePageState(job, page_id, { outcome: "failed" });
     job.status = "failed";
-    saveJob(job);
+    const saved = await saveJob(job);
+    if (!saved.ok) {
+      return { status: "failed", code: saved.code, detail: saved.detail };
+    }
     return { status: "failed", code: fp.code, detail: fp.detail };
   }
 
   if (input.event.input_fingerprint.trim() !== fp.result.fingerprint) {
     updatePageState(job, page_id, { outcome: "failed" });
     job.status = "failed";
-    saveJob(job);
+    const saved = await saveJob(job);
+    if (!saved.ok) {
+      return { status: "failed", code: saved.code, detail: saved.detail };
+    }
     return {
       status: "failed",
       code: "input_fingerprint_mismatch",
@@ -161,7 +178,10 @@ export async function runReportPageGenerateOnce(input: {
     // re-dispatch after Page01 completes — do not permanently fail the page.
     if (page_id === "02" && !job.page_outputs["01"]) {
       updatePageState(job, page_id, { outcome: "pending" });
-      saveJob(job);
+      const saved = await saveJob(job);
+    if (!saved.ok) {
+      return { status: "failed", code: saved.code, detail: saved.detail };
+    }
       return {
         status: "deferred",
         code: "awaiting_optional_page01",
@@ -171,7 +191,10 @@ export async function runReportPageGenerateOnce(input: {
     }
     updatePageState(job, page_id, { outcome: "failed" });
     job.status = "failed";
-    saveJob(job);
+    const saved = await saveJob(job);
+    if (!saved.ok) {
+      return { status: "failed", code: saved.code, detail: saved.detail };
+    }
     return {
       status: "failed",
       code: "may_invoke_llm_false",
@@ -184,7 +207,10 @@ export async function runReportPageGenerateOnce(input: {
     input_fingerprint: fp.result.fingerprint,
   });
   job.status = "running";
-  saveJob(job);
+  const runningSaved = await saveJob(job);
+  if (!runningSaved.ok) {
+    return { status: "failed", code: runningSaved.code, detail: runningSaved.detail };
+  }
 
   const started_at = new Date().toISOString();
   const invoke = getBatch2ModelInvoke();
@@ -213,7 +239,10 @@ export async function runReportPageGenerateOnce(input: {
     });
     updatePageState(job, page_id, { outcome: "failed" });
     job.status = "failed";
-    saveJob(job);
+    const saved = await saveJob(job);
+    if (!saved.ok) {
+      return { status: "failed", code: saved.code, detail: saved.detail };
+    }
     return {
       status: "failed",
       code: "model_invoke_error",
@@ -234,21 +263,33 @@ export async function runReportPageGenerateOnce(input: {
   if (scareRedlineSnippet(rawText)) {
     updatePageState(job, page_id, { outcome: "failed" });
     job.status = "failed";
-    saveJob(job);
+    const saved = await saveJob(job);
+    if (!saved.ok) {
+      return { status: "failed", code: saved.code, detail: saved.detail };
+    }
     return { status: "failed", code: "scare_redline", detail: "model output failed compliance" };
   }
 
   const parsed = parsePageJson(page_id, rawText);
   if (parsed == null) {
-    queueRepair(job, page_id, prep, rawText, fp.result.fingerprint, [
+    const repairQueued = await queueRepair(job, page_id, prep, rawText, fp.result.fingerprint, [
       { code: "json_parse_failed", detail: "strict parse failed" },
     ]);
+    if (repairQueued) return repairQueued;
     return { status: "needs_repair" };
   }
 
   const validated = validatePageOutput(page_id, parsed, prep.ctx, job.locale);
   if (!validated.ok) {
-    queueRepair(job, page_id, prep, rawText, fp.result.fingerprint, validated.issues);
+    const repairQueued = await queueRepair(
+      job,
+      page_id,
+      prep,
+      rawText,
+      fp.result.fingerprint,
+      validated.issues,
+    );
+    if (repairQueued) return repairQueued;
     return { status: "needs_repair" };
   }
 
@@ -259,19 +300,21 @@ export async function runReportPageGenerateOnce(input: {
     output_fingerprint: output_fp,
     input_fingerprint: fp.result.fingerprint,
   });
-  saveJob(job);
+  const doneSaved = await saveJob(job);
+  if (!doneSaved.ok) {
+    return { status: "failed", code: doneSaved.code, detail: doneSaved.detail };
+  }
   return { status: "completed" };
 }
 
-function queueRepair(
-  job: ReturnType<typeof getJob>,
+async function queueRepair(
+  job: ReportBatch2JobRecord,
   page_id: ReportPageId,
   prep: ReturnType<typeof buildPageProductionPrep>,
   previous_raw: string,
   input_fingerprint: string,
   issues: unknown[],
-): void {
-  if (!job) return;
+): Promise<ReportBatch2WorkerResult | null> {
   setRepairPending(job, page_id, {
     page_id,
     system: prep.system,
@@ -285,7 +328,11 @@ function queueRepair(
     prompt_version: prep.prompt_version,
   });
   updatePageState(job, page_id, { outcome: "repair_queued" });
-  saveJob(job);
+  const saved = await saveJob(job);
+  if (!saved.ok) {
+    return { status: "failed", code: saved.code, detail: saved.detail };
+  }
+  return null;
 }
 
 function parsePageJson(page_id: ReportPageId, rawText: string): unknown | null {

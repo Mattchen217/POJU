@@ -4,8 +4,9 @@ import { resolveReportReadyState } from "../orchestration";
 import type { ReportPageId } from "../orchestration/types";
 import {
   appendDispatchLog,
-  createJob,
-  getJob,
+  createJobAndPersist,
+  isReportBatch2SharedStoreAvailable,
+  loadJob,
   saveJob,
   updatePageState,
 } from "./job-store";
@@ -24,7 +25,7 @@ import {
   computePageInputFingerprintForJob,
   upstreamFingerprintsForPage,
 } from "./page-prep";
-import type { ReportBatch2JobInputs } from "./types";
+import type { ReportBatch2JobInputs, ReportBatch2JobRecord } from "./types";
 
 const DISPATCH_GUARD = new Set([
   "queued",
@@ -48,8 +49,7 @@ function isTerminalOutcome(outcome: string): boolean {
   );
 }
 
-function refreshJobStatus(job: ReturnType<typeof getJob>): void {
-  if (!job) return;
+function refreshJobStatus(job: ReportBatch2JobRecord): void {
   const states = job.page_states;
   const allTerminal = states.every((s) => isTerminalOutcome(s.outcome));
   const anyFailed = states.some((s) => s.outcome === "failed");
@@ -67,7 +67,11 @@ export async function runReportBatch2OrchestratorTick(input: {
   | { ok: true; dispatched: ReportBatch2EventPayload[] }
   | { ok: false; code: string; detail: string }
 > {
-  const job = getJob(input.report_id, input.generation_id);
+  const loaded = await loadJob(input.report_id, input.generation_id);
+  if (!loaded.ok) {
+    return { ok: false, code: loaded.code, detail: loaded.detail };
+  }
+  const job = loaded.value;
   if (!job) {
     return { ok: false, code: "job_not_found", detail: "batch2 job missing" };
   }
@@ -98,8 +102,6 @@ export async function runReportBatch2OrchestratorTick(input: {
     dispatched.push(payload);
   }
 
-  // Collect all model-ready pages first (e.g. Page01∥Page02), then send once —
-  // never wait for Page01 completion before enqueueing Page02.
   for (const page_id of ready.ready_model_generations) {
     const st = job.page_states.find((s) => s.page_id === page_id);
     if (st && DISPATCH_GUARD.has(st.outcome)) continue;
@@ -139,6 +141,13 @@ export async function runReportBatch2OrchestratorTick(input: {
     dispatched.push(payload);
   }
 
+  job.status = "orchestrating";
+  refreshJobStatus(job);
+  const preSend = await saveJob(job);
+  if (!preSend.ok) {
+    return { ok: false, code: preSend.code, detail: preSend.detail };
+  }
+
   if (pendingSend.length) {
     const send = await sendReportBatch2Events(pendingSend);
     if (!send.ok) {
@@ -146,9 +155,6 @@ export async function runReportBatch2OrchestratorTick(input: {
     }
   }
 
-  job.status = "orchestrating";
-  refreshJobStatus(job);
-  saveJob(job);
   return { ok: true, dispatched };
 }
 
@@ -162,6 +168,15 @@ export async function startReportBatch2Production(input: {
   | { ok: true; report_id: string; generation_id: string }
   | { ok: false; code: string; detail: string }
 > {
+  void input.persist_kv;
+  if (!isReportBatch2SharedStoreAvailable()) {
+    return {
+      ok: false,
+      code: "kv_unavailable",
+      detail:
+        "Batch2 requires shared durable KV (Upstash/KV env) — no V3 face fallback",
+    };
+  }
   if (!isReportBatch2InngestConfigured() && !getReportBatch2EventSenderForTests()) {
     return {
       ok: false,
@@ -173,13 +188,16 @@ export async function startReportBatch2Production(input: {
 
   const generation_id = (input.generation_id?.trim() || randomUUID()).trim();
   const report_id = input.report_id.trim();
-  createJob({
+
+  const created = await createJobAndPersist({
     report_id,
     generation_id,
     locale: input.locale,
     inputs: input.inputs,
-    persist_kv: input.persist_kv,
   });
+  if (!created.ok) {
+    return { ok: false, code: created.code, detail: created.detail };
+  }
 
   const payload = buildOrchestratePayload({
     report_id,
@@ -191,10 +209,11 @@ export async function startReportBatch2Production(input: {
     return send;
   }
 
-  const job = getJob(report_id, generation_id);
-  if (job) {
-    job.status = "orchestrating";
-    saveJob(job);
+  const job = created.value;
+  job.status = "orchestrating";
+  const saved = await saveJob(job);
+  if (!saved.ok) {
+    return { ok: false, code: saved.code, detail: saved.detail };
   }
 
   return { ok: true, report_id, generation_id };

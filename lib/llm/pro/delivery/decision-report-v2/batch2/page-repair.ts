@@ -41,7 +41,7 @@ import { REPORT_BATCH2_EVENTS } from "./events";
 import {
   appendInvocationLog,
   clearRepairPending,
-  getJob,
+  loadJob,
   saveJob,
   setPageOutput,
   updatePageState,
@@ -56,7 +56,11 @@ export async function runReportPageRepairOnce(input: {
   invocation_id: string;
   worker_id?: string;
 }): Promise<ReportBatch2WorkerResult> {
-  const job = getJob(input.event.report_id, input.event.generation_id);
+  const loaded = await loadJob(input.event.report_id, input.event.generation_id);
+  if (!loaded.ok) {
+    return { status: "failed", code: loaded.code, detail: loaded.detail };
+  }
+  const job = loaded.value;
   if (!job) {
     return { status: "failed", code: "job_not_found", detail: "batch2 job missing" };
   }
@@ -71,7 +75,10 @@ export async function runReportPageRepairOnce(input: {
     updatePageState(job, page_id, { outcome: "failed" });
     clearRepairPending(job, page_id);
     job.status = "failed";
-    saveJob(job);
+    const saved = await saveJob(job);
+    if (!saved.ok) {
+      return { status: "failed", code: saved.code, detail: saved.detail };
+    }
     return {
       status: "failed",
       code: "input_fingerprint_mismatch",
@@ -88,7 +95,10 @@ export async function runReportPageRepairOnce(input: {
   );
 
   updatePageState(job, page_id, { outcome: "running" });
-  saveJob(job);
+  const runningSaved = await saveJob(job);
+  if (!runningSaved.ok) {
+    return { status: "failed", code: runningSaved.code, detail: runningSaved.detail };
+  }
 
   const started_at = new Date().toISOString();
   const invoke = getBatch2ModelInvoke();
@@ -118,7 +128,10 @@ export async function runReportPageRepairOnce(input: {
     updatePageState(job, page_id, { outcome: "failed" });
     clearRepairPending(job, page_id);
     job.status = "failed";
-    saveJob(job);
+    const saved = await saveJob(job);
+    if (!saved.ok) {
+      return { status: "failed", code: saved.code, detail: saved.detail };
+    }
     return {
       status: "failed",
       code: "model_invoke_error",
@@ -141,7 +154,10 @@ export async function runReportPageRepairOnce(input: {
   if (scareRedlineSnippet(rawText)) {
     updatePageState(job, page_id, { outcome: "failed" });
     job.status = "failed";
-    saveJob(job);
+    const saved = await saveJob(job);
+    if (!saved.ok) {
+      return { status: "failed", code: saved.code, detail: saved.detail };
+    }
     return { status: "failed", code: "scare_redline", detail: "repair output failed compliance" };
   }
 
@@ -149,7 +165,10 @@ export async function runReportPageRepairOnce(input: {
   if (parsed == null) {
     updatePageState(job, page_id, { outcome: "failed" });
     job.status = "failed";
-    saveJob(job);
+    const saved = await saveJob(job);
+    if (!saved.ok) {
+      return { status: "failed", code: saved.code, detail: saved.detail };
+    }
     return { status: "failed", code: "repair_json_parse_failed", detail: "repair JSON invalid" };
   }
 
@@ -157,7 +176,10 @@ export async function runReportPageRepairOnce(input: {
   if (!validated.ok) {
     updatePageState(job, page_id, { outcome: "failed" });
     job.status = "failed";
-    saveJob(job);
+    const saved = await saveJob(job);
+    if (!saved.ok) {
+      return { status: "failed", code: saved.code, detail: saved.detail };
+    }
     return {
       status: "failed",
       code: "repair_validation_failed",
@@ -172,7 +194,10 @@ export async function runReportPageRepairOnce(input: {
     output_fingerprint: output_fp,
     input_fingerprint: pending.input_fingerprint,
   });
-  saveJob(job);
+  const doneSaved = await saveJob(job);
+  if (!doneSaved.ok) {
+    return { status: "failed", code: doneSaved.code, detail: doneSaved.detail };
+  }
   return { status: "completed" };
 }
 

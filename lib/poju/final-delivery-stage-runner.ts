@@ -122,6 +122,11 @@ import { dispatchDeliveryContinue, publishDeliveryTask } from "@/lib/poju/delive
 import { productionDeliveryUsesV3 } from "@/lib/llm/pro/delivery/pipeline-v3/flag";
 import { isFaceDeliveryKey } from "@/lib/llm/pro/delivery/pipeline-v3/gate-face-format";
 import {
+  pollFinalDeliveryReportBatch2,
+  shouldRunReportBatch2ForFinalDelivery,
+  startFinalDeliveryReportBatch2,
+} from "@/lib/llm/pro/delivery/decision-report-v2/batch2/production-entry";
+import {
   ensureProductionV3Lab,
   failProductionV3Job,
   persistProductionV3Book,
@@ -1295,6 +1300,58 @@ async function progressProductionV3Segments(
     }
     return "merged";
   }
+
+  // Production call chain: final-delivery segments → startFinalDeliveryReportBatch2
+  // → startReportBatch2Production → Inngest orchestrator → page workers
+  // Old V3 sequential runProductionV3Task face path is isolated when Batch2 is active.
+  if (shouldRunReportBatch2ForFinalDelivery(input)) {
+    let poll = await pollFinalDeliveryReportBatch2(job_id, input);
+    if (poll.phase === "not_started") {
+      const start = await startFinalDeliveryReportBatch2(job_id, input);
+      if (!start.ok) {
+        await failProductionV3Job({
+          job_id,
+          session_id: input.session_id,
+          reason: start.code,
+        });
+        stopHeartbeat();
+        await releaseDeliveryContinueLease(job_id, leaseToken).catch(() => undefined);
+        leaseHandedOff.value = true;
+        return "failed";
+      }
+      return parkForWorkers("report_batch2_started");
+    }
+    if (poll.phase === "running") {
+      return parkForWorkers("report_batch2_workers");
+    }
+    if (poll.phase === "failed") {
+      await failProductionV3Job({
+        job_id,
+        session_id: input.session_id,
+        reason: poll.reason,
+      });
+      stopHeartbeat();
+      await releaseDeliveryContinueLease(job_id, leaseToken).catch(() => undefined);
+      leaseHandedOff.value = true;
+      return "failed";
+    }
+    if (poll.phase === "completed") {
+      return "merged";
+    }
+    // Batch2 path selected — never fall through to sequential V3 face generation.
+    await failProductionV3Job({
+      job_id,
+      session_id: input.session_id,
+      reason: "report_batch2_unhandled_phase",
+    });
+    stopHeartbeat();
+    await releaseDeliveryContinueLease(job_id, leaseToken).catch(() => undefined);
+    leaseHandedOff.value = true;
+    return "failed";
+  }
+
+  // Old V3 sequential runProductionV3Task face path — only when Batch2 is not selected
+  // (e.g. no frozen decision_context_snapshot). Never a silent fallback from Batch2 failures.
 
   if (isEphemeralKvActive()) {
     // No other isolate can see this store. Run v3 steps here until the book

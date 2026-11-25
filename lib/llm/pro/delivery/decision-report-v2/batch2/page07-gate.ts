@@ -8,7 +8,7 @@ import {
 import { REPORT_BATCH2_EVENTS } from "./events";
 import {
   appendInvocationLog,
-  getJob,
+  loadJob,
   saveJob,
   setPageOutput,
   updatePageState,
@@ -23,7 +23,11 @@ export async function runReportPage07ApplicabilityGate(input: {
   invocation_id: string;
   worker_id?: string;
 }): Promise<ReportBatch2ApplicabilityResult> {
-  const job = getJob(input.event.report_id, input.event.generation_id);
+  const loaded = await loadJob(input.event.report_id, input.event.generation_id);
+  if (!loaded.ok) {
+    return { status: "failed", code: loaded.code, detail: loaded.detail };
+  }
+  const job = loaded.value;
   if (!job) {
     return { status: "failed", code: "job_not_found", detail: "batch2 job missing" };
   }
@@ -61,7 +65,10 @@ export async function runReportPage07ApplicabilityGate(input: {
       applicability_status: "applicable",
       outcome: "pending",
     });
-    saveJob(job);
+    const saved = await saveJob(job);
+    if (!saved.ok) {
+      return { status: "failed", code: saved.code, detail: saved.detail };
+    }
     return { status: "applicable", applicability_status: "applicable" };
   }
 
@@ -104,7 +111,10 @@ export async function runReportPage07ApplicabilityGate(input: {
       outcome: "skipped_not_applicable",
       output_fingerprint: output_fp,
     });
-    saveJob(job);
+    const saved = await saveJob(job);
+    if (!saved.ok) {
+      return { status: "failed", code: saved.code, detail: saved.detail };
+    }
     return {
       status: "not_applicable",
       applicability_status: "not_applicable",
@@ -112,11 +122,51 @@ export async function runReportPage07ApplicabilityGate(input: {
     };
   }
 
-  updatePageState(job, page_id, {
-    applicability_status: "insufficient_information",
-    outcome: "insufficient_information",
-  });
-  saveJob(job);
+  // Persist a status page + fingerprint so Page08 upstream fingerprint gate can proceed.
+  {
+    const built = buildFace07ProductionContext({
+      report_id: job.inputs.report_id,
+      locale: job.locale,
+      dc: job.inputs.dc,
+      pack: job.inputs.pack,
+      chart_fact_pack: job.inputs.chart_fact_pack ?? null,
+      page01: job.page_outputs["01"],
+      page02: job.page_outputs["02"],
+      page04: job.page_outputs["04"],
+      page05: job.page_outputs["05"],
+      page06: job.page_outputs["06"],
+      authorized_partner_profile: job.inputs.authorized_partner_profile,
+    });
+    const architecture =
+      built.ok && built.ctx.architecture ? built.ctx.architecture : undefined;
+    const synthesized = synthesizeFace07StatusPage({
+      locale: job.locale,
+      applicability,
+      architecture,
+    });
+    let page: unknown = synthesized;
+    if (built.ok) {
+      const validated = validateFace07ProductionOutput({
+        raw: synthesized,
+        locale: job.locale,
+        ctx: built.ctx,
+      });
+      if (validated.ok) {
+        page = validated.page;
+      }
+    }
+    const output_fp = hashCanonicalPayload(page);
+    setPageOutput(job, page_id, page, output_fp);
+    updatePageState(job, page_id, {
+      applicability_status: "insufficient_information",
+      outcome: "insufficient_information",
+      output_fingerprint: output_fp,
+    });
+  }
+  const saved = await saveJob(job);
+  if (!saved.ok) {
+    return { status: "failed", code: saved.code, detail: saved.detail };
+  }
   return {
     status: "insufficient_information",
     applicability_status: "insufficient_information",

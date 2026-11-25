@@ -9,7 +9,7 @@ import { runReportBatch2OrchestratorTick } from "./orchestrator";
 import { runReportPage07ApplicabilityGate } from "./page07-gate";
 import { runReportPageGenerateOnce } from "./page-generate";
 import { runReportPageRepairOnce } from "./page-repair";
-import { getJob } from "./job-store";
+import { loadJob } from "./job-store";
 import type {
   ReportBatch2ApplicabilityEventData,
   ReportBatch2GenerateEventData,
@@ -22,8 +22,8 @@ async function maybeContinueOrchestration(
   generation_id: string,
   locale: string,
 ): Promise<void> {
-  const job = getJob(report_id, generation_id);
-  if (!job) return;
+  const loaded = await loadJob(report_id, generation_id);
+  if (!loaded.ok || !loaded.value) return;
   await sendReportBatch2Events([
     buildOrchestratePayload({ report_id, generation_id, locale }),
   ]);
@@ -55,8 +55,11 @@ export async function handleGenerateEvent(data: ReportBatch2GenerateEventData): 
   });
 
   if (result.status === "needs_repair") {
-    const job = getJob(data.report_id, data.generation_id);
-    const pending = job?.repair_pending[data.page_id];
+    const loaded = await loadJob(data.report_id, data.generation_id);
+    const pending =
+      loaded.ok && loaded.value
+        ? loaded.value.repair_pending[data.page_id]
+        : undefined;
     if (pending) {
       await sendReportBatch2Events([
         buildRepairPayload({
@@ -71,9 +74,6 @@ export async function handleGenerateEvent(data: ReportBatch2GenerateEventData): 
     return { ok: true, status: "needs_repair", continued: false };
   }
 
-  // Deferred Page02 (awaiting Page01): leave pending. Do NOT re-orchestrate
-  // here — that would re-dispatch Page02 in a loop. Page01 completion will
-  // trigger orchestrate and unlock Page02.
   if (result.status === "deferred") {
     return { ok: true, status: "deferred", continued: false };
   }
@@ -130,4 +130,75 @@ export async function handleApplicabilityEvent(
     status: result.status,
     continued: true,
   };
+}
+
+export async function runReportPageOrchestrateInngestStep(input: {
+  event: { data: Record<string, unknown> };
+}): Promise<{ ok: boolean; dispatched_count: number; detail?: string; skipped?: boolean; reason?: string }> {
+  const report_id = String(input.event.data.report_id ?? "").trim();
+  const generation_id = String(input.event.data.generation_id ?? "").trim();
+  if (!report_id || !generation_id) {
+    return { ok: true, dispatched_count: 0, skipped: true, reason: "missing_job_ids" };
+  }
+  return handleOrchestrateEvent({
+    report_id,
+    generation_id,
+    locale: String(input.event.data.locale ?? "en"),
+  });
+}
+
+export async function runReportPageGenerateInngestStep(input: {
+  event: { data: Record<string, unknown> };
+}): Promise<Record<string, unknown>> {
+  const report_id = String(input.event.data.report_id ?? "").trim();
+  const generation_id = String(input.event.data.generation_id ?? "").trim();
+  const page_id = String(input.event.data.page_id ?? "").trim();
+  if (!report_id || !generation_id || !page_id) {
+    return { skipped: true, reason: "invalid_generate_event" };
+  }
+  return handleGenerateEvent({
+    report_id,
+    generation_id,
+    page_id: page_id as ReportBatch2GenerateEventData["page_id"],
+    locale: String(input.event.data.locale ?? "en"),
+    input_fingerprint: String(input.event.data.input_fingerprint ?? ""),
+    upstream_output_fingerprints:
+      (input.event.data.upstream_output_fingerprints as ReportBatch2GenerateEventData["upstream_output_fingerprints"]) ?? {},
+  });
+}
+
+export async function runReportPageRepairInngestStep(input: {
+  event: { data: Record<string, unknown> };
+}): Promise<Record<string, unknown>> {
+  const report_id = String(input.event.data.report_id ?? "").trim();
+  const generation_id = String(input.event.data.generation_id ?? "").trim();
+  const page_id = String(input.event.data.page_id ?? "").trim();
+  if (!report_id || !generation_id || !page_id) {
+    return { skipped: true, reason: "invalid_repair_event" };
+  }
+  return handleRepairEvent({
+    report_id,
+    generation_id,
+    page_id: page_id as ReportBatch2RepairEventData["page_id"],
+    locale: String(input.event.data.locale ?? "en"),
+    input_fingerprint: String(input.event.data.input_fingerprint ?? ""),
+  });
+}
+
+export async function runReportPageApplicabilityInngestStep(input: {
+  event: { data: Record<string, unknown> };
+}): Promise<Record<string, unknown>> {
+  const report_id = String(input.event.data.report_id ?? "").trim();
+  const generation_id = String(input.event.data.generation_id ?? "").trim();
+  if (!report_id || !generation_id) {
+    return { skipped: true, reason: "invalid_applicability_event" };
+  }
+  return handleApplicabilityEvent({
+    report_id,
+    generation_id,
+    page_id: "07",
+    locale: String(input.event.data.locale ?? "en"),
+    upstream_output_fingerprints:
+      (input.event.data.upstream_output_fingerprints as ReportBatch2ApplicabilityEventData["upstream_output_fingerprints"]) ?? {},
+  });
 }

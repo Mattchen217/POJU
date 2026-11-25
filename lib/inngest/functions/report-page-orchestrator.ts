@@ -1,7 +1,7 @@
 import { inngest } from "@/lib/inngest/client";
 import {
-  handleOrchestrateEvent,
   REPORT_BATCH2_EVENTS,
+  runReportPageOrchestrateInngestStep,
 } from "@/lib/llm/pro/delivery/decision-report-v2/batch2";
 
 export const reportPageOrchestrator = inngest.createFunction(
@@ -18,17 +18,8 @@ export const reportPageOrchestrator = inngest.createFunction(
     triggers: [{ event: REPORT_BATCH2_EVENTS.ORCHESTRATE }],
   },
   async ({ event, step }) => {
-    const report_id = String(event.data.report_id ?? "").trim();
-    const generation_id = String(event.data.generation_id ?? "").trim();
-    if (!report_id || !generation_id) {
-      return { skipped: true, reason: "missing_job_ids" };
-    }
     return await step.run("orchestrate-tick", async () =>
-      handleOrchestrateEvent({
-        report_id,
-        generation_id,
-        locale: String(event.data.locale ?? "en"),
-      }),
+      runReportPageOrchestrateInngestStep({ event }),
     );
   },
 );
