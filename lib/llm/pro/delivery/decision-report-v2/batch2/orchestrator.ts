@@ -8,6 +8,7 @@ import {
   isReportBatch2SharedStoreAvailable,
   loadJob,
   saveJob,
+  updateJobStatus,
   updatePageState,
 } from "./job-store";
 import {
@@ -189,11 +190,14 @@ export async function startReportBatch2Production(input: {
   const generation_id = (input.generation_id?.trim() || randomUUID()).trim();
   const report_id = input.report_id.trim();
 
+  // Persist full initial Job (incl. orchestrating) BEFORE any event — never
+  // write a stale create-time snapshot after workers may have started.
   const created = await createJobAndPersist({
     report_id,
     generation_id,
     locale: input.locale,
     inputs: input.inputs,
+    status: "orchestrating",
   });
   if (!created.ok) {
     return { ok: false, code: created.code, detail: created.detail };
@@ -206,14 +210,12 @@ export async function startReportBatch2Production(input: {
   });
   const send = await sendReportBatch2Events([payload]);
   if (!send.ok) {
-    return send;
-  }
-
-  const job = created.value;
-  job.status = "orchestrating";
-  const saved = await saveJob(job);
-  if (!saved.ok) {
-    return { ok: false, code: saved.code, detail: saved.detail };
+    await updateJobStatus(report_id, generation_id, "failed").catch(() => undefined);
+    return {
+      ok: false,
+      code: send.code,
+      detail: `${send.detail} (job left status=failed after event send failure)`,
+    };
   }
 
   return { ok: true, report_id, generation_id };

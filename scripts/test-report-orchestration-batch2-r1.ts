@@ -218,14 +218,18 @@ async function main(): Promise<void> {
   {
     await cleanup();
     const d = durableKv() as unknown as {
-      set: (...args: unknown[]) => Promise<unknown>;
+      compareAndSetExact: (
+        key: string,
+        expected: string | null,
+        next: unknown,
+        opts?: { ex?: number },
+      ) => Promise<boolean>;
     };
-    const origSet = d.set.bind(d);
-  const failKey = "report-batch2:persist_fail:gen";
-    d.set = async (...args: unknown[]) => {
-      const key = String(args[0] ?? "");
+    const origCas = d.compareAndSetExact.bind(d);
+    const failKey = "report-batch2:persist_fail:gen:meta";
+    d.compareAndSetExact = async (key, expected, next, opts) => {
       if (key === failKey) throw new Error("kv_write_denied");
-      return origSet(...args);
+      return origCas(key, expected, next, opts);
     };
     const created = await createJob({
       report_id: "persist_fail",
@@ -236,7 +240,7 @@ async function main(): Promise<void> {
     assert.equal(created.ok, false);
     if (created.ok) throw new Error("expected kv_write_failed");
     assert.match(created.code, /kv_write_failed|kv_unavailable/);
-    d.set = origSet;
+    d.compareAndSetExact = origCas;
     console.log("job-store ok — persist failure surfaces kv_write_failed");
   }
 
@@ -273,7 +277,7 @@ async function main(): Promise<void> {
     assert.equal(inv.length, 2);
     assert.equal(inv[0]!.function_id, "report-page-generate");
     assert.equal(inv[1]!.function_id, "report-page-generate");
-    assert.notEqual(inv[0]!.invocation_id, inv[1]!.invocation_id);
+    assert.notEqual(inv[0]!.adapter_invocation_id, inv[1]!.adapter_invocation_id);
 
     const job = await getJob(report_id, generation_id);
     assert.ok(job);
@@ -595,7 +599,7 @@ async function main(): Promise<void> {
     setReportBatch2EventSenderForTests(runtimeSender);
     resetBatch2InvocationRecords();
     // Keep generate inv ids from before reset — re-capture after repair only
-    const genInvocationId = genInv[0]!.invocation_id;
+    const genInvocationId = genInv[0]!.adapter_invocation_id;
     await sendReportBatch2Events(heldRepair as Parameters<typeof sendReportBatch2Events>[0]);
     await runtimeSender.drain();
 
@@ -603,7 +607,7 @@ async function main(): Promise<void> {
       (r) => r.function_id === "report-page-repair",
     );
     assert.ok(repairInv.length >= 1);
-    assert.notEqual(genInvocationId, repairInv[0]!.invocation_id);
+    assert.notEqual(genInvocationId, repairInv[0]!.adapter_invocation_id);
     const afterRepair = await loadJob(report_id, generation_id);
     assert.ok(afterRepair.value);
     assert.notEqual(

@@ -14,12 +14,17 @@ import {
 import { FACE_DELIVERY_PAGE_KEYS } from "@/lib/llm/pro/delivery/segment-key-alias";
 import type { FinalDeliveryJobInput } from "@/lib/poju/xhigh-job-types";
 import type { DecisionContext } from "@/lib/poju/decision-context/types";
-import { isReportBatch2InngestConfigured } from "./dispatch";
 import {
+  buildOrchestratePayload,
+  isReportBatch2InngestConfigured,
+  sendReportBatch2Events,
+} from "./dispatch";
+import {
+  createJobAndPersist,
   isReportBatch2SharedStoreAvailable,
   loadJob,
+  updateJobStatus,
 } from "./job-store";
-import { startReportBatch2Production } from "./orchestrator";
 import type { ReportBatch2JobInputs, ReportBatch2JobRecord } from "./types";
 
 const ACTIVE_POINTER_PREFIX = "report-batch2-active:";
@@ -33,6 +38,11 @@ export type ReportBatch2ActivePointer = {
   generation_id: string;
   started_at: string;
 };
+
+export type ActivePointerRead =
+  | { status: "found"; pointer: ReportBatch2ActivePointer }
+  | { status: "not_found" }
+  | { status: "read_failed"; detail: string };
 
 /**
  * Batch2 is the production path for face V2 when V3 delivery is active
@@ -79,30 +89,49 @@ function buildBatch2InputsFromFinalDelivery(
   };
 }
 
+/** Three-state pointer read — never maps KV failure to not_found. */
 export async function readReportBatch2ActivePointer(
   job_id: string,
-): Promise<ReportBatch2ActivePointer | null> {
+): Promise<ActivePointerRead> {
   try {
-    return (await durableKv().get<ReportBatch2ActivePointer>(activePointerKey(job_id))) ?? null;
-  } catch {
-    return null;
+    const raw = await durableKv().get<ReportBatch2ActivePointer>(
+      activePointerKey(job_id),
+    );
+    if (!raw?.report_id?.trim() || !raw?.generation_id?.trim()) {
+      return { status: "not_found" };
+    }
+    return { status: "found", pointer: raw };
+  } catch (err) {
+    return {
+      status: "read_failed",
+      detail: err instanceof Error ? err.message : String(err),
+    };
   }
 }
 
 async function writeActivePointer(
   job_id: string,
   pointer: ReportBatch2ActivePointer,
-): Promise<void> {
-  await durableKv().set(activePointerKey(job_id), pointer, {
-    ex: KV_TTL.REPORT_BATCH2_JOB,
-  });
+): Promise<{ ok: true } | { ok: false; code: string; detail: string }> {
+  try {
+    await durableKv().set(activePointerKey(job_id), pointer, {
+      ex: KV_TTL.REPORT_BATCH2_JOB,
+    });
+    return { ok: true };
+  } catch (err) {
+    return {
+      ok: false,
+      code: "pointer_write_failed",
+      detail: err instanceof Error ? err.message : String(err),
+    };
+  }
 }
 
 export async function startFinalDeliveryReportBatch2(
   job_id: string,
   input: FinalDeliveryJobInput,
 ): Promise<
-  | { ok: true; generation_id: string }
+  | { ok: true; generation_id: string; reused?: boolean }
   | { ok: false; code: string; detail: string }
 > {
   if (!shouldRunReportBatch2ForFinalDelivery(input)) {
@@ -123,24 +152,70 @@ export async function startFinalDeliveryReportBatch2(
     };
   }
 
+  const existing = await readReportBatch2ActivePointer(job_id);
+  if (existing.status === "read_failed") {
+    return {
+      ok: false,
+      code: "pointer_read_failed",
+      detail: existing.detail,
+    };
+  }
+  const generation_id = `${job_id}:batch2`;
+  if (existing.status === "found") {
+    if (existing.pointer.generation_id === generation_id) {
+      // Same generation already started — do not recreate Job or re-dispatch.
+      return { ok: true, generation_id, reused: true };
+    }
+    return {
+      ok: false,
+      code: "pointer_generation_conflict",
+      detail: `active pointer generation ${existing.pointer.generation_id} != ${generation_id}`,
+    };
+  }
+
   const lab = await loadDeliveryLab(productionV3LabId(job_id)).catch(() => null);
   const built = buildBatch2InputsFromFinalDelivery(job_id, input, lab);
   if (!built.ok) return built;
 
-  const generation_id = `${job_id}:batch2`;
-  const started = await startReportBatch2Production({
+  // 1) Persist Job  2) Write pointer  3) Send ORCHESTRATE
+  // Workers must not run before pointer is queryable.
+  const created = await createJobAndPersist({
     report_id: job_id,
     generation_id,
     locale: input.locale,
     inputs: built.inputs,
+    status: "orchestrating",
   });
-  if (!started.ok) return started;
+  if (!created.ok) {
+    return { ok: false, code: created.code, detail: created.detail };
+  }
 
-  await writeActivePointer(job_id, {
+  const pointer: ReportBatch2ActivePointer = {
     report_id: job_id,
     generation_id,
     started_at: new Date().toISOString(),
-  });
+  };
+  const ptrWrite = await writeActivePointer(job_id, pointer);
+  if (!ptrWrite.ok) {
+    await updateJobStatus(job_id, generation_id, "failed").catch(() => undefined);
+    return ptrWrite;
+  }
+
+  const send = await sendReportBatch2Events([
+    buildOrchestratePayload({
+      report_id: job_id,
+      generation_id,
+      locale: input.locale,
+    }),
+  ]);
+  if (!send.ok) {
+    await updateJobStatus(job_id, generation_id, "failed").catch(() => undefined);
+    return {
+      ok: false,
+      code: send.code,
+      detail: `${send.detail} (pointer retained; job status=failed)`,
+    };
+  }
 
   return { ok: true, generation_id };
 }
@@ -191,9 +266,12 @@ export async function pollFinalDeliveryReportBatch2(
   | { phase: "failed"; reason: string }
 > {
   const ptr = await readReportBatch2ActivePointer(job_id);
-  if (!ptr) return { phase: "not_started" };
+  if (ptr.status === "read_failed") {
+    return { phase: "failed", reason: `pointer_read_failed:${ptr.detail}` };
+  }
+  if (ptr.status === "not_found") return { phase: "not_started" };
 
-  const loaded = await loadJob(ptr.report_id, ptr.generation_id);
+  const loaded = await loadJob(ptr.pointer.report_id, ptr.pointer.generation_id);
   if (!loaded.ok) {
     return { phase: "failed", reason: loaded.code };
   }

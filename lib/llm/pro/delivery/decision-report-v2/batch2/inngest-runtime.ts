@@ -1,5 +1,14 @@
 /**
- * Invoke registered Batch2 Inngest handlers in-process (tests / dry-run).
+ * Batch2 local handler-adapter runtime for tests.
+ *
+ * IMPORTANT (Batch2 R2): This does NOT execute the Inngest platform Function
+ * handler registered via inngest.createFunction. It:
+ *  1) asserts the Function id is present in reportBatch2InngestFunctions;
+ *  2) invokes the same step body those Functions call (adapter path).
+ *
+ * Coverage boundary:
+ *  - Proves: shared-KV handler collaboration + event→adapter routing
+ *  - Does NOT prove: deployed Vercel/Inngest invocation or 300s budgets
  */
 
 import { reportBatch2InngestFunctions } from "@/lib/inngest/functions/report-batch2";
@@ -19,18 +28,27 @@ export const REPORT_BATCH2_FUNCTION_META = [
   { id: "report-page-applicability", event: REPORT_BATCH2_EVENTS.APPLICABILITY },
 ] as const;
 
-export type Batch2InvocationRecord = {
+export type Batch2AdapterInvocationRecord = {
+  /** Local test adapter id — NOT an Inngest platform run id. */
+  adapter_invocation_id: string;
   function_id: string;
   event_name: string;
-  invocation_id: string;
   started_at: string;
   ended_at: string;
+  path: "handler_adapter";
 };
 
-const invocationRecords: Batch2InvocationRecord[] = [];
+/** @deprecated Use Batch2AdapterInvocationRecord — kept for R1 test imports. */
+export type Batch2InvocationRecord = Batch2AdapterInvocationRecord;
+
+const invocationRecords: Batch2AdapterInvocationRecord[] = [];
 const pendingInvocations: Promise<unknown>[] = [];
 
-export function getBatch2InvocationRecords(): readonly Batch2InvocationRecord[] {
+export function getBatch2InvocationRecords(): readonly Batch2AdapterInvocationRecord[] {
+  return invocationRecords;
+}
+
+export function getBatch2AdapterInvocationRecords(): readonly Batch2AdapterInvocationRecord[] {
   return invocationRecords;
 }
 
@@ -45,11 +63,7 @@ function resolveFunctionId(eventName: string): string | null {
   );
 }
 
-const stepMock = {
-  run: async <T>(_name: string, fn: () => Promise<T> | T): Promise<T> => fn(),
-};
-
-async function invokeHandlerBody(
+async function invokeHandlerAdapterBody(
   eventName: string,
   data: Record<string, unknown>,
 ): Promise<unknown> {
@@ -68,58 +82,72 @@ async function invokeHandlerBody(
   }
 }
 
-export async function invokeRegisteredBatch2Event(input: {
+/**
+ * Invoke the shared step body used by registered Functions (adapter path).
+ * Does not call Inngest SDK execute / serve.
+ */
+export async function invokeBatch2HandlerAdapter(input: {
   name: string;
   data: Record<string, unknown>;
-  invocation_id: string;
+  adapter_invocation_id: string;
 }): Promise<unknown> {
   const function_id = resolveFunctionId(input.name);
   if (!function_id) {
-    throw new Error(`no registered Batch2 Function for event ${input.name}`);
+    throw new Error(`no Batch2 Function meta for event ${input.name}`);
   }
   const registered = reportBatch2InngestFunctions.find(
     (fn) => fn.id() === function_id,
   );
   if (!registered) {
-    throw new Error(`Batch2 Function ${function_id} is not in reportBatch2InngestFunctions`);
+    throw new Error(
+      `Batch2 Function ${function_id} is not in reportBatch2InngestFunctions`,
+    );
   }
 
   const report_id = String(input.data.report_id ?? "").trim();
   const generation_id = String(input.data.generation_id ?? "").trim();
   if (report_id && generation_id) {
-    // Force durable KV read — no process-local overlay across Worker invocations.
     clearBatch2JobMemoryOverlay(report_id, generation_id);
   }
 
   const started_at = new Date().toISOString();
   try {
-    const result = await stepMock.run(input.name, () =>
-      invokeHandlerBody(input.name, input.data),
-    );
-    return result;
+    return await invokeHandlerAdapterBody(input.name, input.data);
   } finally {
     invocationRecords.push({
       function_id,
       event_name: input.name,
-      invocation_id: input.invocation_id,
+      adapter_invocation_id: input.adapter_invocation_id,
       started_at,
       ended_at: new Date().toISOString(),
+      path: "handler_adapter",
     });
   }
 }
 
-function scheduleInvocation(input: {
+/** @deprecated Prefer invokeBatch2HandlerAdapter */
+export async function invokeRegisteredBatch2Event(input: {
   name: string;
   data: Record<string, unknown>;
   invocation_id: string;
-}): void {
-  const work = invokeRegisteredBatch2Event(input).catch((err) => {
-    throw err;
+}): Promise<unknown> {
+  return invokeBatch2HandlerAdapter({
+    name: input.name,
+    data: input.data,
+    adapter_invocation_id: input.invocation_id,
   });
+}
+
+function scheduleAdapter(input: {
+  name: string;
+  data: Record<string, unknown>;
+  adapter_invocation_id: string;
+}): void {
+  const work = invokeBatch2HandlerAdapter(input);
   pendingInvocations.push(work);
 }
 
-export function createRegisteredBatch2EventSender(): {
+export function createBatch2HandlerAdapterEventSender(): {
   send(
     events: Array<{ name: string; data: Record<string, unknown> }>,
   ): Promise<{ ok: true } | { ok: false; code: string; detail: string }>;
@@ -129,10 +157,10 @@ export function createRegisteredBatch2EventSender(): {
     send: async (events) => {
       const crypto = await import("node:crypto");
       for (const e of events) {
-        scheduleInvocation({
+        scheduleAdapter({
           name: e.name,
           data: e.data,
-          invocation_id: crypto.randomUUID(),
+          adapter_invocation_id: `adapter_${crypto.randomUUID()}`,
         });
       }
       return { ok: true };
@@ -155,12 +183,65 @@ export function createRegisteredBatch2EventSender(): {
   };
 }
 
-/** Sanity: meta ids align with registered functions. */
+/** @deprecated Prefer createBatch2HandlerAdapterEventSender */
+export function createRegisteredBatch2EventSender(): ReturnType<
+  typeof createBatch2HandlerAdapterEventSender
+> {
+  return createBatch2HandlerAdapterEventSender();
+}
+
+export type ReportBatch2FunctionRegistrationCheck = {
+  id: string;
+  event: string;
+  registered: boolean;
+  has_id_method: boolean;
+};
+
+/** Static/structured check of the four registered Functions (not platform execution). */
+export function inspectReportBatch2FunctionRegistration(): ReportBatch2FunctionRegistrationCheck[] {
+  const byId = new Map(
+    reportBatch2InngestFunctions.map((fn) => [fn.id(), fn] as const),
+  );
+  return REPORT_BATCH2_FUNCTION_META.map((meta) => {
+    const fn = byId.get(meta.id);
+    return {
+      id: meta.id,
+      event: meta.event,
+      registered: !!fn,
+      has_id_method: typeof fn?.id === "function",
+    };
+  });
+}
+
 export function assertReportBatch2FunctionRegistration(): void {
-  const ids = new Set(reportBatch2InngestFunctions.map((fn) => fn.id()));
-  for (const meta of REPORT_BATCH2_FUNCTION_META) {
-    if (!ids.has(meta.id)) {
-      throw new Error(`missing inngest registration for ${meta.id}`);
+  for (const row of inspectReportBatch2FunctionRegistration()) {
+    if (!row.registered) {
+      throw new Error(`missing inngest registration for ${row.id}`);
     }
+  }
+}
+
+/** Source-level checks: generate vs repair are distinct Functions / events. */
+export function assertReportBatch2GenerateRepairSeparation(): void {
+  const gen = REPORT_BATCH2_FUNCTION_META.find(
+    (m) => m.id === "report-page-generate",
+  );
+  const repair = REPORT_BATCH2_FUNCTION_META.find(
+    (m) => m.id === "report-page-repair",
+  );
+  if (!gen || !repair) throw new Error("generate/repair meta missing");
+  const genId: string = gen.id;
+  const repairId: string = repair.id;
+  const genEvent: string = gen.event;
+  const repairEvent: string = repair.event;
+  if (genId === repairId) throw new Error("generate/repair share Function id");
+  if (genEvent === repairEvent) {
+    throw new Error("generate/repair share the same event name");
+  }
+  if (genEvent !== REPORT_BATCH2_EVENTS.GENERATE) {
+    throw new Error("generate Function must trigger on GENERATE");
+  }
+  if (repairEvent !== REPORT_BATCH2_EVENTS.REPAIR) {
+    throw new Error("repair Function must trigger on REPAIR");
   }
 }

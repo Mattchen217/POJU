@@ -205,6 +205,13 @@ export class MemoryKv {
     return list.length;
   }
 
+  async rpush(key: string, ...values: unknown[]): Promise<number> {
+    const list = this.lists.get(key) ?? [];
+    for (const v of values) list.push(v);
+    this.lists.set(key, list);
+    return list.length;
+  }
+
   async ltrim(key: string, start: number, stop: number): Promise<"OK"> {
     const list = this.lists.get(key) ?? [];
     const end = stop < 0 ? list.length + stop + 1 : stop + 1;
