@@ -44,6 +44,16 @@ function isNonEmptyFingerprint(value: unknown): value is string {
   return typeof value === "string" && value.trim().length > 0;
 }
 
+/**
+ * Page output fingerprints are SHA-256 hex digests (same as hashCanonicalPayload).
+ * Used for Page02 optional←Page01 consistency — never treat invalid format as absent.
+ */
+export function isValidPageOutputFingerprint(value: unknown): value is string {
+  return (
+    typeof value === "string" && /^[a-f0-9]{64}$/i.test(value.trim())
+  );
+}
+
 function isExplicitApplicability(
   value: unknown,
 ): value is ReportPage07ApplicabilityStatus {
@@ -225,9 +235,9 @@ export function computePageInputFingerprint(
 
 /**
  * Page02 optional←Page01 must match real context consumption.
- * Consumed alignment without Page01 output FP → reject.
- * No alignment but Page01 output FP provided → reject.
- * Never invent a Page01 output fingerprint.
+ * Consumed alignment without a valid Page01 output FP → reject.
+ * No alignment but a non-empty / invalid Page01 output FP → reject.
+ * Never invent a Page01 output fingerprint; never treat invalid as absent.
  */
 export function assertPage02OptionalUpstreamConsistency(input: {
   production_context: unknown;
@@ -238,16 +248,32 @@ export function assertPage02OptionalUpstreamConsistency(input: {
   const ctx = input.production_context as Face02ProductionContext;
   const consumed = page02ConsumesPage01Alignment(ctx);
   const upFp = input.upstream_output_fingerprints["01"];
-  const hasUp = isNonEmptyFingerprint(upFp);
-  if (consumed && !hasUp) {
-    return {
-      ok: false,
-      code: "optional_upstream_context_mismatch",
-      detail:
-        "page 02 production context consumed Page01 alignment but upstream_output_fingerprints[01] is missing/empty",
-    };
+  const provided = isNonEmptyFingerprint(upFp);
+  const valid = isValidPageOutputFingerprint(upFp);
+
+  if (consumed) {
+    if (!provided) {
+      return {
+        ok: false,
+        code: "optional_upstream_context_mismatch",
+        detail:
+          "page 02 production context consumed Page01 alignment but upstream_output_fingerprints[01] is missing/empty",
+      };
+    }
+    if (!valid) {
+      return {
+        ok: false,
+        code: "optional_upstream_context_mismatch",
+        detail:
+          "page 02 production context consumed Page01 alignment but upstream_output_fingerprints[01] is not a valid SHA-256 hex fingerprint",
+      };
+    }
+    return { ok: true };
   }
-  if (!consumed && hasUp) {
+
+  // Not consumed: any non-empty provision (valid or invalid format) is a mismatch.
+  // Missing / blank → record absent downstream; never invent a fingerprint.
+  if (provided) {
     return {
       ok: false,
       code: "optional_upstream_context_mismatch",

@@ -59,6 +59,7 @@ export {
 
 export {
   hashCanonicalPayload,
+  isValidPageOutputFingerprint,
   selectUpstreamFingerprintsForPage,
   selectOptionalUpstreamFingerprintsForPage,
   requireUpstreamFingerprintsForPage,
@@ -85,6 +86,7 @@ export {
   extractConsumedInputFromFace07,
   extractConsumedInputFromFace08,
   page02ConsumesPage01Alignment,
+  page02RecommendationConditionsFromArchitecture,
   applicabilityFromProductionContext,
   type ReportPageConsumedInputExtract,
   type ProductionContextFingerprintResult,

@@ -1,5 +1,5 @@
 /**
- * Report orchestration Batch 1 R3 — DAG SSOT + production-context fingerprints.
+ * Report orchestration Batch 1 R4 — DAG SSOT + production-context fingerprints.
  * No LLM / Inngest workers. Run: pnpm exec tsx scripts/test-report-orchestration-batch1.ts
  */
 
@@ -21,11 +21,14 @@ import {
   computePageInputFingerprint,
   computePageInputFingerprintFromProductionContext,
   computeAllPageInputFingerprints,
+  hashCanonicalPayload,
+  isValidPageOutputFingerprint,
   selectUpstreamFingerprintsForPage,
   selectOptionalUpstreamFingerprintsForPage,
   requireUpstreamFingerprintsForPage,
   makeTestSharedSlice,
   buildPageSharedInputFingerprintFromProductionContext,
+  page02ConsumesPage01Alignment,
   resolveReportReadyState,
   initialPendingPageStates,
   isPageReadyToDispatch,
@@ -270,7 +273,30 @@ const page02Stub = {
   },
 };
 
-console.log("=== Report orchestration Batch1 R3 (production-context fingerprints) ===");
+/** Valid SHA-256 hex page-output fingerprints for optional upstream tests. */
+const FP01_A = hashCanonicalPayload({ page: "01", v: "a" });
+const FP01_B = hashCanonicalPayload({ page: "01", v: "b" });
+assert.ok(isValidPageOutputFingerprint(FP01_A));
+assert.ok(isValidPageOutputFingerprint(FP01_B));
+assert.notEqual(FP01_A, FP01_B);
+
+function payloadRegistryIds(ctx: {
+  production_payload: {
+    registry: {
+      claims: Array<{ claim_id: string }>;
+      evidence: Array<{ evidence_id: string }>;
+    };
+  };
+}): { claimIds: string[]; evidenceIds: string[] } {
+  return {
+    claimIds: ctx.production_payload.registry.claims.map((c) => c.claim_id),
+    evidenceIds: ctx.production_payload.registry.evidence.map(
+      (e) => e.evidence_id,
+    ),
+  };
+}
+
+console.log("=== Report orchestration Batch1 R4 (production-context fingerprints) ===");
 
 {
   const graph = buildReportDependencyGraph();
@@ -490,30 +516,148 @@ console.log("=== Report orchestration Batch1 R3 (production-context fingerprints
 }
 
 {
-  // Page01/02 personal domains: bazi-only vs ziwei availability
+  // Page02 A–J: optional Page01 consumption detection + fingerprint consistency
   const pack = basePack();
   const dc = baseDc();
-  const baziOnly = buildFace01ProductionContext({
-    report_id: "job_orch_r2_dom",
+
+  const page01CoreOnly = {
+    ...page01Stub,
+    core_judgment: {
+      text: "Core-only judgment for Page02 consumption.",
+      claim_ids: ["u_destiny_01"],
+    },
+    why_this_path: [],
+    recommendation_conditions: [],
+  };
+  const page01WhyOnly = {
+    ...page01Stub,
+    core_judgment: { text: "", claim_ids: [] },
+    why_this_path: [
+      { text: "Why-path-only alignment for Page02.", claim_ids: ["u_destiny_01"] },
+    ],
+    recommendation_conditions: [],
+  };
+  const page01ConditionsOnly = {
+    ...page01Stub,
+    core_judgment: { text: "", claim_ids: [] },
+    why_this_path: [],
+    recommendation_conditions: [
+      {
+        // Differ within architecture value_summary window (status:first-32).
+        condition: "SIX-mo runway gate remains confirmed",
+        status: "assumed",
+        source_ids: ["fact_runway"],
+      },
+    ],
+  };
+  const page01ConditionsAlt = {
+    ...page01ConditionsOnly,
+    recommendation_conditions: [
+      {
+        condition: "THREE-mo runway gate remains confirmed",
+        status: "unconfirmed",
+        source_ids: ["fact_runway"],
+      },
+    ],
+  };
+
+  // A — only core judgment → consumed
+  const builtCore = buildFace02ProductionContext({
+    report_id: "job_orch_r4_02a",
     locale: "en",
     dc,
     pack,
     chart_fact_pack: "日主甲木…",
-    ziwei_available: false,
+    page01: page01CoreOnly,
   });
-  assert.equal(baziOnly.ok, true);
-  if (!baziOnly.ok) throw new Error(baziOnly.reason);
-  const fpBazi = computePageInputFingerprintFromProductionContext({
-    page_id: "01",
-    production_context: baziOnly.ctx,
+  assert.equal(builtCore.ok, true);
+  if (!builtCore.ok) throw new Error(builtCore.reason);
+  assert.equal(page02ConsumesPage01Alignment(builtCore.ctx), true);
+  console.log("H-A ok — only Page01 core judgment → consumed");
+
+  // B — only why paths → consumed
+  const builtWhy = buildFace02ProductionContext({
+    report_id: "job_orch_r4_02b",
+    locale: "en",
+    dc,
+    pack,
+    chart_fact_pack: "日主甲木…",
+    page01: page01WhyOnly,
+  });
+  assert.equal(builtWhy.ok, true);
+  if (!builtWhy.ok) throw new Error(builtWhy.reason);
+  assert.equal(page02ConsumesPage01Alignment(builtWhy.ctx), true);
+  console.log("H-B ok — only Page01 why paths → consumed");
+
+  // C — only recommendation conditions → consumed
+  const builtCond = buildFace02ProductionContext({
+    report_id: "job_orch_r4_02c",
+    locale: "en",
+    dc,
+    pack,
+    chart_fact_pack: "日主甲木…",
+    page01: page01ConditionsOnly,
+  });
+  assert.equal(builtCond.ok, true);
+  if (!builtCond.ok) throw new Error(builtCond.reason);
+  assert.equal(page02ConsumesPage01Alignment(builtCond.ctx), true);
+  console.log("H-C ok — only Page01 recommendation conditions → consumed");
+
+  // D — conditions content change → Page02 fingerprint changes
+  const fpCond = computePageInputFingerprintFromProductionContext({
+    page_id: "02",
+    production_context: builtCond.ctx,
+    upstream_output_fingerprints: { "01": FP01_A },
+  });
+  assert.equal(fpCond.ok, true);
+  if (!fpCond.ok) throw new Error(fpCond.detail);
+  const builtCondAlt = buildFace02ProductionContext({
+    report_id: "job_orch_r4_02c",
+    locale: "en",
+    dc,
+    pack,
+    chart_fact_pack: "日主甲木…",
+    page01: page01ConditionsAlt,
+  });
+  assert.equal(builtCondAlt.ok, true);
+  if (!builtCondAlt.ok) throw new Error(builtCondAlt.reason);
+  const fpCondAlt = computePageInputFingerprintFromProductionContext({
+    page_id: "02",
+    production_context: builtCondAlt.ctx,
+    upstream_output_fingerprints: { "01": FP01_A },
+  });
+  assert.equal(fpCondAlt.ok, true);
+  if (!fpCondAlt.ok) throw new Error(fpCondAlt.detail);
+  assert.notEqual(fpCond.result.fingerprint, fpCondAlt.result.fingerprint);
+  console.log("H-D ok — recommendation conditions change → fingerprint changes");
+
+  // E — consumed, missing Page01 output fingerprint → reject
+  const missUp = computePageInputFingerprintFromProductionContext({
+    page_id: "02",
+    production_context: builtCond.ctx,
     upstream_output_fingerprints: {},
   });
-  assert.equal(fpBazi.ok, true);
-  if (!fpBazi.ok) throw new Error(fpBazi.detail);
+  assert.equal(missUp.ok, false);
+  if (missUp.ok) throw new Error("expected mismatch");
+  assert.equal(missUp.code, "optional_upstream_context_mismatch");
+  console.log("H-E ok — consumed + missing Page01 FP rejected");
 
-  // Page02 without Page01 vs with Page01
+  // F — consumed, empty or invalid format → reject
+  for (const bad of ["", "   ", "out_page01_v1", "absent", "zz"]) {
+    const badFp = computePageInputFingerprintFromProductionContext({
+      page_id: "02",
+      production_context: builtCond.ctx,
+      upstream_output_fingerprints: { "01": bad },
+    });
+    assert.equal(badFp.ok, false, `expected reject for ${JSON.stringify(bad)}`);
+    if (badFp.ok) throw new Error("expected mismatch");
+    assert.equal(badFp.code, "optional_upstream_context_mismatch");
+  }
+  console.log("H-F ok — consumed + empty/invalid Page01 FP rejected");
+
+  // G — not consumed, but valid Page01 FP provided → reject
   const p02No = buildFace02ProductionContext({
-    report_id: "job_orch_r2_02",
+    report_id: "job_orch_r4_02g",
     locale: "en",
     dc,
     pack,
@@ -521,6 +665,18 @@ console.log("=== Report orchestration Batch1 R3 (production-context fingerprints
   });
   assert.equal(p02No.ok, true);
   if (!p02No.ok) throw new Error(p02No.reason);
+  assert.equal(page02ConsumesPage01Alignment(p02No.ctx), false);
+  const orphanUp = computePageInputFingerprintFromProductionContext({
+    page_id: "02",
+    production_context: p02No.ctx,
+    upstream_output_fingerprints: { "01": FP01_A },
+  });
+  assert.equal(orphanUp.ok, false);
+  if (orphanUp.ok) throw new Error("expected mismatch");
+  assert.equal(orphanUp.code, "optional_upstream_context_mismatch");
+  console.log("H-G ok — not consumed + valid Page01 FP rejected");
+
+  // H — not consumed, no Page01 FP → allow, record absent
   const fp02No = computePageInputFingerprintFromProductionContext({
     page_id: "02",
     production_context: p02No.ctx,
@@ -528,8 +684,6 @@ console.log("=== Report orchestration Batch1 R3 (production-context fingerprints
   });
   assert.equal(fp02No.ok, true);
   if (!fp02No.ok) throw new Error(fp02No.detail);
-  const optAbsent = selectOptionalUpstreamFingerprintsForPage("02", {});
-  assert.equal(optAbsent["01"], REPORT_OPTIONAL_UPSTREAM_ABSENT);
   assert.equal(
     (fp02No.result.canonical_payload.optional_upstream_fingerprints as Record<
       string,
@@ -537,60 +691,36 @@ console.log("=== Report orchestration Batch1 R3 (production-context fingerprints
     >)["01"],
     REPORT_OPTIONAL_UPSTREAM_ABSENT,
   );
+  assert.equal(
+    selectOptionalUpstreamFingerprintsForPage("02", {})["01"],
+    REPORT_OPTIONAL_UPSTREAM_ABSENT,
+  );
+  console.log("H-H ok — not consumed + absent Page01 FP recorded");
 
-  const p02With = buildFace02ProductionContext({
-    report_id: "job_orch_r2_02",
-    locale: "en",
-    dc,
-    pack,
-    chart_fact_pack: "日主甲木…",
-    page01: page01Stub,
-  });
-  assert.equal(p02With.ok, true);
-  if (!p02With.ok) throw new Error(p02With.reason);
-  assert.ok(p02With.ctx.page01_core_judgment);
-
-  // Consumed Page01 alignment without upstream FP → fail closed
-  const mismatchMissingUp = computePageInputFingerprintFromProductionContext({
+  // I — consumed + valid Page01 FP → allow; FP changes with upstream hash
+  const fpWithA = computePageInputFingerprintFromProductionContext({
     page_id: "02",
-    production_context: p02With.ctx,
-    upstream_output_fingerprints: {},
+    production_context: builtCond.ctx,
+    upstream_output_fingerprints: { "01": FP01_A },
   });
-  assert.equal(mismatchMissingUp.ok, false);
-  if (mismatchMissingUp.ok) throw new Error("expected mismatch");
-  assert.equal(mismatchMissingUp.code, "optional_upstream_context_mismatch");
-
-  // No Page01 alignment but upstream FP provided → fail closed
-  const mismatchExtraUp = computePageInputFingerprintFromProductionContext({
+  const fpWithB = computePageInputFingerprintFromProductionContext({
     page_id: "02",
-    production_context: p02No.ctx,
-    upstream_output_fingerprints: { "01": "out_page01_orphan" },
+    production_context: builtCond.ctx,
+    upstream_output_fingerprints: { "01": FP01_B },
   });
-  assert.equal(mismatchExtraUp.ok, false);
-  if (mismatchExtraUp.ok) throw new Error("expected mismatch");
-  assert.equal(mismatchExtraUp.code, "optional_upstream_context_mismatch");
+  assert.equal(fpWithA.ok && fpWithB.ok, true);
+  if (!fpWithA.ok || !fpWithB.ok) throw new Error("p02 up");
+  assert.notEqual(fpWithA.result.fingerprint, fpWithB.result.fingerprint);
+  assert.notEqual(fp02No.result.fingerprint, fpWithA.result.fingerprint);
+  console.log("H-I ok — consumed + valid Page01 FP allowed");
 
-  // Consistent: consumed + valid Page01 output FP
-  const fp02WithUp = computePageInputFingerprintFromProductionContext({
-    page_id: "02",
-    production_context: p02With.ctx,
-    upstream_output_fingerprints: { "01": "out_page01_v1" },
-  });
-  const fp02WithUp2 = computePageInputFingerprintFromProductionContext({
-    page_id: "02",
-    production_context: p02With.ctx,
-    upstream_output_fingerprints: { "01": "out_page01_v2" },
-  });
-  assert.equal(fp02WithUp.ok && fp02WithUp2.ok, true);
-  if (!fp02WithUp.ok || !fp02WithUp2.ok) throw new Error("p02 up");
-  assert.notEqual(fp02WithUp.result.fingerprint, fp02WithUp2.result.fingerprint);
-  // Alignment content + consistent upstream differs from no-Page01 absent
-  assert.notEqual(fp02No.result.fingerprint, fp02WithUp.result.fingerprint);
-
-  // Still independently ready
+  // J — Page01/02 still independently ready (optional is not required)
+  assertPage01Page02Independent();
   const ready = resolveReportReadyState(initialPendingPageStates());
   assert.deepEqual(ready.ready_model_generations.sort(), ["01", "02"]);
-  console.log("H ok — Page02 optional Page01 consistency fail-closed + parallel ready");
+  assert.deepEqual([...requiredUpstreamOf("02")], []);
+  console.log("H-J ok — Page01/02 independent; optional upstream not required");
+  console.log("H ok — Page02 optional Page01 A–J");
 }
 
 {
@@ -1043,6 +1173,13 @@ console.log("=== Report orchestration Batch1 R3 (production-context fingerprints
     if (!fpFact.ok) throw new Error(fpFact.detail);
     assert.notEqual(fpA.result.fingerprint, fpFact.result.fingerprint);
 
+    const ids05 = payloadRegistryIds(built.ctx);
+    assert.ok(!ids05.claimIds.includes("claim_u_unused_08"));
+    assert.ok(!ids05.evidenceIds.includes("u_unused_08"));
+    assert.ok(ids05.claimIds.includes("claim_u_path_05"));
+    assert.ok(ids05.evidenceIds.includes("u_path_05"));
+
+    // C — unused BookJudgment unit
     const packUnused = {
       ...pack05,
       units: (pack05.units as Array<{ id: string; claim: string }>).map((u) =>
@@ -1069,6 +1206,79 @@ console.log("=== Report orchestration Batch1 R3 (production-context fingerprints
     assert.equal(fpUnused.ok, true);
     if (!fpUnused.ok) throw new Error(fpUnused.detail);
     assert.equal(fpA.result.fingerprint, fpUnused.result.fingerprint);
+
+    // D — unused registry claim source (filtered by real builder seeding)
+    const packUnusedClaim = {
+      ...pack05,
+      units: (pack05.units as Array<{ id: string; claim: string }>).map((u) =>
+        u.id === "u_unused_08"
+          ? { ...u, claim: "CHANGED unused registry claim body for Page05" }
+          : u,
+      ),
+    } as unknown as BookJudgmentPack;
+    const builtUnusedClaim = buildFace05ProductionContext({
+      report_id: "job_orch_r3_05",
+      locale: "en",
+      dc: dc05,
+      pack: packUnusedClaim,
+      chart_fact_pack: "日主甲木…",
+      page01: page01Stub,
+      page02: page02Stub,
+      page04: page04ForLater,
+    });
+    assert.equal(builtUnusedClaim.ok, true);
+    if (!builtUnusedClaim.ok) throw new Error(builtUnusedClaim.reason);
+    assert.ok(
+      !payloadRegistryIds(builtUnusedClaim.ctx).claimIds.includes(
+        "claim_u_unused_08",
+      ),
+    );
+    const fpUnusedClaim = computePageInputFingerprintFromProductionContext({
+      page_id: "05",
+      production_context: builtUnusedClaim.ctx,
+      upstream_output_fingerprints: UP05,
+    });
+    assert.equal(fpUnusedClaim.ok, true);
+    if (!fpUnusedClaim.ok) throw new Error(fpUnusedClaim.detail);
+    assert.equal(fpA.result.fingerprint, fpUnusedClaim.result.fingerprint);
+
+    // E — unused registry evidence source (caveat → explanation if seeded)
+    const packUnusedEv = {
+      ...pack05,
+      units: (
+        pack05.units as Array<{ id: string; claim: string; caveat?: string }>
+      ).map((u) =>
+        u.id === "u_unused_08"
+          ? {
+              ...u,
+              caveat: "CHANGED unused registry evidence caveat for Page05",
+            }
+          : u,
+      ),
+    } as unknown as BookJudgmentPack;
+    const builtUnusedEv = buildFace05ProductionContext({
+      report_id: "job_orch_r3_05",
+      locale: "en",
+      dc: dc05,
+      pack: packUnusedEv,
+      chart_fact_pack: "日主甲木…",
+      page01: page01Stub,
+      page02: page02Stub,
+      page04: page04ForLater,
+    });
+    assert.equal(builtUnusedEv.ok, true);
+    if (!builtUnusedEv.ok) throw new Error(builtUnusedEv.reason);
+    assert.ok(
+      !payloadRegistryIds(builtUnusedEv.ctx).evidenceIds.includes("u_unused_08"),
+    );
+    const fpUnusedEv = computePageInputFingerprintFromProductionContext({
+      page_id: "05",
+      production_context: builtUnusedEv.ctx,
+      upstream_output_fingerprints: UP05,
+    });
+    assert.equal(fpUnusedEv.ok, true);
+    if (!fpUnusedEv.ok) throw new Error(fpUnusedEv.detail);
+    assert.equal(fpA.result.fingerprint, fpUnusedEv.result.fingerprint);
 
     const page04Changed = {
       ...page04ForLater,
@@ -1099,7 +1309,9 @@ console.log("=== Report orchestration Batch1 R3 (production-context fingerprints
     assert.equal(fpUp.ok, true);
     if (!fpUp.ok) throw new Error(fpUp.detail);
     assert.notEqual(fpA.result.fingerprint, fpUp.result.fingerprint);
-    console.log("L1 ok — Page05 real builder isolation");
+    console.log(
+      "L1 ok — Page05 real builder isolation + registry claim/evidence filter",
+    );
   }
 
   // Page06
@@ -1208,6 +1420,12 @@ console.log("=== Report orchestration Batch1 R3 (production-context fingerprints
     if (!fpFact.ok) throw new Error(fpFact.detail);
     assert.notEqual(fpA.result.fingerprint, fpFact.result.fingerprint);
 
+    const ids06 = payloadRegistryIds(built.ctx);
+    assert.ok(!ids06.claimIds.includes("claim_u_unused_08"));
+    assert.ok(!ids06.evidenceIds.includes("u_unused_08"));
+    assert.ok(ids06.claimIds.includes("claim_u_exec_06"));
+    assert.ok(ids06.evidenceIds.includes("u_exec_06"));
+
     const packUnused = {
       ...pack06,
       units: (pack06.units as Array<{ id: string; claim: string }>).map((u) =>
@@ -1235,6 +1453,79 @@ console.log("=== Report orchestration Batch1 R3 (production-context fingerprints
     assert.equal(fpUnused.ok, true);
     if (!fpUnused.ok) throw new Error(fpUnused.detail);
     assert.equal(fpA.result.fingerprint, fpUnused.result.fingerprint);
+
+    const packUnusedClaim = {
+      ...pack06,
+      units: (pack06.units as Array<{ id: string; claim: string }>).map((u) =>
+        u.id === "u_unused_08"
+          ? { ...u, claim: "CHANGED unused registry claim body for Page06" }
+          : u,
+      ),
+    } as unknown as BookJudgmentPack;
+    const builtUnusedClaim = buildFace06ProductionContext({
+      report_id: "job_orch_r3_06",
+      locale: "en",
+      dc: baseDc(),
+      pack: packUnusedClaim,
+      chart_fact_pack: "日主甲木…",
+      page01: page01Stub,
+      page02: page02For06,
+      page04: page04ForLater,
+      page05: page05Schema,
+    });
+    assert.equal(builtUnusedClaim.ok, true);
+    if (!builtUnusedClaim.ok) throw new Error(builtUnusedClaim.reason);
+    assert.ok(
+      !payloadRegistryIds(builtUnusedClaim.ctx).claimIds.includes(
+        "claim_u_unused_08",
+      ),
+    );
+    const fpUnusedClaim = computePageInputFingerprintFromProductionContext({
+      page_id: "06",
+      production_context: builtUnusedClaim.ctx,
+      upstream_output_fingerprints: UP06,
+    });
+    assert.equal(fpUnusedClaim.ok, true);
+    if (!fpUnusedClaim.ok) throw new Error(fpUnusedClaim.detail);
+    assert.equal(fpA.result.fingerprint, fpUnusedClaim.result.fingerprint);
+
+    const packUnusedEv = {
+      ...pack06,
+      units: (
+        pack06.units as Array<{ id: string; claim: string; caveat?: string }>
+      ).map((u) =>
+        u.id === "u_unused_08"
+          ? {
+              ...u,
+              caveat: "CHANGED unused registry evidence caveat for Page06",
+            }
+          : u,
+      ),
+    } as unknown as BookJudgmentPack;
+    const builtUnusedEv = buildFace06ProductionContext({
+      report_id: "job_orch_r3_06",
+      locale: "en",
+      dc: baseDc(),
+      pack: packUnusedEv,
+      chart_fact_pack: "日主甲木…",
+      page01: page01Stub,
+      page02: page02For06,
+      page04: page04ForLater,
+      page05: page05Schema,
+    });
+    assert.equal(builtUnusedEv.ok, true);
+    if (!builtUnusedEv.ok) throw new Error(builtUnusedEv.reason);
+    assert.ok(
+      !payloadRegistryIds(builtUnusedEv.ctx).evidenceIds.includes("u_unused_08"),
+    );
+    const fpUnusedEv = computePageInputFingerprintFromProductionContext({
+      page_id: "06",
+      production_context: builtUnusedEv.ctx,
+      upstream_output_fingerprints: UP06,
+    });
+    assert.equal(fpUnusedEv.ok, true);
+    if (!fpUnusedEv.ok) throw new Error(fpUnusedEv.detail);
+    assert.equal(fpA.result.fingerprint, fpUnusedEv.result.fingerprint);
 
     const page05Changed = {
       ...page05Schema,
@@ -1267,7 +1558,9 @@ console.log("=== Report orchestration Batch1 R3 (production-context fingerprints
     assert.equal(fpUp.ok, true);
     if (!fpUp.ok) throw new Error(fpUp.detail);
     assert.notEqual(fpA.result.fingerprint, fpUp.result.fingerprint);
-    console.log("L2 ok — Page06 real builder isolation");
+    console.log(
+      "L2 ok — Page06 real builder isolation + registry claim/evidence filter",
+    );
   }
 
   // Page07
@@ -1442,6 +1735,12 @@ console.log("=== Report orchestration Batch1 R3 (production-context fingerprints
     if (!fpSolo.ok) throw new Error(fpSolo.detail);
     assert.notEqual(fpApp.result.fingerprint, fpSolo.result.fingerprint);
 
+    const ids07 = payloadRegistryIds(builtApp.ctx);
+    assert.ok(!ids07.claimIds.includes("claim_u_unused_08"));
+    assert.ok(!ids07.evidenceIds.includes("u_unused_08"));
+    assert.ok(ids07.claimIds.includes("claim_u_field_07"));
+    assert.ok(ids07.evidenceIds.includes("u_field_07"));
+
     const packUnused = {
       ...pack07,
       units: (pack07.units as Array<{ id: string; claim: string }>).map((u) =>
@@ -1470,6 +1769,81 @@ console.log("=== Report orchestration Batch1 R3 (production-context fingerprints
     assert.equal(fpUnused.ok, true);
     if (!fpUnused.ok) throw new Error(fpUnused.detail);
     assert.equal(fpApp.result.fingerprint, fpUnused.result.fingerprint);
+
+    const packUnusedClaim = {
+      ...pack07,
+      units: (pack07.units as Array<{ id: string; claim: string }>).map((u) =>
+        u.id === "u_unused_08"
+          ? { ...u, claim: "CHANGED unused registry claim body for Page07" }
+          : u,
+      ),
+    } as unknown as BookJudgmentPack;
+    const builtUnusedClaim = buildFace07ProductionContext({
+      report_id: "job_orch_r3_07",
+      locale: "en",
+      dc: dcApplicable,
+      pack: packUnusedClaim,
+      chart_fact_pack: "日主甲木…",
+      page01: page01Stub,
+      page02: page02For07,
+      page04: page04ForLater,
+      page05: page05For07,
+      page06: page06For07,
+    });
+    assert.equal(builtUnusedClaim.ok, true);
+    if (!builtUnusedClaim.ok) throw new Error(builtUnusedClaim.reason);
+    assert.ok(
+      !payloadRegistryIds(builtUnusedClaim.ctx).claimIds.includes(
+        "claim_u_unused_08",
+      ),
+    );
+    const fpUnusedClaim = computePageInputFingerprintFromProductionContext({
+      page_id: "07",
+      production_context: builtUnusedClaim.ctx,
+      upstream_output_fingerprints: UP07,
+    });
+    assert.equal(fpUnusedClaim.ok, true);
+    if (!fpUnusedClaim.ok) throw new Error(fpUnusedClaim.detail);
+    assert.equal(fpApp.result.fingerprint, fpUnusedClaim.result.fingerprint);
+
+    const packUnusedEv = {
+      ...pack07,
+      units: (
+        pack07.units as Array<{ id: string; claim: string; caveat?: string }>
+      ).map((u) =>
+        u.id === "u_unused_08"
+          ? {
+              ...u,
+              caveat: "CHANGED unused registry evidence caveat for Page07",
+            }
+          : u,
+      ),
+    } as unknown as BookJudgmentPack;
+    const builtUnusedEv = buildFace07ProductionContext({
+      report_id: "job_orch_r3_07",
+      locale: "en",
+      dc: dcApplicable,
+      pack: packUnusedEv,
+      chart_fact_pack: "日主甲木…",
+      page01: page01Stub,
+      page02: page02For07,
+      page04: page04ForLater,
+      page05: page05For07,
+      page06: page06For07,
+    });
+    assert.equal(builtUnusedEv.ok, true);
+    if (!builtUnusedEv.ok) throw new Error(builtUnusedEv.reason);
+    assert.ok(
+      !payloadRegistryIds(builtUnusedEv.ctx).evidenceIds.includes("u_unused_08"),
+    );
+    const fpUnusedEv = computePageInputFingerprintFromProductionContext({
+      page_id: "07",
+      production_context: builtUnusedEv.ctx,
+      upstream_output_fingerprints: UP07,
+    });
+    assert.equal(fpUnusedEv.ok, true);
+    if (!fpUnusedEv.ok) throw new Error(fpUnusedEv.detail);
+    assert.equal(fpApp.result.fingerprint, fpUnusedEv.result.fingerprint);
 
     const page06Changed = {
       ...page06For07,
@@ -1500,7 +1874,9 @@ console.log("=== Report orchestration Batch1 R3 (production-context fingerprints
     assert.equal(fpUp.ok, true);
     if (!fpUp.ok) throw new Error(fpUp.detail);
     assert.notEqual(fpApp.result.fingerprint, fpUp.result.fingerprint);
-    console.log("L3 ok — Page07 real builder isolation + applicability");
+    console.log(
+      "L3 ok — Page07 real builder isolation + applicability + registry filter",
+    );
   }
 
   // Page08
@@ -1594,6 +1970,12 @@ console.log("=== Report orchestration Batch1 R3 (production-context fingerprints
     if (!fpFact.ok) throw new Error(fpFact.detail);
     assert.notEqual(fpA.result.fingerprint, fpFact.result.fingerprint);
 
+    const ids08 = payloadRegistryIds(built.ctx);
+    assert.ok(!ids08.claimIds.includes("claim_u_unused_05"));
+    assert.ok(!ids08.evidenceIds.includes("u_unused_05"));
+    assert.ok(ids08.claimIds.includes("claim_u_mon_08"));
+    assert.ok(ids08.evidenceIds.includes("u_mon_08"));
+
     const packUnused = {
       ...pack08,
       units: (pack08.units as Array<{ id: string; claim: string }>).map((u) =>
@@ -1623,6 +2005,83 @@ console.log("=== Report orchestration Batch1 R3 (production-context fingerprints
     assert.equal(fpUnused.ok, true);
     if (!fpUnused.ok) throw new Error(fpUnused.detail);
     assert.equal(fpA.result.fingerprint, fpUnused.result.fingerprint);
+
+    const packUnusedClaim = {
+      ...pack08,
+      units: (pack08.units as Array<{ id: string; claim: string }>).map((u) =>
+        u.id === "u_unused_05"
+          ? { ...u, claim: "CHANGED unused registry claim body for Page08" }
+          : u,
+      ),
+    } as unknown as BookJudgmentPack;
+    const builtUnusedClaim = buildFace08ProductionContext({
+      report_id: "job_orch_r3_08",
+      locale: "en",
+      dc: baseDc(),
+      pack: packUnusedClaim,
+      chart_fact_pack: "日主甲木…",
+      page01: page01Stub,
+      page02: page02Stub,
+      page04: page04ForLater,
+      page05: page05Schema,
+      page06: page06Schema,
+      page07: page07ApplicableSchema,
+    });
+    assert.equal(builtUnusedClaim.ok, true);
+    if (!builtUnusedClaim.ok) throw new Error(builtUnusedClaim.reason);
+    assert.ok(
+      !payloadRegistryIds(builtUnusedClaim.ctx).claimIds.includes(
+        "claim_u_unused_05",
+      ),
+    );
+    const fpUnusedClaim = computePageInputFingerprintFromProductionContext({
+      page_id: "08",
+      production_context: builtUnusedClaim.ctx,
+      upstream_output_fingerprints: UP08,
+    });
+    assert.equal(fpUnusedClaim.ok, true);
+    if (!fpUnusedClaim.ok) throw new Error(fpUnusedClaim.detail);
+    assert.equal(fpA.result.fingerprint, fpUnusedClaim.result.fingerprint);
+
+    const packUnusedEv = {
+      ...pack08,
+      units: (
+        pack08.units as Array<{ id: string; claim: string; caveat?: string }>
+      ).map((u) =>
+        u.id === "u_unused_05"
+          ? {
+              ...u,
+              caveat: "CHANGED unused registry evidence caveat for Page08",
+            }
+          : u,
+      ),
+    } as unknown as BookJudgmentPack;
+    const builtUnusedEv = buildFace08ProductionContext({
+      report_id: "job_orch_r3_08",
+      locale: "en",
+      dc: baseDc(),
+      pack: packUnusedEv,
+      chart_fact_pack: "日主甲木…",
+      page01: page01Stub,
+      page02: page02Stub,
+      page04: page04ForLater,
+      page05: page05Schema,
+      page06: page06Schema,
+      page07: page07ApplicableSchema,
+    });
+    assert.equal(builtUnusedEv.ok, true);
+    if (!builtUnusedEv.ok) throw new Error(builtUnusedEv.reason);
+    assert.ok(
+      !payloadRegistryIds(builtUnusedEv.ctx).evidenceIds.includes("u_unused_05"),
+    );
+    const fpUnusedEv = computePageInputFingerprintFromProductionContext({
+      page_id: "08",
+      production_context: builtUnusedEv.ctx,
+      upstream_output_fingerprints: UP08,
+    });
+    assert.equal(fpUnusedEv.ok, true);
+    if (!fpUnusedEv.ok) throw new Error(fpUnusedEv.detail);
+    assert.equal(fpA.result.fingerprint, fpUnusedEv.result.fingerprint);
 
     const page07Changed = {
       ...page07ApplicableSchema,
@@ -1658,10 +2117,12 @@ console.log("=== Report orchestration Batch1 R3 (production-context fingerprints
     assert.equal(fpCorpus.ok, true);
     if (!fpCorpus.ok) throw new Error(fpCorpus.detail);
     assert.notEqual(fpA.result.fingerprint, fpCorpus.result.fingerprint);
-    console.log("L4 ok — Page08 real builder isolation + dateCorpus");
+    console.log(
+      "L4 ok — Page08 real builder isolation + dateCorpus + registry filter",
+    );
   }
 
   console.log("L ok — Page05–08 real production-context isolation");
 }
 
-console.log("ok report orchestration batch1 R3");
+console.log("ok report orchestration batch1 R4");

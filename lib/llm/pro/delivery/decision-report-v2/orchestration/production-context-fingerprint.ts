@@ -209,8 +209,32 @@ export function extractConsumedInputFromFace01(
 }
 
 /**
+ * Page01 recommendation_conditions as actually assembled into Page02 architecture
+ * (and therefore into the prompt bundle). Prefer structured input_manifest —
+ * never guess from free-form logs.
+ */
+export function page02RecommendationConditionsFromArchitecture(
+  ctx: Face02ProductionContext,
+): {
+  present: boolean;
+  collection_status: string | null;
+  value_summary: string | null;
+} {
+  const entry = ctx.architecture?.input_manifest?.find(
+    (row) => row.field_id === "page01_recommendation_conditions",
+  );
+  return {
+    present: Boolean(entry?.present),
+    collection_status: entry?.collection_status ?? null,
+    value_summary:
+      typeof entry?.value_summary === "string" ? entry.value_summary : null,
+  };
+}
+
+/**
  * True when Page02 production context actually consumed Page01 alignment
- * (core_judgment / why_paths), not merely when an optional upstream map key exists.
+ * (core_judgment / why_paths / recommendation_conditions), not merely when an
+ * optional upstream map key exists.
  */
 export function page02ConsumesPage01Alignment(
   ctx: Face02ProductionContext,
@@ -221,7 +245,12 @@ export function page02ConsumesPage01Alignment(
     (typeof ctx.slice.page01_judgment_context?.core_judgment_text === "string" &&
       ctx.slice.page01_judgment_context.core_judgment_text.trim());
   const why = ctx.slice.page01_judgment_context?.why_paths ?? [];
-  return Boolean(core) || why.some((w) => typeof w === "string" && w.trim());
+  const conditions = page02RecommendationConditionsFromArchitecture(ctx);
+  return (
+    Boolean(core) ||
+    why.some((w) => typeof w === "string" && w.trim()) ||
+    conditions.present
+  );
 }
 
 /** Face02: face-filtered slice/registry + optional Page01 alignment content. */
@@ -278,12 +307,15 @@ export function extractConsumedInputFromFace02(
         association_basis: binding.association_basis ?? null,
       })),
   };
+  const recommendation_conditions =
+    page02RecommendationConditionsFromArchitecture(ctx);
   const page01_alignment = {
     core_judgment_text:
       ctx.page01_core_judgment ??
       ctx.slice.page01_judgment_context?.core_judgment_text ??
       null,
     why_paths: ctx.slice.page01_judgment_context?.why_paths ?? [],
+    recommendation_conditions,
     present: page02ConsumesPage01Alignment(ctx),
   };
   return finishExtract("02", {
