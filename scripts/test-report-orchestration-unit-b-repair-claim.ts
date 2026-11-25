@@ -695,6 +695,134 @@ async function main(): Promise<void> {
     console.log("B7 ok — worker Repair fail clears Fence + explicit failed");
   }
 
+  // --- B7b. R1: failAndRelease fails → keep Pending, do not save failed ---
+  {
+    await cleanup();
+    const report_id = "rpt_ub_b7b";
+    const gen = await boot(report_id, "g_ub_b7b");
+    const page_id: ReportPageId = "01";
+
+    setBatch2ModelInvokeForTests(async () => ({
+      content: "{ broken",
+      tokens_used: 1,
+      model_call_id: "mc_gen_b7b",
+    }));
+    const job0 = await loadJob(report_id, gen.generation_id);
+    assert.ok(job0.ok && job0.value);
+    const { buildPageProductionPrep, computePageInputFingerprintForJob } =
+      await import(
+        "@/lib/llm/pro/delivery/decision-report-v2/batch2/page-prep"
+      );
+    const prep = buildPageProductionPrep(job0.value!, page_id);
+    assert.equal(prep.build_fail, undefined);
+    const fp = computePageInputFingerprintForJob(job0.value!, page_id, prep);
+    assert.ok(fp.ok);
+    if (!fp.ok) throw new Error("fp");
+    const { updatePageState, saveJob } = await import(
+      "@/lib/llm/pro/delivery/decision-report-v2/batch2/job-store"
+    );
+    updatePageState(job0.value!, page_id, { outcome: "queued" });
+    assert.ok((await saveJob(job0.value!)).ok);
+    assert.equal(
+      (
+        await runReportPageGenerateOnce({
+          event: {
+            report_id,
+            generation_id: gen.generation_id,
+            generation_epoch: gen.generation_epoch,
+            page_id,
+            locale: "en",
+            input_fingerprint: fp.result.fingerprint,
+            upstream_output_fingerprints: {},
+          },
+          invocation_id: randomUUID(),
+          worker_id: "w_ub_b7b_gen",
+        })
+      ).status,
+      "needs_repair",
+    );
+
+    const pendingBefore = await loadJob(report_id, gen.generation_id);
+    assert.ok(pendingBefore.ok && pendingBefore.value?.repair_pending[page_id]);
+
+    // After Repair Claim (before failAndRelease): seal Finalization so release fails.
+    // Model invoke runs after Claim — inject lock here, then return invalid JSON.
+    setBatch2ModelInvokeForTests(async (input) => {
+      if (input.call_kind === "repair") {
+        const cKey = finalizationClaimKey(report_id, gen.generation_id);
+        assert.ok(
+          (
+            await casSet(cKey, null, {
+              report_id,
+              generation_id: gen.generation_id,
+              generation_epoch: gen.generation_epoch,
+              status: "sealed",
+              sealed_at: new Date().toISOString(),
+              input_fingerprint: "ifp_b7b",
+              pages: [],
+            })
+          ).ok,
+        );
+      }
+      return {
+        content: "{ still-broken",
+        tokens_used: 1,
+        model_call_id: "mc_repair_b7b",
+      };
+    });
+
+    const repairResult = await runReportPageRepairOnce({
+      event: {
+        report_id,
+        generation_id: gen.generation_id,
+        generation_epoch: gen.generation_epoch,
+        page_id,
+        locale: "en",
+        input_fingerprint: fp.result.fingerprint,
+      },
+      invocation_id: randomUUID(),
+      worker_id: "w_ub_b7b_repair",
+    });
+    assert.equal(repairResult.status, "failed");
+    assert.equal(
+      repairResult.status === "failed" ? repairResult.code : "",
+      "finalization_locked",
+    );
+    assert.match(
+      repairResult.status === "failed" ? repairResult.detail : "",
+      /fail_release_failed/,
+    );
+    assert.doesNotMatch(
+      repairResult.status === "failed" ? repairResult.code : "",
+      /repair_json_parse_failed/,
+    );
+
+    const jobAfter = await loadJob(report_id, gen.generation_id);
+    assert.ok(jobAfter.ok && jobAfter.value);
+    assert.ok(
+      jobAfter.value!.repair_pending[page_id],
+      "repair_pending must survive release failure",
+    );
+    const pageState = jobAfter.value!.page_states.find(
+      (s) => s.page_id === page_id,
+    );
+    assert.notEqual(pageState?.outcome, "failed");
+
+    const fence = await readPageFence(report_id, gen.generation_id, page_id);
+    assert.equal(fence.value?.status, "claimed");
+    assert.ok(fence.value?.task_key);
+    const repairTask = await readTask(
+      report_id,
+      gen.generation_id,
+      fence.value!.task_key!,
+    );
+    assert.equal(repairTask.value?.status, "running");
+    assert.equal(repairTask.value?.task_type, "repair");
+    console.log(
+      "B7b ok — failAndRelease failure keeps Pending + claimed Fence",
+    );
+  }
+
   // --- B8. Worker: Generate fail → Repair Worker Validator + Authority Commit ---
   {
     await cleanup();
