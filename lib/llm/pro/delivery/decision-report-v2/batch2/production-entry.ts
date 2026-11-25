@@ -17,6 +17,7 @@ import type { DecisionContext } from "@/lib/poju/decision-context/types";
 import {
   buildOrchestratePayload,
   buildRecoverPayload,
+  getReportBatch2EventSenderForTests,
   isReportBatch2InngestConfigured,
   sendReportBatch2Events,
 } from "./dispatch";
@@ -27,6 +28,61 @@ import {
   updateJobStatus,
 } from "./job-store";
 import type { ReportBatch2JobInputs, ReportBatch2JobRecord } from "./types";
+
+function hasBatch2EventBusForPoll(): boolean {
+  return (
+    !!getReportBatch2EventSenderForTests() || isReportBatch2InngestConfigured()
+  );
+}
+
+/**
+ * Unit D R1: when poll finds an in-flight Generation that still needs
+ * Recovery work, schedule RECOVER without allocating a new Generation.
+ */
+async function maybeTriggerRecoveryFromPoll(input: {
+  job: ReportBatch2JobRecord;
+  locale: string;
+}): Promise<void> {
+  const { job } = input;
+  const epoch = job.generation_epoch;
+  if (typeof epoch !== "number" || !Number.isFinite(epoch)) return;
+  if (!hasBatch2EventBusForPoll()) return;
+
+  const { listPendingIntents } = await import("../batch3/dispatch-intent");
+  const intents = await listPendingIntents({
+    report_id: job.report_id,
+    generation_id: job.generation_id,
+  });
+  if (!intents.ok) {
+    throw new Error(
+      `poll_intent_read_failed:${intents.code}:${intents.detail}`,
+    );
+  }
+  const needsIntentResend = intents.value.some(
+    (i) =>
+      i.generation_epoch === epoch &&
+      (i.status === "pending" || i.status === "failed"),
+  );
+  const needsInitialOrchestrate =
+    (job.status === "orchestrating" || job.status === "pending") &&
+    job.dispatch_log.length === 0;
+
+  if (!needsIntentResend && !needsInitialOrchestrate) return;
+
+  const recover = await sendReportBatch2Events([
+    buildRecoverPayload({
+      report_id: job.report_id,
+      generation_id: job.generation_id,
+      generation_epoch: epoch,
+      locale: input.locale,
+    }),
+  ]);
+  if (!recover.ok) {
+    throw new Error(
+      `poll_recover_trigger_failed:${recover.code}:${recover.detail}`,
+    );
+  }
+}
 
 const ACTIVE_POINTER_PREFIX = "report-batch2-active:";
 
@@ -592,11 +648,20 @@ export async function pollFinalDeliveryReportBatch2(
 
   const loaded = await loadJob(ptr.pointer.report_id, ptr.pointer.generation_id);
   if (!loaded.ok) {
+    // Transient KV read must not terminal-fail delivery (failProductionV3Job).
+    if (
+      loaded.code === "kv_read_failed" ||
+      loaded.code === "kv_unavailable"
+    ) {
+      throw new Error(
+        `poll_job_read_failed:${loaded.code}:${loaded.detail}`,
+      );
+    }
     return { phase: "failed", reason: loaded.code };
   }
   const job = loaded.value;
   if (!job) {
-    return { phase: "failed", reason: "job_not_found" };
+    return { phase: "failed", reason: "job_missing" };
   }
   if (job.status === "completed") {
     const merged = await mergeReportBatch2IntoV3Lab(job_id, input, job);
@@ -608,5 +673,9 @@ export async function pollFinalDeliveryReportBatch2(
   if (job.status === "failed") {
     return { phase: "failed", reason: "report_batch2_failed" };
   }
+
+  // Unit D R1: Stage retry lands here as phase=running — re-trigger Recovery
+  // when durable Intent/orchestrate gaps are visible (do not park forever).
+  await maybeTriggerRecoveryFromPoll({ job, locale: input.locale });
   return { phase: "running" };
 }

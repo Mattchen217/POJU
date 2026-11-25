@@ -49,6 +49,19 @@ function hasBatch2EventBus(): boolean {
   );
 }
 
+/**
+ * Unit D R1 test hook: one-shot loadJob failure in needs_repair Handler path.
+ * Production never sets this.
+ */
+let needsRepairLoadJobFailOnceForTests: { code: string; detail: string } | null =
+  null;
+
+export function setNeedsRepairLoadJobFailOnceForTests(
+  fail: { code: string; detail: string } | null,
+): void {
+  needsRepairLoadJobFailOnceForTests = fail;
+}
+
 async function triggerRecoverOrThrow(input: {
   report_id: string;
   generation_id: string;
@@ -166,38 +179,68 @@ export async function handleGenerateEvent(data: ReportBatch2GenerateEventData): 
   });
 
   if (result.status === "needs_repair") {
-    const loaded = await loadJob(data.report_id, data.generation_id);
-    const pending =
-      loaded.ok && loaded.value
-        ? loaded.value.repair_pending[data.page_id]
-        : undefined;
-    if (pending) {
-      const sent = await sendReportBatch2Events([
-        buildRepairPayload({
+    const injectedLoad = needsRepairLoadJobFailOnceForTests;
+    if (injectedLoad) {
+      needsRepairLoadJobFailOnceForTests = null;
+    }
+    const loaded = injectedLoad
+      ? ({
+          ok: false as const,
+          code: injectedLoad.code,
+          detail: injectedLoad.detail,
+        } as const)
+      : await loadJob(data.report_id, data.generation_id);
+
+    // Case A: cannot confirm Pending — schedule Recovery (do not fail-open).
+    if (!loaded.ok) {
+      const epoch = finiteEpoch(data.generation_epoch);
+      const prior = `needs_repair_load_failed:${loaded.code}:${loaded.detail}`;
+      if (epoch !== undefined && hasBatch2EventBus()) {
+        await triggerRecoverOrThrow({
           report_id: data.report_id,
           generation_id: data.generation_id,
-          page_id: data.page_id,
+          generation_epoch: epoch,
           locale: data.locale,
-          input_fingerprint: pending.input_fingerprint,
-          generation_epoch: data.generation_epoch,
-        }),
-      ]);
-      if (!sent.ok) {
-        // Pending + handoff already durable — trigger Recovery to resend REPAIR.
-        if (hasBatch2EventBus()) {
-          const epoch = finiteEpoch(data.generation_epoch);
-          const prior = `repair_dispatch_failed:${sent.code}:${sent.detail}`;
-          if (epoch === undefined) {
-            throw new Error(prior);
-          }
-          await triggerRecoverOrThrow({
-            report_id: data.report_id,
-            generation_id: data.generation_id,
-            generation_epoch: epoch,
-            locale: data.locale,
-            prior,
-          });
+          prior,
+        });
+        return { ok: true, status: "needs_repair", continued: false };
+      }
+      throw new Error(prior);
+    }
+
+    // Case B: Worker returned needs_repair but Pending is missing — inconsistent.
+    const pending = loaded.value?.repair_pending[data.page_id];
+    if (!loaded.value || !pending) {
+      throw new Error(
+        `generate_needs_repair_pending_missing:report_id=${data.report_id};generation_id=${data.generation_id};page_id=${data.page_id};job=${loaded.value ? "present" : "absent"};pending=missing`,
+      );
+    }
+
+    // Case C: Pending present — dispatch REPAIR (or Recovery on send failure).
+    const sent = await sendReportBatch2Events([
+      buildRepairPayload({
+        report_id: data.report_id,
+        generation_id: data.generation_id,
+        page_id: data.page_id,
+        locale: data.locale,
+        input_fingerprint: pending.input_fingerprint,
+        generation_epoch: data.generation_epoch,
+      }),
+    ]);
+    if (!sent.ok) {
+      if (hasBatch2EventBus()) {
+        const epoch = finiteEpoch(data.generation_epoch);
+        const prior = `repair_dispatch_failed:${sent.code}:${sent.detail}`;
+        if (epoch === undefined) {
+          throw new Error(prior);
         }
+        await triggerRecoverOrThrow({
+          report_id: data.report_id,
+          generation_id: data.generation_id,
+          generation_epoch: epoch,
+          locale: data.locale,
+          prior,
+        });
       }
     }
     return { ok: true, status: "needs_repair", continued: false };

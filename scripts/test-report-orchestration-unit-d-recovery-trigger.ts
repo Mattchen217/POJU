@@ -18,16 +18,23 @@ import {
   handleGenerateEvent,
   invokeBatch2HandlerAdapter,
   loadJob,
+  pollFinalDeliveryReportBatch2,
   resetBatch2InvocationRecords,
   resetBatch2JobStoreForTests,
+  runReportPageGenerateOnce,
   saveJob,
   setBatch2ModelInvokeForTests,
   setReportBatch2EventSenderForTests,
   startReportBatch2Production,
+  updateJobStatus,
   updatePageState,
   type ReportBatch2JobInputs,
 } from "@/lib/llm/pro/delivery/decision-report-v2/batch2";
 import { REPORT_BATCH2_EVENTS } from "@/lib/llm/pro/delivery/decision-report-v2/batch2/events";
+import {
+  handleOrchestrateEvent,
+  setNeedsRepairLoadJobFailOnceForTests,
+} from "@/lib/llm/pro/delivery/decision-report-v2/batch2/handlers";
 import {
   buildPageProductionPrep,
   computePageInputFingerprintForJob,
@@ -40,8 +47,10 @@ import {
   activateGeneration,
   allocateGeneration,
   commitPageResult,
+  enqueueDispatchIntent,
   ensurePageFence,
   listPendingIntents,
+  markIntentFailed,
   readPageFence,
   resetBatch3KeysForTests,
 } from "@/lib/llm/pro/delivery/decision-report-v2/batch3";
@@ -53,7 +62,7 @@ import {
 import type { BookJudgmentPack } from "@/lib/llm/pro/delivery/book-judgment/schema";
 import type { DecisionContext } from "@/lib/poju/decision-context/types";
 import type { ReportPageId } from "@/lib/llm/pro/delivery/decision-report-v2/orchestration/types";
-import { handleOrchestrateEvent } from "@/lib/llm/pro/delivery/decision-report-v2/batch2/handlers";
+import type { FinalDeliveryJobInput } from "@/lib/poju/xhigh-job-types";
 
 type CapturedEvent = { name: string; data: Record<string, unknown> };
 
@@ -163,7 +172,15 @@ async function cleanup(): Promise<void> {
   await resetBatch3KeysForTests();
   setBatch2ModelInvokeForTests(null);
   setReportBatch2EventSenderForTests(null);
+  setNeedsRepairLoadJobFailOnceForTests(null);
   resetBatch2InvocationRecords();
+}
+
+function fakeFinalDeliveryInput(locale = "en"): FinalDeliveryJobInput {
+  return {
+    kind: "final_delivery",
+    locale,
+  } as FinalDeliveryJobInput;
 }
 
 async function prepGenerate(
@@ -703,6 +720,582 @@ async function main(): Promise<void> {
     console.log(
       "D-T6 ok — Recovery dispatch fail throws Error; retry succeeds",
     );
+  }
+
+  // --- D-T6b: Recovery internal REPAIR dispatch fail throws + retry ---
+  {
+    await cleanup();
+    const report_id = "rpt_ud_t6b";
+    const gen = await allocateGeneration({
+      report_id,
+      locale: "en",
+      generation_id: "g_ud_t6b",
+    });
+    assert.ok(gen.ok);
+    if (!gen.ok) throw new Error("alloc");
+    await activateGeneration({ record: gen.value, job_id: report_id });
+    await createJob({
+      report_id,
+      generation_id: gen.value.generation_id,
+      locale: "en",
+      inputs: inputs(report_id),
+      generation_epoch: gen.value.generation_epoch,
+    });
+    const { page_id, fingerprint } = await prepGenerate(
+      report_id,
+      gen.value.generation_id,
+    );
+    setBatch2ModelInvokeForTests(async () => ({
+      content: "{ t6b-needs-repair",
+      tokens_used: 1,
+      model_call_id: "mc_t6b",
+    }));
+    setReportBatch2EventSenderForTests({
+      send: async () => ({ ok: true }),
+    });
+    assert.equal(
+      (
+        await runReportPageGenerateOnce({
+          event: {
+            report_id,
+            generation_id: gen.value.generation_id,
+            generation_epoch: gen.value.generation_epoch,
+            page_id,
+            locale: "en",
+            input_fingerprint: fingerprint,
+            upstream_output_fingerprints: {},
+          },
+          invocation_id: randomUUID(),
+          worker_id: "w_t6b",
+        })
+      ).status,
+      "needs_repair",
+    );
+    assert.ok(
+      (await loadJob(report_id, gen.value.generation_id)).value
+        ?.repair_pending[page_id],
+    );
+
+    let repairAttempts = 0;
+    setReportBatch2EventSenderForTests({
+      send: async (events) => {
+        for (const e of events) {
+          if (e.name === REPORT_BATCH2_EVENTS.REPAIR) {
+            repairAttempts += 1;
+            if (repairAttempts === 1) {
+              return {
+                ok: false,
+                code: "inngest_send_failed",
+                detail: "t6b_repair_resend_fail",
+              };
+            }
+          }
+        }
+        return { ok: true };
+      },
+    });
+
+    const recoverData = {
+      report_id,
+      generation_id: gen.value.generation_id,
+      generation_epoch: gen.value.generation_epoch,
+      locale: "en",
+    };
+    await assert.rejects(
+      () =>
+        runReportPageRecoveryInngestStep({
+          event: { data: recoverData },
+        }),
+      (err: unknown) => {
+        assert.ok(err instanceof Error);
+        assert.equal(err instanceof NonRetriableError, false);
+        assert.match(err.message, /batch3_recovery_failed/);
+        assert.match(err.message, /dispatch_failed|t6b_repair_resend_fail/);
+        return true;
+      },
+    );
+    assert.ok(
+      (await loadJob(report_id, gen.value.generation_id)).value
+        ?.repair_pending[page_id],
+    );
+    const intentsFail = await listPendingIntents({
+      report_id,
+      generation_id: gen.value.generation_id,
+    });
+    assert.ok(intentsFail.value!.some((i) => i.status === "failed"));
+
+    setReportBatch2EventSenderForTests({
+      send: async () => ({ ok: true }),
+    });
+    const second = await runReportPageRecoveryInngestStep({
+      event: { data: recoverData },
+    });
+    assert.ok(
+      (second as { actions: { kind: string }[] }).actions.some(
+        (a) => a.kind === "dispatch_repair",
+      ),
+    );
+    const intentsOk = await listPendingIntents({
+      report_id,
+      generation_id: gen.value.generation_id,
+    });
+    assert.equal(
+      intentsOk.value!.filter((i) => i.status === "failed").length,
+      0,
+    );
+    console.log(
+      "D-T6b ok — Recovery REPAIR dispatch fail throws; retry sends REPAIR",
+    );
+  }
+
+  // --- D-T4b: maybeContinueOrchestration ORCHESTRATE fail → RECOVER ---
+  {
+    await cleanup();
+    const report_id = "rpt_ud_t4b";
+    const gen = await allocateGeneration({
+      report_id,
+      locale: "en",
+      generation_id: "g_ud_t4b",
+    });
+    assert.ok(gen.ok);
+    if (!gen.ok) throw new Error("alloc");
+    await activateGeneration({ record: gen.value, job_id: report_id });
+    await createJob({
+      report_id,
+      generation_id: gen.value.generation_id,
+      locale: "en",
+      inputs: inputs(report_id),
+      generation_epoch: gen.value.generation_epoch,
+    });
+    const page_id: ReportPageId = "01";
+    const def = reportPageDefinition(page_id);
+    const input_fingerprint = "fp_ud_t4b";
+    await ensurePageFence({
+      report_id,
+      generation_id: gen.value.generation_id,
+      generation_epoch: gen.value.generation_epoch,
+      page_id,
+    });
+    const claimed = await fenceAndClaimPageTask({
+      report_id,
+      generation_id: gen.value.generation_id,
+      generation_epoch: gen.value.generation_epoch,
+      page_id,
+      task_type: "generate",
+      input_fingerprint,
+      upstream_output_fingerprints: {},
+      worker_id: "w_t4b",
+    });
+    assert.ok(claimed.ok);
+    const out = { page: "01", body: "generate_ok_t4b" };
+    const fp = hashCanonicalPayload(out);
+    assert.ok(
+      (
+        await commitPageResult({
+          report_id,
+          generation_id: gen.value.generation_id,
+          generation_epoch: gen.value.generation_epoch,
+          page_id,
+          attempt_id: claimed.value!.attempt_id,
+          task_key: claimed.value!.task_key,
+          output: out,
+          output_fingerprint: fp,
+          state_patch: { outcome: "completed", input_fingerprint },
+          provenance: {
+            report_id,
+            generation_id: gen.value.generation_id,
+            generation_epoch: gen.value.generation_epoch,
+            page_id,
+            input_fingerprint,
+            upstream_output_fingerprints: {},
+            page_contract_version: def.production_version,
+            prompt_version: def.prompt_version,
+            validator_version: def.validator_version,
+            output_fingerprint: fp,
+            attempt_id: claimed.value!.attempt_id,
+            task_key: claimed.value!.task_key,
+            validity_rev: claimed.value!.validity_rev,
+          },
+        })
+      ).ok,
+    );
+
+    const captured: CapturedEvent[] = [];
+    setReportBatch2EventSenderForTests({
+      send: async (events) => {
+        for (const e of events) {
+          captured.push({ name: e.name, data: e.data });
+          if (e.name === REPORT_BATCH2_EVENTS.ORCHESTRATE) {
+            return {
+              ok: false,
+              code: "inngest_send_failed",
+              detail: "t4b_followup_orch_fail",
+            };
+          }
+        }
+        return { ok: true };
+      },
+    });
+
+    const skipped = await handleGenerateEvent({
+      report_id,
+      generation_id: gen.value.generation_id,
+      generation_epoch: gen.value.generation_epoch,
+      page_id,
+      locale: "en",
+      input_fingerprint,
+      upstream_output_fingerprints: {},
+    });
+    assert.equal(skipped.status, "skipped");
+    assert.equal(
+      captured.filter((e) => e.name === REPORT_BATCH2_EVENTS.RECOVER).length,
+      1,
+    );
+    assert.equal(
+      (await loadJob(report_id, gen.value.generation_id)).value!.page_states.find(
+        (s) => s.page_id === page_id,
+      )?.outcome,
+      "completed",
+    );
+    console.log(
+      "D-T4b ok — completed Generate follow-up ORCHESTRATE fail → RECOVER",
+    );
+  }
+
+  // --- D-T7: needs_repair + loadJob fail → RECOVER (not silent success) ---
+  {
+    await cleanup();
+    const report_id = "rpt_ud_t7";
+    const gen = await allocateGeneration({
+      report_id,
+      locale: "en",
+      generation_id: "g_ud_t7",
+    });
+    assert.ok(gen.ok);
+    if (!gen.ok) throw new Error("alloc");
+    await activateGeneration({ record: gen.value, job_id: report_id });
+    await createJob({
+      report_id,
+      generation_id: gen.value.generation_id,
+      locale: "en",
+      inputs: inputs(report_id),
+      generation_epoch: gen.value.generation_epoch,
+    });
+    const { page_id, fingerprint } = await prepGenerate(
+      report_id,
+      gen.value.generation_id,
+    );
+
+    let modelCalls = 0;
+    setBatch2ModelInvokeForTests(async () => {
+      modelCalls += 1;
+      return {
+        content: "{ t7-needs-repair",
+        tokens_used: 1,
+        model_call_id: `mc_t7_${modelCalls}`,
+      };
+    });
+
+    const captured: CapturedEvent[] = [];
+    setReportBatch2EventSenderForTests({
+      send: async (events) => {
+        for (const e of events) captured.push({ name: e.name, data: e.data });
+        return { ok: true };
+      },
+    });
+    setNeedsRepairLoadJobFailOnceForTests({
+      code: "kv_read_failed",
+      detail: "injected_needs_repair_load_fail",
+    });
+
+    const first = await handleGenerateEvent({
+      report_id,
+      generation_id: gen.value.generation_id,
+      generation_epoch: gen.value.generation_epoch,
+      page_id,
+      locale: "en",
+      input_fingerprint: fingerprint,
+      upstream_output_fingerprints: {},
+    });
+    assert.equal(first.status, "needs_repair");
+    assert.equal(modelCalls, 1);
+    const recoverEvents = captured.filter(
+      (e) => e.name === REPORT_BATCH2_EVENTS.RECOVER,
+    );
+    assert.equal(recoverEvents.length, 1);
+    assert.equal(
+      captured.filter((e) => e.name === REPORT_BATCH2_EVENTS.REPAIR).length,
+      0,
+      "must not send REPAIR when Pending load failed",
+    );
+    assert.ok(
+      (await loadJob(report_id, gen.value.generation_id)).value
+        ?.repair_pending[page_id],
+    );
+    assert.equal(
+      (await readPageFence(report_id, gen.value.generation_id, page_id)).value
+        ?.status,
+      "open",
+    );
+
+    const modelBefore = modelCalls;
+    await invokeBatch2HandlerAdapter({
+      name: REPORT_BATCH2_EVENTS.RECOVER,
+      data: recoverEvents[0]!.data,
+      adapter_invocation_id: randomUUID(),
+    });
+    assert.equal(modelCalls, modelBefore);
+    assert.ok(
+      captured.some((e) => e.name === REPORT_BATCH2_EVENTS.REPAIR),
+      "Recovery must resend REPAIR",
+    );
+
+    // RECOVER itself fails → Handler throws.
+    await cleanup();
+    const gen2 = await allocateGeneration({
+      report_id: "rpt_ud_t7b",
+      locale: "en",
+      generation_id: "g_ud_t7b",
+    });
+    assert.ok(gen2.ok);
+    if (!gen2.ok) throw new Error("alloc");
+    await activateGeneration({ record: gen2.value, job_id: "rpt_ud_t7b" });
+    await createJob({
+      report_id: "rpt_ud_t7b",
+      generation_id: gen2.value.generation_id,
+      locale: "en",
+      inputs: inputs("rpt_ud_t7b"),
+      generation_epoch: gen2.value.generation_epoch,
+    });
+    const prep2 = await prepGenerate("rpt_ud_t7b", gen2.value.generation_id);
+    setBatch2ModelInvokeForTests(async () => ({
+      content: "{ t7b",
+      tokens_used: 1,
+      model_call_id: "mc_t7b",
+    }));
+    setReportBatch2EventSenderForTests({
+      send: async (events) => {
+        if (events.some((e) => e.name === REPORT_BATCH2_EVENTS.RECOVER)) {
+          return {
+            ok: false,
+            code: "inngest_send_failed",
+            detail: "t7b_recover_fail",
+          };
+        }
+        return { ok: true };
+      },
+    });
+    setNeedsRepairLoadJobFailOnceForTests({
+      code: "kv_read_failed",
+      detail: "injected_t7b_load_fail",
+    });
+    await assert.rejects(
+      () =>
+        handleGenerateEvent({
+          report_id: "rpt_ud_t7b",
+          generation_id: gen2.value.generation_id,
+          generation_epoch: gen2.value.generation_epoch,
+          page_id: prep2.page_id,
+          locale: "en",
+          input_fingerprint: prep2.fingerprint,
+          upstream_output_fingerprints: {},
+        }),
+      (err: unknown) => {
+        assert.ok(err instanceof Error);
+        assert.equal(err instanceof NonRetriableError, false);
+        assert.match(err.message, /needs_repair_load_failed|recover_trigger_failed/);
+        return true;
+      },
+    );
+    console.log(
+      "D-T7 ok — needs_repair load fail → RECOVER; recover fail throws",
+    );
+  }
+
+  // --- D-T8: Production poll retry path triggers RECOVER ---
+  {
+    await cleanup();
+    const job_id = "rpt_ud_t8";
+    const generation_id = `${job_id}:batch2`;
+    const gen = await allocateGeneration({
+      report_id: job_id,
+      locale: "en",
+      generation_id,
+    });
+    assert.ok(gen.ok);
+    if (!gen.ok) throw new Error("alloc");
+    await activateGeneration({ record: gen.value, job_id });
+    await createJob({
+      report_id: job_id,
+      generation_id,
+      locale: "en",
+      inputs: inputs(job_id),
+      generation_epoch: gen.value.generation_epoch,
+      status: "orchestrating",
+    });
+
+    const orchPayload = {
+      report_id: job_id,
+      generation_id,
+      locale: "en",
+      generation_epoch: gen.value.generation_epoch,
+    };
+    const intent = await enqueueDispatchIntent({
+      report_id: job_id,
+      generation_id,
+      generation_epoch: gen.value.generation_epoch,
+      event_name: REPORT_BATCH2_EVENTS.ORCHESTRATE,
+      payload: orchPayload,
+    });
+    assert.ok(intent.ok);
+    assert.ok((await markIntentFailed(intent.value!, "t8_initial_orch_fail")).ok);
+
+    let recoverAttempts = 0;
+    const captured: CapturedEvent[] = [];
+    setReportBatch2EventSenderForTests({
+      send: async (events) => {
+        for (const e of events) {
+          captured.push({ name: e.name, data: e.data });
+          if (e.name === REPORT_BATCH2_EVENTS.RECOVER) {
+            recoverAttempts += 1;
+            if (recoverAttempts === 1) {
+              return {
+                ok: false,
+                code: "inngest_send_failed",
+                detail: "t8_first_recover_fail",
+              };
+            }
+          }
+        }
+        return { ok: true };
+      },
+    });
+
+    await assert.rejects(
+      () => pollFinalDeliveryReportBatch2(job_id, fakeFinalDeliveryInput()),
+      (err: unknown) => {
+        assert.ok(err instanceof Error);
+        assert.match(err.message, /poll_recover_trigger_failed|t8_first_recover_fail/);
+        return true;
+      },
+    );
+
+    // Stage retry: second poll sends RECOVER successfully, stays running.
+    const second = await pollFinalDeliveryReportBatch2(
+      job_id,
+      fakeFinalDeliveryInput(),
+    );
+    assert.equal(second.phase, "running");
+    assert.equal(recoverAttempts, 2);
+
+    const recoverEvt = captured.filter(
+      (e) => e.name === REPORT_BATCH2_EVENTS.RECOVER,
+    );
+    assert.ok(recoverEvt.length >= 2);
+    assert.equal(recoverEvt.at(-1)!.data.generation_id, generation_id);
+    assert.equal(
+      recoverEvt.at(-1)!.data.generation_epoch,
+      gen.value.generation_epoch,
+    );
+
+    const jobSame = await loadJob(job_id, generation_id);
+    assert.equal(jobSame.value?.generation_id, generation_id);
+    assert.equal(jobSame.value?.generation_epoch, gen.value.generation_epoch);
+    assert.notEqual(jobSame.value?.status, "failed");
+
+    await invokeBatch2HandlerAdapter({
+      name: REPORT_BATCH2_EVENTS.RECOVER,
+      data: recoverEvt.at(-1)!.data,
+      adapter_invocation_id: randomUUID(),
+    });
+    const intents = await listPendingIntents({
+      report_id: job_id,
+      generation_id,
+    });
+    assert.ok(intents.ok);
+    assert.equal(
+      intents.value!.filter((i) => i.status === "failed").length,
+      0,
+    );
+    console.log(
+      "D-T8 ok — poll retry path sends RECOVER; Intent resent to sent",
+    );
+  }
+
+  // --- D-T9: healthy running Job does not spam RECOVER ---
+  {
+    await cleanup();
+    const job_id = "rpt_ud_t9";
+    const generation_id = `${job_id}:batch2`;
+    const gen = await allocateGeneration({
+      report_id: job_id,
+      locale: "en",
+      generation_id,
+    });
+    assert.ok(gen.ok);
+    if (!gen.ok) throw new Error("alloc");
+    await activateGeneration({ record: gen.value, job_id });
+    await createJob({
+      report_id: job_id,
+      generation_id,
+      locale: "en",
+      inputs: inputs(job_id),
+      generation_epoch: gen.value.generation_epoch,
+    });
+    assert.ok((await updateJobStatus(job_id, generation_id, "running")).ok);
+
+    // Mark an Intent as already sent so there is no pending/failed work.
+    const intent = await enqueueDispatchIntent({
+      report_id: job_id,
+      generation_id,
+      generation_epoch: gen.value.generation_epoch,
+      event_name: REPORT_BATCH2_EVENTS.ORCHESTRATE,
+      payload: {
+        report_id: job_id,
+        generation_id,
+        locale: "en",
+        generation_epoch: gen.value.generation_epoch,
+      },
+    });
+    assert.ok(intent.ok);
+    const { markIntentSent } = await import(
+      "@/lib/llm/pro/delivery/decision-report-v2/batch3/dispatch-intent"
+    );
+    assert.ok((await markIntentSent(intent.value!)).ok);
+
+    // Non-empty dispatch_log so orchestrating+empty rule does not apply.
+    const job = await loadJob(job_id, generation_id);
+    assert.ok(job.ok && job.value);
+    job.value!.dispatch_log.push({
+      at: new Date().toISOString(),
+      event_name: REPORT_BATCH2_EVENTS.ORCHESTRATE,
+      page_id: null,
+    });
+    assert.ok((await saveJob(job.value!)).ok);
+    assert.ok((await updateJobStatus(job_id, generation_id, "running")).ok);
+
+    const captured: CapturedEvent[] = [];
+    setReportBatch2EventSenderForTests({
+      send: async (events) => {
+        for (const e of events) captured.push({ name: e.name, data: e.data });
+        return { ok: true };
+      },
+    });
+
+    const polled = await pollFinalDeliveryReportBatch2(
+      job_id,
+      fakeFinalDeliveryInput(),
+    );
+    assert.equal(polled.phase, "running");
+    assert.equal(
+      captured.filter((e) => e.name === REPORT_BATCH2_EVENTS.RECOVER).length,
+      0,
+    );
+    assert.equal(
+      (await loadJob(job_id, generation_id)).value?.generation_id,
+      generation_id,
+    );
+    console.log("D-T9 ok — healthy running poll does not send RECOVER");
   }
 
   console.log("UNIT_D_RECOVERY_TRIGGER: PASS");
