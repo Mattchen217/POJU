@@ -11,7 +11,7 @@ import {
   sendReportBatch2Events,
 } from "../batch2/dispatch";
 import { REPORT_BATCH2_EVENTS } from "../batch2/events";
-import { loadJob } from "../batch2/job-store";
+import { loadJob, loadJobRawBlobs } from "../batch2/job-store";
 import { runReportBatch2OrchestratorTick } from "../batch2/orchestrator";
 import { REPORT_PAGE_IDS, resolveReportReadyState } from "../orchestration";
 import type { ReportPageId } from "../orchestration/types";
@@ -119,6 +119,16 @@ export async function runReportBatch3Recovery(input: {
   const job = loaded.value;
   const locale = input.locale ?? job.locale;
 
+  // Raw blobs (pre-authority demotion) — detect physical missing/mismatched persist.
+  const rawBlobs = await loadJobRawBlobs(input.report_id, input.generation_id);
+  if (!rawBlobs.ok) {
+    return {
+      ok: false,
+      code: rawBlobs.code === "kv_unavailable" ? "kv_unavailable" : "kv_read_failed",
+      detail: rawBlobs.detail,
+    };
+  }
+
   // 0) Replay authority-committed pages whose Batch2 blob is missing / mismatched
   for (const page_id of REPORT_PAGE_IDS) {
     if (actions.length >= limit) {
@@ -146,11 +156,14 @@ export async function runReportBatch3Recovery(input: {
     if (auth.value.validity_rev !== fence.value.validity_rev) continue;
     if (auth.value.output_fingerprint !== fence.value.output_fingerprint) continue;
 
-    const st = job.page_states.find((s) => s.page_id === page_id);
+    const rawBlob = rawBlobs.value?.pages.get(page_id);
     const blobOk =
-      st?.outcome === "completed" &&
-      st.output_fingerprint === fence.value.output_fingerprint &&
-      job.page_outputs[page_id] != null;
+      !!rawBlob &&
+      rawBlob.state.outcome === "completed" &&
+      rawBlob.state.output_fingerprint === fence.value.output_fingerprint &&
+      rawBlob.authority_output_fingerprint === fence.value.output_fingerprint &&
+      (rawBlob.validity_rev ?? -1) === fence.value.validity_rev &&
+      rawBlob.output != null;
     if (blobOk) {
       actions.push({
         kind: "skipped_completed",

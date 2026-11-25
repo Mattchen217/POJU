@@ -27,6 +27,7 @@ import {
   inspectReportBatch2FunctionRegistration,
   isReportBatch2SharedStoreAvailable,
   loadJob,
+  loadJobRawBlobs,
   pollFinalDeliveryReportBatch2,
   readReportBatch2ActivePointer,
   resetBatch2InvocationRecords,
@@ -297,17 +298,16 @@ async function main(): Promise<void> {
     assert.equal(started.ok, true, JSON.stringify(started));
     assert.equal(orchestrateSent, true);
 
-    const after = await loadJob(report_id, generation_id);
-    assert.equal(after.ok, true);
-    assert.ok(
-      after.value!.page_outputs["01"],
-      "startup must not clobber worker Page01 write after ORCHESTRATE",
-    );
-    assert.equal(
-      after.value!.page_states.find((s) => s.page_id === "01")?.outcome,
-      "completed",
-    );
-    assert.equal(after.value!.status, "orchestrating");
+    // Physical KV must retain the worker write (startup must not clobber).
+    // Authority-gated loadJob may demote without Batch3 fence — that is R3
+    // read-path behavior, not a startup overwrite regression.
+    const raw = await loadJobRawBlobs(report_id, generation_id);
+    assert.equal(raw.ok, true);
+    assert.ok(raw.value);
+    const blob01 = raw.value!.pages.get("01");
+    assert.ok(blob01?.output, "startup must not clobber worker Page01 write after ORCHESTRATE");
+    assert.equal(blob01!.state.outcome, "completed");
+    assert.equal(raw.value!.meta.status, "orchestrating");
     console.log("B ok — startup does not stale-overwrite worker Job");
   }
 

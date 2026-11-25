@@ -68,6 +68,8 @@ export async function runReportBatch2OrchestratorTick(input: {
   | { ok: true; dispatched: ReportBatch2EventPayload[] }
   | { ok: false; code: string; detail: string }
 > {
+  // loadJob authority-gates terminal page blobs when generation_epoch is set —
+  // stale/missing/mismatch pages arrive as pending and cannot unlock downstream.
   const loaded = await loadJob(input.report_id, input.generation_id);
   if (!loaded.ok) {
     return { ok: false, code: loaded.code, detail: loaded.detail };

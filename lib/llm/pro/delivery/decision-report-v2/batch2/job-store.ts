@@ -352,10 +352,22 @@ function assembleJob(
   return job;
 }
 
-export async function loadJob(
+/**
+ * Load raw page blobs without Batch3 authority gating.
+ * Production DAG / delivery must use loadJob (gated). Recovery may use this
+ * to detect physical blob absence independently of demotions.
+ */
+export async function loadJobRawBlobs(
   report_id: string,
   generation_id: string,
-): Promise<JobStoreResult<ReportBatch2JobRecord | null>> {
+): Promise<
+  JobStoreResult<{
+    meta: JobMeta;
+    pages: Map<ReportPageId, PageBlob>;
+    dispatch_log: DispatchLogEntry[];
+    invocation_log: InvocationLogEntry[];
+  } | null>
+> {
   if (!isReportBatch2SharedStoreAvailable()) return storeUnavailable();
   try {
     const store = kvStore();
@@ -381,7 +393,7 @@ export async function loadJob(
 
     return {
       ok: true,
-      value: assembleJob(meta, pages, dispatch_log, invocation_log),
+      value: { meta, pages, dispatch_log, invocation_log },
     };
   } catch (err) {
     return {
@@ -390,6 +402,52 @@ export async function loadJob(
       detail: err instanceof Error ? err.message : String(err),
     };
   }
+}
+
+/**
+ * Production job load — when generation_epoch is set (Batch3), every terminal
+ * page blob must pass unified authority gating before entering page_outputs /
+ * completed page_states. Authority unavailable fail-closes the whole load.
+ */
+export async function loadJob(
+  report_id: string,
+  generation_id: string,
+): Promise<JobStoreResult<ReportBatch2JobRecord | null>> {
+  const raw = await loadJobRawBlobs(report_id, generation_id);
+  if (!raw.ok) return raw;
+  if (!raw.value) return { ok: true, value: null };
+
+  const { meta, pages, dispatch_log, invocation_log } = raw.value;
+  let gatedPages = pages;
+
+  if (typeof meta.generation_epoch === "number") {
+    const { filterPagesThroughAuthority } = await import(
+      "../batch3/authority-page-read"
+    );
+    const filtered = await filterPagesThroughAuthority({
+      report_id,
+      generation_id,
+      generation_epoch: meta.generation_epoch,
+      pages,
+      page_ids: REPORT_PAGE_IDS,
+    });
+    if (!filtered.ok) {
+      return {
+        ok: false,
+        code:
+          filtered.code === "kv_unavailable"
+            ? "kv_unavailable"
+            : "kv_read_failed",
+        detail: filtered.detail,
+      };
+    }
+    gatedPages = filtered.value.pages;
+  }
+
+  return {
+    ok: true,
+    value: assembleJob(meta, gatedPages, dispatch_log, invocation_log),
+  };
 }
 
 async function writePageBlob(

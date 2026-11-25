@@ -266,8 +266,150 @@ export async function mergeReportBatch2IntoV3Lab(
     return { ok: false, reason: "v3_lab_missing_for_batch2_merge" };
   }
 
+  // Final delivery gate: never trust caller page_outputs alone when Batch3 epoch is set.
+  const epoch = batch2Job.generation_epoch;
+  if (typeof epoch !== "number") {
+    return {
+      ok: false,
+      reason: "batch2_merge_requires_generation_epoch_for_authority_gate",
+    };
+  }
+
+  const {
+    assertGenerationActive,
+    readAuthorityGatedPage,
+  } = await import("../batch3");
+  const {
+    loadJobRawBlobs,
+  } = await import("./job-store");
+
+  const stillActive = await assertGenerationActive({
+    report_id: batch2Job.report_id,
+    generation_id: batch2Job.generation_id,
+    generation_epoch: epoch,
+  });
+  if (!stillActive.ok) {
+    return {
+      ok: false,
+      reason: `merge_generation_not_active:${stillActive.code}:${stillActive.detail}`,
+    };
+  }
+
+  const raw = await loadJobRawBlobs(
+    batch2Job.report_id,
+    batch2Job.generation_id,
+  );
+  if (!raw.ok) {
+    return { ok: false, reason: `merge_job_read_failed:${raw.code}` };
+  }
+  if (!raw.value) {
+    return { ok: false, reason: "merge_job_missing" };
+  }
+
+  const authoritativeOutputs: Record<string, unknown> = {};
+  const { REPORT_PAGE_IDS } = await import("../orchestration");
+  const reportPageSet = new Set<string>(REPORT_PAGE_IDS);
+
   for (const key of FACE_DELIVERY_PAGE_KEYS) {
-    const out = batch2Job.page_outputs[key as keyof typeof batch2Job.page_outputs];
+    // Glossary (03) is derived — not a Batch3 fenced model page.
+    if (!reportPageSet.has(key)) continue;
+    const page_id = key as import("../orchestration/types").ReportPageId;
+    const blob = raw.value.pages.get(page_id) ?? null;
+    const callerOut =
+      batch2Job.page_outputs[page_id as keyof typeof batch2Job.page_outputs];
+    const st = batch2Job.page_states.find((s) => s.page_id === page_id);
+
+    // Nothing claimed for this face page — skip (optional pages / not yet done).
+    if (!callerOut && !blob?.output && st?.outcome !== "completed") continue;
+
+    // Caller or raw blob claims output → must pass authority; forged Job rejected.
+    const gated = await readAuthorityGatedPage({
+      report_id: batch2Job.report_id,
+      generation_id: batch2Job.generation_id,
+      generation_epoch: epoch,
+      page_id,
+      blob:
+        blob ??
+        (callerOut
+          ? {
+              rev: 0,
+              state: {
+                page_id,
+                outcome: "completed" as const,
+                output_fingerprint: st?.output_fingerprint ?? undefined,
+              },
+              output: callerOut,
+            }
+          : null),
+    });
+    if (gated.verdict === "unavailable") {
+      return {
+        ok: false,
+        reason: `merge_page_${key}_authority_unavailable:${gated.detail}`,
+      };
+    }
+    if (gated.verdict !== "valid" || !gated.authority_output) {
+      return {
+        ok: false,
+        reason: `merge_page_${key}_authority_${gated.verdict}:${gated.detail}`,
+      };
+    }
+    authoritativeOutputs[key] = gated.authority_output.output;
+  }
+
+  // Page07 conditional terminals: if Job claims a terminal gate outcome, require authority.
+  {
+    const st07 = batch2Job.page_states.find((s) => s.page_id === "07");
+    const blob07 = raw.value.pages.get("07") ?? null;
+    if (
+      st07 &&
+      (st07.outcome === "completed" ||
+        st07.outcome === "skipped_not_applicable" ||
+        st07.outcome === "insufficient_information")
+    ) {
+      const gated07 = await readAuthorityGatedPage({
+        report_id: batch2Job.report_id,
+        generation_id: batch2Job.generation_id,
+        generation_epoch: epoch,
+        page_id: "07",
+        blob:
+          blob07 ??
+          ({
+            rev: 0,
+            state: st07,
+            output: batch2Job.page_outputs["07"],
+          } as const),
+      });
+      if (gated07.verdict === "unavailable") {
+        return {
+          ok: false,
+          reason: `merge_page07_authority_unavailable:${gated07.detail}`,
+        };
+      }
+      if (gated07.verdict !== "valid") {
+        return {
+          ok: false,
+          reason: `merge_page07_authority_${gated07.verdict}:${gated07.detail}`,
+        };
+      }
+    }
+  }
+
+  // Re-check generation still active after per-page reads (invalidation race).
+  const stillActive2 = await assertGenerationActive({
+    report_id: batch2Job.report_id,
+    generation_id: batch2Job.generation_id,
+    generation_epoch: epoch,
+  });
+  if (!stillActive2.ok) {
+    return {
+      ok: false,
+      reason: `merge_generation_superseded_before_lab_write:${stillActive2.code}`,
+    };
+  }
+
+  for (const key of FACE_DELIVERY_PAGE_KEYS) {
+    const out = authoritativeOutputs[key];
     if (!out) continue;
     const byPage = lab.artifacts.by_page ?? {};
     byPage[key] = { ...byPage[key], page_schema: out };
