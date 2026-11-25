@@ -65,6 +65,7 @@ export {
   buildPageInputFingerprintPayload,
   computePageInputFingerprint,
   computePageInputFingerprintFromProductionContext,
+  assertPage02OptionalUpstreamConsistency,
   computeAllPageInputFingerprints,
 } from "./input-fingerprint";
 
@@ -83,6 +84,7 @@ export {
   extractConsumedInputFromFace06,
   extractConsumedInputFromFace07,
   extractConsumedInputFromFace08,
+  page02ConsumesPage01Alignment,
   applicabilityFromProductionContext,
   type ReportPageConsumedInputExtract,
   type ProductionContextFingerprintResult,

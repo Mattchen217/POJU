@@ -1,5 +1,5 @@
 /**
- * Report orchestration Batch 1 R2 — DAG SSOT + production-context fingerprints.
+ * Report orchestration Batch 1 R3 — DAG SSOT + production-context fingerprints.
  * No LLM / Inngest workers. Run: pnpm exec tsx scripts/test-report-orchestration-batch1.ts
  */
 
@@ -40,6 +40,10 @@ import {
 import { buildFace01ProductionContext } from "@/lib/llm/pro/delivery/decision-report-v2/page01/production";
 import { buildFace02ProductionContext } from "@/lib/llm/pro/delivery/decision-report-v2/page02/production";
 import { buildFace04ProductionContext } from "@/lib/llm/pro/delivery/decision-report-v2/page04/production";
+import { buildFace05ProductionContext } from "@/lib/llm/pro/delivery/decision-report-v2/page05/production";
+import { buildFace06ProductionContext } from "@/lib/llm/pro/delivery/decision-report-v2/page06/production";
+import { buildFace07ProductionContext } from "@/lib/llm/pro/delivery/decision-report-v2/page07/production";
+import { buildFace08ProductionContext } from "@/lib/llm/pro/delivery/decision-report-v2/page08/production";
 import type { DecisionContext } from "@/lib/poju/decision-context/types";
 import type { BookJudgmentPack } from "@/lib/llm/pro/delivery/book-judgment/schema";
 
@@ -266,7 +270,7 @@ const page02Stub = {
   },
 };
 
-console.log("=== Report orchestration Batch1 R2 (production-context fingerprints) ===");
+console.log("=== Report orchestration Batch1 R3 (production-context fingerprints) ===");
 
 {
   const graph = buildReportDependencyGraph();
@@ -545,17 +549,28 @@ console.log("=== Report orchestration Batch1 R2 (production-context fingerprints
   assert.equal(p02With.ok, true);
   if (!p02With.ok) throw new Error(p02With.reason);
   assert.ok(p02With.ctx.page01_core_judgment);
-  const fp02WithAbsentUp = computePageInputFingerprintFromProductionContext({
+
+  // Consumed Page01 alignment without upstream FP → fail closed
+  const mismatchMissingUp = computePageInputFingerprintFromProductionContext({
     page_id: "02",
     production_context: p02With.ctx,
     upstream_output_fingerprints: {},
   });
-  assert.equal(fp02WithAbsentUp.ok, true);
-  if (!fp02WithAbsentUp.ok) throw new Error(fp02WithAbsentUp.detail);
-  // Alignment content present → different from no-Page01 context
-  assert.notEqual(fp02No.result.fingerprint, fp02WithAbsentUp.result.fingerprint);
+  assert.equal(mismatchMissingUp.ok, false);
+  if (mismatchMissingUp.ok) throw new Error("expected mismatch");
+  assert.equal(mismatchMissingUp.code, "optional_upstream_context_mismatch");
 
-  // Page01 output fingerprint present vs changed
+  // No Page01 alignment but upstream FP provided → fail closed
+  const mismatchExtraUp = computePageInputFingerprintFromProductionContext({
+    page_id: "02",
+    production_context: p02No.ctx,
+    upstream_output_fingerprints: { "01": "out_page01_orphan" },
+  });
+  assert.equal(mismatchExtraUp.ok, false);
+  if (mismatchExtraUp.ok) throw new Error("expected mismatch");
+  assert.equal(mismatchExtraUp.code, "optional_upstream_context_mismatch");
+
+  // Consistent: consumed + valid Page01 output FP
   const fp02WithUp = computePageInputFingerprintFromProductionContext({
     page_id: "02",
     production_context: p02With.ctx,
@@ -569,12 +584,13 @@ console.log("=== Report orchestration Batch1 R2 (production-context fingerprints
   assert.equal(fp02WithUp.ok && fp02WithUp2.ok, true);
   if (!fp02WithUp.ok || !fp02WithUp2.ok) throw new Error("p02 up");
   assert.notEqual(fp02WithUp.result.fingerprint, fp02WithUp2.result.fingerprint);
-  assert.notEqual(fp02WithAbsentUp.result.fingerprint, fp02WithUp.result.fingerprint);
+  // Alignment content + consistent upstream differs from no-Page01 absent
+  assert.notEqual(fp02No.result.fingerprint, fp02WithUp.result.fingerprint);
 
   // Still independently ready
   const ready = resolveReportReadyState(initialPendingPageStates());
   assert.deepEqual(ready.ready_model_generations.sort(), ["01", "02"]);
-  console.log("H ok — Page02 optional Page01 alignment + output FP; parallel ready");
+  console.log("H ok — Page02 optional Page01 consistency fail-closed + parallel ready");
 }
 
 {
@@ -770,4 +786,882 @@ console.log("=== Report orchestration Batch1 R2 (production-context fingerprints
   console.log("K ok — per-page validator isolation + upstream select");
 }
 
-console.log("ok report orchestration batch1 R2");
+{
+  // --- Page05–08 real builder isolation (R3) ---
+  const UP05 = { "01": "o1", "02": "o2", "04": "o4" } as const;
+  const UP06 = { ...UP05, "05": "o5" } as const;
+  const UP07 = { ...UP06, "06": "o6" } as const;
+  const UP08 = { ...UP07, "07": "o7" } as const;
+
+  const page04ForLater = {
+    page: "04",
+    face: "04",
+    schema_version: "face04-v2",
+    content_units: [
+      {
+        unit_id: "u_name",
+        kind: "bottleneck_label",
+        text: "Cash-floor panic under offer pressure.",
+        title: "",
+        claim_ids: ["claim_u_path_05"],
+        evidence_ids: [],
+        related_reality_fact_ids: ["fact_runway"],
+      },
+    ],
+    bottleneck_naming_unit_ids: ["u_name"],
+    manifestation_unit_ids: ["u_name"],
+    force_through_cost_unit_ids: ["u_name"],
+    leverage_point_unit_ids: ["u_name"],
+    evidence_boundary: {
+      claim_ids: ["claim_u_path_05"],
+      evidence_note_unit_ids: [],
+      confirmed_fact_ids: ["fact_runway"],
+      hypothesis_notes: [],
+      uncertainty_notes: ["x"],
+    },
+    reading_order: [
+      "bottleneck_naming",
+      "manifestation",
+      "force_through_cost",
+      "leverage_point",
+      "evidence_boundary",
+    ],
+  };
+
+  const page05Schema = {
+    page: "05",
+    face: "05",
+    schema_version: "face05-v2",
+    preferred_path_ids: ["path_staged"],
+    alternative_path_ids: ["path_hold"],
+    cautious_path_ids: [],
+    path_units: [
+      {
+        path_id: "path_staged",
+        path_role: "preferred",
+        title: "Staged explore while keeping runway",
+        description: "Negotiate terms while keeping the cash floor intact.",
+        prerequisites: ["runway holds"],
+        required_resources: ["negotiation bandwidth"],
+        risks: ["offer window closes"],
+        success_signals: ["written runway plan holds for 30 days"],
+        reconsideration_conditions: [],
+      },
+      {
+        path_id: "path_hold",
+        path_role: "alternative",
+        title: "Hold and clarify before any leave decision",
+        description: "Defer leave talk until salary and equity facts are clarified.",
+        prerequisites: ["can delay response"],
+        required_resources: ["time window"],
+        risks: ["relationship cooling"],
+        success_signals: ["key unknowns become confirmed or declined"],
+        reconsideration_conditions: [],
+      },
+    ],
+    path_comparison: {
+      rows: [
+        {
+          path_id: "path_staged",
+          benefit: "Keeps runway",
+          cost: "Negotiation effort",
+          risk: "Offer window",
+          resource_requirement: "Bandwidth",
+          reversibility: "High",
+          prerequisites: "Runway holds",
+        },
+        {
+          path_id: "path_hold",
+          benefit: "Clarify first",
+          cost: "Time delay",
+          risk: "Cooling",
+          resource_requirement: "Calendar",
+          reversibility: "High",
+          prerequisites: "Delay ok",
+        },
+      ],
+    },
+    switching_rules: [
+      {
+        rule_id: "sw_to_hold",
+        source_path_id: "path_staged",
+        trigger_condition: "Runway drops",
+        action: "switch",
+        target_path_id: "path_hold",
+        rationale: "Protect cash floor",
+      },
+    ],
+  };
+
+  const page06Schema = {
+    page: "06",
+    face: "06",
+    schema_version: "face06-v2",
+    primary_path_id: "path_staged",
+    first_step: {
+      action_id: "act_first",
+      what: "Write the comparison",
+      path_id: "path_staged",
+    },
+    execution_actions: [
+      { action_id: "act_budget", action: "Set a cash floor check", path_id: "path_staged" },
+    ],
+    monitoring_contract: {
+      path_id: "path_staged",
+      action_ids: ["act_first"],
+      experiment_ids: [],
+      observe_signals: ["Whether the written comparison exists"],
+      red_flags: ["Cash floor breached"],
+      review_questions: ["Did the comparison stay bounded?"],
+      continue_triggers: ["Comparison stays inside the cash floor"],
+      adjust_triggers: ["Scope grows past one offer"],
+      stop_triggers: ["Runway falls under six months"],
+      rerun_triggers: [],
+      resource_guardrails: ["Do not resign during the window"],
+      defer_costs: ["Waiting without a written comparison"],
+      claim_ids: ["claim_u_mon_08"],
+      evidence_ids: ["u_mon_08"],
+      reality_fact_ids: ["fact_runway"],
+    },
+  };
+
+  const page07ApplicableSchema = {
+    page: "07",
+    face: "07",
+    schema_version: "face07-v2",
+    applicability_status: "applicable",
+    applicability_reason: "A named partnership is already stated.",
+    participants: [{ participant_id: "self", display_label: "用户", role: "self" }],
+    field_units: [
+      {
+        unit_id: "f_budget",
+        kind: "field_constraint",
+        text: "UNIQUE_FIELD_TEAM_BUDGET_CAP",
+      },
+    ],
+    relationship_units: [],
+    alignment_with_main: {
+      changes_page01_recommendation: false,
+      changes_page05_path_order: false,
+      note: "Auxiliary condition",
+    },
+    evidence_boundary: { uncertainty_notes: [] },
+    related_page05_path_ids: ["path_staged"],
+    related_page06_action_ids: ["act_first"],
+    effect_on_page06_execution: null,
+  };
+
+  // Page05
+  {
+    const pack05 = {
+      version: 1,
+      locale: "en",
+      cfp_hash: "cfp_orch_05",
+      zfp_hash: null,
+      zfpOmitted: true,
+      shot_mode: "one",
+      created_at: "2026-01-01T00:00:00Z",
+      units: [
+        {
+          id: "u_path_05",
+          track: "science",
+          claim: "Staged explore preserves runway.",
+          anchors: ["runway_buffer"],
+          serves_face: ["05"],
+          term_ids: [],
+          source_domain: "science",
+        },
+        {
+          id: "u_unused_08",
+          track: "science",
+          claim: "Unused by Page05 — page08 only.",
+          anchors: ["close"],
+          serves_face: ["08"],
+          term_ids: [],
+          source_domain: "science",
+        },
+      ],
+      by_face: { "05": ["u_path_05"], "08": ["u_unused_08"] },
+      pattern_hits_used: [],
+      science_tags_used: [],
+    } as unknown as BookJudgmentPack;
+    const dc05 = baseDc();
+    const built = buildFace05ProductionContext({
+      report_id: "job_orch_r3_05",
+      locale: "en",
+      dc: dc05,
+      pack: pack05,
+      chart_fact_pack: "日主甲木…",
+      page01: page01Stub,
+      page02: page02Stub,
+      page04: page04ForLater,
+    });
+    assert.equal(built.ok, true, built.ok ? "" : built.reason);
+    if (!built.ok) throw new Error(built.reason);
+    const personal = (
+      buildPageSharedInputFingerprintFromProductionContext("05", built.ctx) as {
+        ok: true;
+        extract: { components: { personal_consumed: { available_domains: string[]; domain_versions: Record<string, string> } } };
+      }
+    ).extract.components.personal_consumed;
+    assert.ok(!personal.available_domains.includes("ziwei"));
+    assert.ok(!("ziwei" in personal.domain_versions));
+
+    const fpA = computePageInputFingerprintFromProductionContext({
+      page_id: "05",
+      production_context: built.ctx,
+      upstream_output_fingerprints: UP05,
+    });
+    assert.equal(fpA.ok, true);
+    if (!fpA.ok) throw new Error(fpA.detail);
+
+    const dcChanged = baseDc({
+      facts: baseDc().reality_facts!.map((f) =>
+        f.fact_id === "fact_runway"
+          ? { ...f, statement: "Runway about 2 months — consumed by Page05." }
+          : f,
+      ),
+    });
+    const builtFact = buildFace05ProductionContext({
+      report_id: "job_orch_r3_05",
+      locale: "en",
+      dc: dcChanged,
+      pack: pack05,
+      chart_fact_pack: "日主甲木…",
+      page01: page01Stub,
+      page02: page02Stub,
+      page04: page04ForLater,
+    });
+    assert.equal(builtFact.ok, true);
+    if (!builtFact.ok) throw new Error(builtFact.reason);
+    const fpFact = computePageInputFingerprintFromProductionContext({
+      page_id: "05",
+      production_context: builtFact.ctx,
+      upstream_output_fingerprints: UP05,
+    });
+    assert.equal(fpFact.ok, true);
+    if (!fpFact.ok) throw new Error(fpFact.detail);
+    assert.notEqual(fpA.result.fingerprint, fpFact.result.fingerprint);
+
+    const packUnused = {
+      ...pack05,
+      units: (pack05.units as Array<{ id: string; claim: string }>).map((u) =>
+        u.id === "u_unused_08" ? { ...u, claim: "CHANGED unused page08 unit" } : u,
+      ),
+    } as unknown as BookJudgmentPack;
+    const builtUnused = buildFace05ProductionContext({
+      report_id: "job_orch_r3_05",
+      locale: "en",
+      dc: dc05,
+      pack: packUnused,
+      chart_fact_pack: "日主甲木…",
+      page01: page01Stub,
+      page02: page02Stub,
+      page04: page04ForLater,
+    });
+    assert.equal(builtUnused.ok, true);
+    if (!builtUnused.ok) throw new Error(builtUnused.reason);
+    const fpUnused = computePageInputFingerprintFromProductionContext({
+      page_id: "05",
+      production_context: builtUnused.ctx,
+      upstream_output_fingerprints: UP05,
+    });
+    assert.equal(fpUnused.ok, true);
+    if (!fpUnused.ok) throw new Error(fpUnused.detail);
+    assert.equal(fpA.result.fingerprint, fpUnused.result.fingerprint);
+
+    const page04Changed = {
+      ...page04ForLater,
+      content_units: [
+        {
+          ...(page04ForLater.content_units[0] as object),
+          text: "CHANGED bottleneck label for Page05 upstream payload.",
+        },
+      ],
+    };
+    const builtUp = buildFace05ProductionContext({
+      report_id: "job_orch_r3_05",
+      locale: "en",
+      dc: dc05,
+      pack: pack05,
+      chart_fact_pack: "日主甲木…",
+      page01: page01Stub,
+      page02: page02Stub,
+      page04: page04Changed,
+    });
+    assert.equal(builtUp.ok, true);
+    if (!builtUp.ok) throw new Error(builtUp.reason);
+    const fpUp = computePageInputFingerprintFromProductionContext({
+      page_id: "05",
+      production_context: builtUp.ctx,
+      upstream_output_fingerprints: UP05,
+    });
+    assert.equal(fpUp.ok, true);
+    if (!fpUp.ok) throw new Error(fpUp.detail);
+    assert.notEqual(fpA.result.fingerprint, fpUp.result.fingerprint);
+    console.log("L1 ok — Page05 real builder isolation");
+  }
+
+  // Page06
+  {
+    const pack06 = {
+      version: 1,
+      locale: "en",
+      cfp_hash: "cfp_orch_06",
+      zfp_hash: null,
+      zfpOmitted: true,
+      shot_mode: "one",
+      created_at: "2026-01-01T00:00:00Z",
+      units: [
+        {
+          id: "u_exec_06",
+          track: "science",
+          claim: "Staged explore preserves runway better than cold resign.",
+          anchors: ["runway_buffer"],
+          serves_face: ["06"],
+          term_ids: [],
+          source_domain: "science",
+        },
+        {
+          id: "u_unused_08",
+          track: "science",
+          claim: "Unused by Page06.",
+          anchors: ["close"],
+          serves_face: ["08"],
+          term_ids: [],
+          source_domain: "science",
+        },
+      ],
+      by_face: { "06": ["u_exec_06"], "08": ["u_unused_08"] },
+      pattern_hits_used: [],
+      science_tags_used: [],
+    } as unknown as BookJudgmentPack;
+    const page02For06 = {
+      ...page02Stub,
+      content_units: [
+        {
+          unit_id: "p02_personal",
+          kind: "personal_interpretation",
+          text: "Cash-floor anxiety amplifies under offer deadlines.",
+          title: "",
+          claim_ids: ["claim_u_exec_06"],
+          evidence_ids: ["u_exec_06"],
+          source_domain: "science",
+        },
+      ],
+    };
+    const built = buildFace06ProductionContext({
+      report_id: "job_orch_r3_06",
+      locale: "en",
+      dc: baseDc(),
+      pack: pack06,
+      chart_fact_pack: "日主甲木…",
+      page01: page01Stub,
+      page02: page02For06,
+      page04: page04ForLater,
+      page05: page05Schema,
+    });
+    assert.equal(built.ok, true, built.ok ? "" : built.reason);
+    if (!built.ok) throw new Error(built.reason);
+    const personal = (
+      buildPageSharedInputFingerprintFromProductionContext("06", built.ctx) as {
+        ok: true;
+        extract: { components: { personal_consumed: { available_domains: string[]; domain_versions: Record<string, string> } } };
+      }
+    ).extract.components.personal_consumed;
+    assert.ok(!personal.available_domains.includes("ziwei"));
+
+    const fpA = computePageInputFingerprintFromProductionContext({
+      page_id: "06",
+      production_context: built.ctx,
+      upstream_output_fingerprints: UP06,
+    });
+    assert.equal(fpA.ok, true);
+    if (!fpA.ok) throw new Error(fpA.detail);
+
+    const dcChanged = baseDc({
+      facts: baseDc().reality_facts!.map((f) =>
+        f.fact_id === "fact_runway"
+          ? { ...f, statement: "Runway about 1 month — Page06 consumes." }
+          : f,
+      ),
+    });
+    const builtFact = buildFace06ProductionContext({
+      report_id: "job_orch_r3_06",
+      locale: "en",
+      dc: dcChanged,
+      pack: pack06,
+      chart_fact_pack: "日主甲木…",
+      page01: page01Stub,
+      page02: page02For06,
+      page04: page04ForLater,
+      page05: page05Schema,
+    });
+    assert.equal(builtFact.ok, true);
+    if (!builtFact.ok) throw new Error(builtFact.reason);
+    const fpFact = computePageInputFingerprintFromProductionContext({
+      page_id: "06",
+      production_context: builtFact.ctx,
+      upstream_output_fingerprints: UP06,
+    });
+    assert.equal(fpFact.ok, true);
+    if (!fpFact.ok) throw new Error(fpFact.detail);
+    assert.notEqual(fpA.result.fingerprint, fpFact.result.fingerprint);
+
+    const packUnused = {
+      ...pack06,
+      units: (pack06.units as Array<{ id: string; claim: string }>).map((u) =>
+        u.id === "u_unused_08" ? { ...u, claim: "CHANGED unused" } : u,
+      ),
+    } as unknown as BookJudgmentPack;
+    const builtUnused = buildFace06ProductionContext({
+      report_id: "job_orch_r3_06",
+      locale: "en",
+      dc: baseDc(),
+      pack: packUnused,
+      chart_fact_pack: "日主甲木…",
+      page01: page01Stub,
+      page02: page02For06,
+      page04: page04ForLater,
+      page05: page05Schema,
+    });
+    assert.equal(builtUnused.ok, true);
+    if (!builtUnused.ok) throw new Error(builtUnused.reason);
+    const fpUnused = computePageInputFingerprintFromProductionContext({
+      page_id: "06",
+      production_context: builtUnused.ctx,
+      upstream_output_fingerprints: UP06,
+    });
+    assert.equal(fpUnused.ok, true);
+    if (!fpUnused.ok) throw new Error(fpUnused.detail);
+    assert.equal(fpA.result.fingerprint, fpUnused.result.fingerprint);
+
+    const page05Changed = {
+      ...page05Schema,
+      path_units: [
+        {
+          ...page05Schema.path_units[0],
+          title: "CHANGED staged path title for Page06 upstream",
+        },
+        page05Schema.path_units[1],
+      ],
+    };
+    const builtUp = buildFace06ProductionContext({
+      report_id: "job_orch_r3_06",
+      locale: "en",
+      dc: baseDc(),
+      pack: pack06,
+      chart_fact_pack: "日主甲木…",
+      page01: page01Stub,
+      page02: page02For06,
+      page04: page04ForLater,
+      page05: page05Changed,
+    });
+    assert.equal(builtUp.ok, true);
+    if (!builtUp.ok) throw new Error(builtUp.reason);
+    const fpUp = computePageInputFingerprintFromProductionContext({
+      page_id: "06",
+      production_context: builtUp.ctx,
+      upstream_output_fingerprints: UP06,
+    });
+    assert.equal(fpUp.ok, true);
+    if (!fpUp.ok) throw new Error(fpUp.detail);
+    assert.notEqual(fpA.result.fingerprint, fpUp.result.fingerprint);
+    console.log("L2 ok — Page06 real builder isolation");
+  }
+
+  // Page07
+  {
+    const pack07 = {
+      version: 1,
+      locale: "en",
+      cfp_hash: "cfp_orch_07",
+      zfp_hash: null,
+      zfpOmitted: true,
+      shot_mode: "one",
+      created_at: "2026-01-01T00:00:00Z",
+      units: [
+        {
+          id: "u_field_07",
+          track: "science",
+          claim: "A written split is the condition for sharing a move.",
+          anchors: ["split_before_move"],
+          serves_face: ["07"],
+          term_ids: [],
+          source_domain: "science",
+        },
+        {
+          id: "u_unused_08",
+          track: "science",
+          claim: "Unused by Page07.",
+          anchors: ["close"],
+          serves_face: ["08"],
+          term_ids: [],
+          source_domain: "science",
+        },
+      ],
+      by_face: { "07": ["u_field_07"], "08": ["u_unused_08"] },
+      pattern_hits_used: [],
+      science_tags_used: [],
+    } as unknown as BookJudgmentPack;
+
+    const dcApplicable = {
+      ...baseDc({
+        question: "Should I relocate and enter a partnership with Alex?",
+        facts: [
+          {
+            fact_id: "fact_alex",
+            statement: "Partnership with Alex requires a written split before we relocate.",
+            status: "confirmed",
+            verification_level: "user_asserted",
+            source_stage: "collecting",
+            source_turn_id: "t1",
+            user_confirmed: true,
+          },
+        ],
+      }),
+      constraints: [
+        {
+          constraint_id: "c_split",
+          statement: "No relocate until the partnership split is written.",
+          category: "responsibility",
+          status: "confirmed",
+          verification_level: "user_asserted",
+          source_stage: "collecting",
+          source_turn_id: "t1",
+          rigidity: "hard",
+          user_confirmed: true,
+        },
+      ],
+    } as unknown as DecisionContext;
+
+    const dcSolo = baseDc({
+      question: "Should I take a solo promotion and keep my runway?",
+    });
+
+    const page02For07 = {
+      ...page02Stub,
+      content_units: [
+        {
+          unit_id: "p02_personal",
+          kind: "personal_interpretation",
+          text: "The user tightens when responsibility is unwritten.",
+          title: "",
+          claim_ids: ["claim_u_field_07"],
+          evidence_ids: ["u_field_07"],
+          source_domain: "science",
+        },
+      ],
+    };
+    const page05For07 = {
+      ...page05Schema,
+      preferred_path_ids: ["path_split"],
+      path_units: [
+        {
+          path_id: "path_split",
+          path_role: "preferred",
+          title: "Write the split before relocating",
+          description: "Keep the move conditional on a written partnership split.",
+          prerequisites: ["Alex is willing"],
+          required_resources: ["one conversation"],
+          risks: ["Talk stalls"],
+          success_signals: ["A dated split note exists"],
+          reconsideration_conditions: [],
+        },
+      ],
+    };
+    const page06For07 = {
+      ...page06Schema,
+      primary_path_id: "path_split",
+      first_step: {
+        action_id: "act_first",
+        path_id: "path_split",
+        what: "Draft the split note before any move date.",
+      },
+      execution_actions: [
+        {
+          action_id: "act_send",
+          path_id: "path_split",
+          action: "Send the draft only after it names the split.",
+        },
+      ],
+    };
+
+    const builtApp = buildFace07ProductionContext({
+      report_id: "job_orch_r3_07",
+      locale: "en",
+      dc: dcApplicable,
+      pack: pack07,
+      chart_fact_pack: "日主甲木…",
+      page01: page01Stub,
+      page02: page02For07,
+      page04: page04ForLater,
+      page05: page05For07,
+      page06: page06For07,
+    });
+    assert.equal(builtApp.ok, true, builtApp.ok ? "" : builtApp.reason);
+    if (!builtApp.ok) throw new Error(builtApp.reason);
+    assert.equal(builtApp.ctx.applicability.status, "applicable");
+    const personal = (
+      buildPageSharedInputFingerprintFromProductionContext("07", builtApp.ctx) as {
+        ok: true;
+        extract: { components: { personal_consumed: { available_domains: string[]; domain_versions: Record<string, string> } } };
+      }
+    ).extract.components.personal_consumed;
+    assert.ok(!personal.available_domains.includes("ziwei"));
+
+    const fpApp = computePageInputFingerprintFromProductionContext({
+      page_id: "07",
+      production_context: builtApp.ctx,
+      upstream_output_fingerprints: UP07,
+    });
+    assert.equal(fpApp.ok, true);
+    if (!fpApp.ok) throw new Error(fpApp.detail);
+
+    const builtSolo = buildFace07ProductionContext({
+      report_id: "job_orch_r3_07",
+      locale: "en",
+      dc: dcSolo,
+      pack: pack07,
+      chart_fact_pack: "日主甲木…",
+      page01: page01Stub,
+      page02: page02For07,
+      page04: page04ForLater,
+      page05: page05For07,
+      page06: page06For07,
+    });
+    assert.equal(builtSolo.ok, true);
+    if (!builtSolo.ok) throw new Error(builtSolo.reason);
+    assert.notEqual(builtSolo.ctx.applicability.status, "applicable");
+    const fpSolo = computePageInputFingerprintFromProductionContext({
+      page_id: "07",
+      production_context: builtSolo.ctx,
+      upstream_output_fingerprints: UP07,
+    });
+    assert.equal(fpSolo.ok, true);
+    if (!fpSolo.ok) throw new Error(fpSolo.detail);
+    assert.notEqual(fpApp.result.fingerprint, fpSolo.result.fingerprint);
+
+    const packUnused = {
+      ...pack07,
+      units: (pack07.units as Array<{ id: string; claim: string }>).map((u) =>
+        u.id === "u_unused_08" ? { ...u, claim: "CHANGED unused by 07" } : u,
+      ),
+    } as unknown as BookJudgmentPack;
+    const builtUnused = buildFace07ProductionContext({
+      report_id: "job_orch_r3_07",
+      locale: "en",
+      dc: dcApplicable,
+      pack: packUnused,
+      chart_fact_pack: "日主甲木…",
+      page01: page01Stub,
+      page02: page02For07,
+      page04: page04ForLater,
+      page05: page05For07,
+      page06: page06For07,
+    });
+    assert.equal(builtUnused.ok, true);
+    if (!builtUnused.ok) throw new Error(builtUnused.reason);
+    const fpUnused = computePageInputFingerprintFromProductionContext({
+      page_id: "07",
+      production_context: builtUnused.ctx,
+      upstream_output_fingerprints: UP07,
+    });
+    assert.equal(fpUnused.ok, true);
+    if (!fpUnused.ok) throw new Error(fpUnused.detail);
+    assert.equal(fpApp.result.fingerprint, fpUnused.result.fingerprint);
+
+    const page06Changed = {
+      ...page06For07,
+      first_step: {
+        ...page06For07.first_step,
+        what: "CHANGED first step for Page07 upstream payload",
+      },
+    };
+    const builtUp = buildFace07ProductionContext({
+      report_id: "job_orch_r3_07",
+      locale: "en",
+      dc: dcApplicable,
+      pack: pack07,
+      chart_fact_pack: "日主甲木…",
+      page01: page01Stub,
+      page02: page02For07,
+      page04: page04ForLater,
+      page05: page05For07,
+      page06: page06Changed,
+    });
+    assert.equal(builtUp.ok, true);
+    if (!builtUp.ok) throw new Error(builtUp.reason);
+    const fpUp = computePageInputFingerprintFromProductionContext({
+      page_id: "07",
+      production_context: builtUp.ctx,
+      upstream_output_fingerprints: UP07,
+    });
+    assert.equal(fpUp.ok, true);
+    if (!fpUp.ok) throw new Error(fpUp.detail);
+    assert.notEqual(fpApp.result.fingerprint, fpUp.result.fingerprint);
+    console.log("L3 ok — Page07 real builder isolation + applicability");
+  }
+
+  // Page08
+  {
+    const pack08 = {
+      version: 1,
+      locale: "en",
+      cfp_hash: "cfp_orch_08",
+      zfp_hash: null,
+      zfpOmitted: true,
+      shot_mode: "one",
+      created_at: "2026-01-01T00:00:00Z",
+      units: [
+        {
+          id: "u_mon_08",
+          track: "science",
+          claim: "Watch the cash floor before widening the explore.",
+          anchors: ["runway_buffer"],
+          serves_face: ["08"],
+          term_ids: [],
+          source_domain: "science",
+        },
+        {
+          id: "u_unused_05",
+          track: "science",
+          claim: "Unused by Page08 — page05 only.",
+          anchors: ["path"],
+          serves_face: ["05"],
+          term_ids: [],
+          source_domain: "science",
+        },
+      ],
+      by_face: { "08": ["u_mon_08"], "05": ["u_unused_05"] },
+      pattern_hits_used: [],
+      science_tags_used: [],
+    } as unknown as BookJudgmentPack;
+
+    const built = buildFace08ProductionContext({
+      report_id: "job_orch_r3_08",
+      locale: "en",
+      dc: baseDc(),
+      pack: pack08,
+      chart_fact_pack: "日主甲木…",
+      page01: page01Stub,
+      page02: page02Stub,
+      page04: page04ForLater,
+      page05: page05Schema,
+      page06: page06Schema,
+      page07: page07ApplicableSchema,
+    });
+    assert.equal(built.ok, true, built.ok ? "" : built.reason);
+    if (!built.ok) throw new Error(built.reason);
+
+    const fpA = computePageInputFingerprintFromProductionContext({
+      page_id: "08",
+      production_context: built.ctx,
+      upstream_output_fingerprints: UP08,
+    });
+    assert.equal(fpA.ok, true);
+    if (!fpA.ok) throw new Error(fpA.detail);
+
+    const dcChanged = baseDc({
+      facts: baseDc().reality_facts!.map((f) =>
+        f.fact_id === "fact_runway"
+          ? { ...f, statement: "Runway about 4 months — changes dateCorpus." }
+          : f,
+      ),
+    });
+    const builtFact = buildFace08ProductionContext({
+      report_id: "job_orch_r3_08",
+      locale: "en",
+      dc: dcChanged,
+      pack: pack08,
+      chart_fact_pack: "日主甲木…",
+      page01: page01Stub,
+      page02: page02Stub,
+      page04: page04ForLater,
+      page05: page05Schema,
+      page06: page06Schema,
+      page07: page07ApplicableSchema,
+    });
+    assert.equal(builtFact.ok, true);
+    if (!builtFact.ok) throw new Error(builtFact.reason);
+    assert.notEqual(built.ctx.dateCorpus, builtFact.ctx.dateCorpus);
+    const fpFact = computePageInputFingerprintFromProductionContext({
+      page_id: "08",
+      production_context: builtFact.ctx,
+      upstream_output_fingerprints: UP08,
+    });
+    assert.equal(fpFact.ok, true);
+    if (!fpFact.ok) throw new Error(fpFact.detail);
+    assert.notEqual(fpA.result.fingerprint, fpFact.result.fingerprint);
+
+    const packUnused = {
+      ...pack08,
+      units: (pack08.units as Array<{ id: string; claim: string }>).map((u) =>
+        u.id === "u_unused_05" ? { ...u, claim: "CHANGED unused page05 unit" } : u,
+      ),
+    } as unknown as BookJudgmentPack;
+    const builtUnused = buildFace08ProductionContext({
+      report_id: "job_orch_r3_08",
+      locale: "en",
+      dc: baseDc(),
+      pack: packUnused,
+      chart_fact_pack: "日主甲木…",
+      page01: page01Stub,
+      page02: page02Stub,
+      page04: page04ForLater,
+      page05: page05Schema,
+      page06: page06Schema,
+      page07: page07ApplicableSchema,
+    });
+    assert.equal(builtUnused.ok, true);
+    if (!builtUnused.ok) throw new Error(builtUnused.reason);
+    const fpUnused = computePageInputFingerprintFromProductionContext({
+      page_id: "08",
+      production_context: builtUnused.ctx,
+      upstream_output_fingerprints: UP08,
+    });
+    assert.equal(fpUnused.ok, true);
+    if (!fpUnused.ok) throw new Error(fpUnused.detail);
+    assert.equal(fpA.result.fingerprint, fpUnused.result.fingerprint);
+
+    const page07Changed = {
+      ...page07ApplicableSchema,
+      field_units: [
+        {
+          unit_id: "f_budget",
+          kind: "field_constraint",
+          text: "CHANGED_FIELD_TEXT_FOR_DATE_CORPUS",
+        },
+      ],
+    };
+    const builtCorpus = buildFace08ProductionContext({
+      report_id: "job_orch_r3_08",
+      locale: "en",
+      dc: baseDc(),
+      pack: pack08,
+      chart_fact_pack: "日主甲木…",
+      page01: page01Stub,
+      page02: page02Stub,
+      page04: page04ForLater,
+      page05: page05Schema,
+      page06: page06Schema,
+      page07: page07Changed,
+    });
+    assert.equal(builtCorpus.ok, true);
+    if (!builtCorpus.ok) throw new Error(builtCorpus.reason);
+    assert.notEqual(built.ctx.dateCorpus, builtCorpus.ctx.dateCorpus);
+    const fpCorpus = computePageInputFingerprintFromProductionContext({
+      page_id: "08",
+      production_context: builtCorpus.ctx,
+      upstream_output_fingerprints: UP08,
+    });
+    assert.equal(fpCorpus.ok, true);
+    if (!fpCorpus.ok) throw new Error(fpCorpus.detail);
+    assert.notEqual(fpA.result.fingerprint, fpCorpus.result.fingerprint);
+    console.log("L4 ok — Page08 real builder isolation + dateCorpus");
+  }
+
+  console.log("L ok — Page05–08 real production-context isolation");
+}
+
+console.log("ok report orchestration batch1 R3");

@@ -208,6 +208,22 @@ export function extractConsumedInputFromFace01(
   });
 }
 
+/**
+ * True when Page02 production context actually consumed Page01 alignment
+ * (core_judgment / why_paths), not merely when an optional upstream map key exists.
+ */
+export function page02ConsumesPage01Alignment(
+  ctx: Face02ProductionContext,
+): boolean {
+  const core =
+    (typeof ctx.page01_core_judgment === "string" &&
+      ctx.page01_core_judgment.trim()) ||
+    (typeof ctx.slice.page01_judgment_context?.core_judgment_text === "string" &&
+      ctx.slice.page01_judgment_context.core_judgment_text.trim());
+  const why = ctx.slice.page01_judgment_context?.why_paths ?? [];
+  return Boolean(core) || why.some((w) => typeof w === "string" && w.trim());
+}
+
 /** Face02: face-filtered slice/registry + optional Page01 alignment content. */
 export function extractConsumedInputFromFace02(
   ctx: Face02ProductionContext,
@@ -268,11 +284,7 @@ export function extractConsumedInputFromFace02(
       ctx.slice.page01_judgment_context?.core_judgment_text ??
       null,
     why_paths: ctx.slice.page01_judgment_context?.why_paths ?? [],
-    present: Boolean(
-      (ctx.page01_core_judgment && ctx.page01_core_judgment.trim()) ||
-        (ctx.slice.page01_judgment_context?.core_judgment_text &&
-          ctx.slice.page01_judgment_context.core_judgment_text.trim()),
-    ),
+    present: page02ConsumesPage01Alignment(ctx),
   };
   return finishExtract("02", {
     locale,

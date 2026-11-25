@@ -15,8 +15,10 @@ import {
 import {
   applicabilityFromProductionContext,
   buildPageSharedInputFingerprintFromProductionContext,
+  page02ConsumesPage01Alignment,
 } from "./production-context-fingerprint";
 import { selectSharedSliceForPage } from "./shared-input-adapter";
+import type { Face02ProductionContext } from "../page02/production";
 import {
   REPORT_OPTIONAL_UPSTREAM_ABSENT,
   REPORT_ORCHESTRATION_GRAPH_VERSION,
@@ -222,6 +224,41 @@ export function computePageInputFingerprint(
 }
 
 /**
+ * Page02 optional←Page01 must match real context consumption.
+ * Consumed alignment without Page01 output FP → reject.
+ * No alignment but Page01 output FP provided → reject.
+ * Never invent a Page01 output fingerprint.
+ */
+export function assertPage02OptionalUpstreamConsistency(input: {
+  production_context: unknown;
+  upstream_output_fingerprints: ReportUpstreamOutputFingerprints;
+}):
+  | { ok: true }
+  | { ok: false; code: "optional_upstream_context_mismatch"; detail: string } {
+  const ctx = input.production_context as Face02ProductionContext;
+  const consumed = page02ConsumesPage01Alignment(ctx);
+  const upFp = input.upstream_output_fingerprints["01"];
+  const hasUp = isNonEmptyFingerprint(upFp);
+  if (consumed && !hasUp) {
+    return {
+      ok: false,
+      code: "optional_upstream_context_mismatch",
+      detail:
+        "page 02 production context consumed Page01 alignment but upstream_output_fingerprints[01] is missing/empty",
+    };
+  }
+  if (!consumed && hasUp) {
+    return {
+      ok: false,
+      code: "optional_upstream_context_mismatch",
+      detail:
+        "page 02 production context did not consume Page01 alignment but upstream_output_fingerprints[01] was provided",
+    };
+  }
+  return { ok: true };
+}
+
+/**
  * Canonical production path:
  * real FaceXXProductionContext → consumed slice → page input fingerprint.
  */
@@ -244,6 +281,21 @@ export function computePageInputFingerprintFromProductionContext(input: {
       code: extracted.code,
       detail: extracted.detail,
     };
+  }
+
+  if (input.page_id === "02") {
+    const consistency = assertPage02OptionalUpstreamConsistency({
+      production_context: input.production_context,
+      upstream_output_fingerprints: input.upstream_output_fingerprints,
+    });
+    if (!consistency.ok) {
+      return {
+        ok: false,
+        page_id: "02",
+        code: consistency.code,
+        detail: consistency.detail,
+      };
+    }
   }
 
   let applicability = input.page07_applicability_status;
