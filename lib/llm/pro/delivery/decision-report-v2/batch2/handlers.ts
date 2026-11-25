@@ -228,20 +228,19 @@ export async function handleGenerateEvent(data: ReportBatch2GenerateEventData): 
       }),
     ]);
     if (!sent.ok) {
-      if (hasBatch2EventBus()) {
-        const epoch = finiteEpoch(data.generation_epoch);
-        const prior = `repair_dispatch_failed:${sent.code}:${sent.detail}`;
-        if (epoch === undefined) {
-          throw new Error(prior);
-        }
-        await triggerRecoverOrThrow({
-          report_id: data.report_id,
-          generation_id: data.generation_id,
-          generation_epoch: epoch,
-          locale: data.locale,
-          prior,
-        });
+      const prior = `repair_dispatch_failed:${sent.code}:${sent.detail}`;
+      const epoch = finiteEpoch(data.generation_epoch);
+      if (!hasBatch2EventBus() || epoch === undefined) {
+        // Unit D R2: do not return success when Repair cannot be scheduled.
+        throw new Error(prior);
       }
+      await triggerRecoverOrThrow({
+        report_id: data.report_id,
+        generation_id: data.generation_id,
+        generation_epoch: epoch,
+        locale: data.locale,
+        prior,
+      });
     }
     return { ok: true, status: "needs_repair", continued: false };
   }

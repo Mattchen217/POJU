@@ -29,14 +29,36 @@ import {
 } from "./job-store";
 import type { ReportBatch2JobInputs, ReportBatch2JobRecord } from "./types";
 
-function hasBatch2EventBusForPoll(): boolean {
+/** Stable code for Batch2 → Stage Runner → Inngest retry propagation (Unit D R2). */
+export const REPORT_BATCH2_RETRYABLE_CODE = "report_batch2_retryable" as const;
+
+/**
+ * Recoverable Batch2 scheduling failure. Must not be swallowed by failStage /
+ * NonRetriableError — pojuFinalDeliveryContinue retries:2 depends on rethrow.
+ */
+export class ReportBatch2RetryableError extends Error {
+  readonly code = REPORT_BATCH2_RETRYABLE_CODE;
+
+  constructor(message: string, options?: { cause?: unknown }) {
+    super(message, options?.cause !== undefined ? { cause: options.cause } : undefined);
+    this.name = "ReportBatch2RetryableError";
+  }
+}
+
+export function isReportBatch2RetryableError(
+  err: unknown,
+): err is ReportBatch2RetryableError {
+  if (err instanceof ReportBatch2RetryableError) return true;
   return (
-    !!getReportBatch2EventSenderForTests() || isReportBatch2InngestConfigured()
+    typeof err === "object" &&
+    err !== null &&
+    (err as { code?: unknown }).code === REPORT_BATCH2_RETRYABLE_CODE &&
+    err instanceof Error
   );
 }
 
 /**
- * Unit D R1: when poll finds an in-flight Generation that still needs
+ * Unit D R1/R2: when poll finds an in-flight Generation that still needs
  * Recovery work, schedule RECOVER without allocating a new Generation.
  */
 async function maybeTriggerRecoveryFromPoll(input: {
@@ -46,7 +68,6 @@ async function maybeTriggerRecoveryFromPoll(input: {
   const { job } = input;
   const epoch = job.generation_epoch;
   if (typeof epoch !== "number" || !Number.isFinite(epoch)) return;
-  if (!hasBatch2EventBusForPoll()) return;
 
   const { listPendingIntents } = await import("../batch3/dispatch-intent");
   const intents = await listPendingIntents({
@@ -54,7 +75,7 @@ async function maybeTriggerRecoveryFromPoll(input: {
     generation_id: job.generation_id,
   });
   if (!intents.ok) {
-    throw new Error(
+    throw new ReportBatch2RetryableError(
       `poll_intent_read_failed:${intents.code}:${intents.detail}`,
     );
   }
@@ -69,6 +90,7 @@ async function maybeTriggerRecoveryFromPoll(input: {
 
   if (!needsIntentResend && !needsInitialOrchestrate) return;
 
+  // Always attempt send — inngest_unavailable becomes RetryableError (no silent park).
   const recover = await sendReportBatch2Events([
     buildRecoverPayload({
       report_id: job.report_id,
@@ -78,7 +100,7 @@ async function maybeTriggerRecoveryFromPoll(input: {
     }),
   ]);
   if (!recover.ok) {
-    throw new Error(
+    throw new ReportBatch2RetryableError(
       `poll_recover_trigger_failed:${recover.code}:${recover.detail}`,
     );
   }
@@ -201,7 +223,10 @@ export async function startFinalDeliveryReportBatch2(
       detail: "Batch2 production requires shared KV — no V3 face fallback",
     };
   }
-  if (!isReportBatch2InngestConfigured()) {
+  if (
+    !isReportBatch2InngestConfigured() &&
+    !getReportBatch2EventSenderForTests()
+  ) {
     return {
       ok: false,
       code: "inngest_unavailable",
@@ -246,7 +271,7 @@ export async function startFinalDeliveryReportBatch2(
           }),
         ]);
         if (!recover.ok) {
-          throw new Error(
+          throw new ReportBatch2RetryableError(
             `reused_generation_recover_failed:${recover.code}:${recover.detail}`,
           );
         }
@@ -349,7 +374,7 @@ export async function startFinalDeliveryReportBatch2(
     if (recover.ok) {
       return { ok: true, generation_id: gid, generation_epoch };
     }
-    throw new Error(
+    throw new ReportBatch2RetryableError(
       `orchestrate_dispatch_failed:${send.code}:${send.detail}; recover_trigger_failed:${recover.code}:${recover.detail}`,
     );
   }
@@ -642,7 +667,9 @@ export async function pollFinalDeliveryReportBatch2(
 > {
   const ptr = await readReportBatch2ActivePointer(job_id);
   if (ptr.status === "read_failed") {
-    return { phase: "failed", reason: `pointer_read_failed:${ptr.detail}` };
+    throw new ReportBatch2RetryableError(
+      `poll_pointer_read_failed:${ptr.detail}`,
+    );
   }
   if (ptr.status === "not_found") return { phase: "not_started" };
 
@@ -653,7 +680,7 @@ export async function pollFinalDeliveryReportBatch2(
       loaded.code === "kv_read_failed" ||
       loaded.code === "kv_unavailable"
     ) {
-      throw new Error(
+      throw new ReportBatch2RetryableError(
         `poll_job_read_failed:${loaded.code}:${loaded.detail}`,
       );
     }

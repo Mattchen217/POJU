@@ -17,8 +17,10 @@ import {
   createJob,
   handleGenerateEvent,
   invokeBatch2HandlerAdapter,
+  isReportBatch2RetryableError,
   loadJob,
   pollFinalDeliveryReportBatch2,
+  ReportBatch2RetryableError,
   resetBatch2InvocationRecords,
   resetBatch2JobStoreForTests,
   runReportPageGenerateOnce,
@@ -30,6 +32,9 @@ import {
   updatePageState,
   type ReportBatch2JobInputs,
 } from "@/lib/llm/pro/delivery/decision-report-v2/batch2";
+import { currentDeliveryDeployGeneration } from "@/lib/poju/delivery-deploy-generation";
+import { runFinalDeliveryStage } from "@/lib/poju/final-delivery-stage-runner";
+import { createXhighJob, getXhighJob } from "@/lib/poju/xhigh-job-store";
 import { REPORT_BATCH2_EVENTS } from "@/lib/llm/pro/delivery/decision-report-v2/batch2/events";
 import {
   handleOrchestrateEvent,
@@ -1174,7 +1179,7 @@ async function main(): Promise<void> {
     await assert.rejects(
       () => pollFinalDeliveryReportBatch2(job_id, fakeFinalDeliveryInput()),
       (err: unknown) => {
-        assert.ok(err instanceof Error);
+        assert.ok(isReportBatch2RetryableError(err));
         assert.match(err.message, /poll_recover_trigger_failed|t8_first_recover_fail/);
         return true;
       },
@@ -1296,6 +1301,421 @@ async function main(): Promise<void> {
       generation_id,
     );
     console.log("D-T9 ok — healthy running poll does not send RECOVER");
+  }
+
+  // --- D-T10: real runFinalDeliveryStage Retryable Error propagation ---
+  {
+    await cleanup();
+    const session_id = "sess_ud_t10";
+    const dc = baseDc();
+    const formal = await createXhighJob({
+      phase: "final_delivery",
+      session_id,
+      locale: "en",
+      deploy_generation: currentDeliveryDeployGeneration(),
+      job_input: {
+        kind: "final_delivery",
+        session_id,
+        locale: "en",
+        agent_v2: { original_question: "t10" } as FinalDeliveryJobInput["agent_v2"],
+        breakthrough_core: null,
+        covered_agenda: [],
+        base_analysis: {},
+        delivery_mode: "full",
+        decision_context_snapshot: dc,
+        require_decision_context: true,
+      },
+    });
+    const job_id = formal.job_id;
+    const generation_id = `${job_id}:batch2`;
+    const gen = await allocateGeneration({
+      report_id: job_id,
+      locale: "en",
+      generation_id,
+    });
+    assert.ok(gen.ok);
+    if (!gen.ok) throw new Error("alloc");
+    await activateGeneration({ record: gen.value, job_id });
+    await createJob({
+      report_id: job_id,
+      generation_id,
+      locale: "en",
+      inputs: inputs(job_id),
+      generation_epoch: gen.value.generation_epoch,
+      status: "running",
+    });
+    const intent = await enqueueDispatchIntent({
+      report_id: job_id,
+      generation_id,
+      generation_epoch: gen.value.generation_epoch,
+      event_name: REPORT_BATCH2_EVENTS.ORCHESTRATE,
+      payload: {
+        report_id: job_id,
+        generation_id,
+        locale: "en",
+        generation_epoch: gen.value.generation_epoch,
+      },
+    });
+    assert.ok(intent.ok);
+    assert.ok((await markIntentFailed(intent.value!, "t10_failed_intent")).ok);
+
+    let recoverAttempts = 0;
+    const captured: CapturedEvent[] = [];
+    setReportBatch2EventSenderForTests({
+      send: async (events) => {
+        for (const e of events) {
+          captured.push({ name: e.name, data: e.data });
+          if (e.name === REPORT_BATCH2_EVENTS.RECOVER) {
+            recoverAttempts += 1;
+            if (recoverAttempts === 1) {
+              return {
+                ok: false,
+                code: "inngest_send_failed",
+                detail: "t10_first_recover_fail",
+              };
+            }
+          }
+        }
+        return { ok: true };
+      },
+    });
+
+    await assert.rejects(
+      () => runFinalDeliveryStage(job_id, "segments"),
+      (err: unknown) => {
+        assert.ok(isReportBatch2RetryableError(err));
+        assert.equal(err instanceof NonRetriableError, false);
+        assert.match(err.message, /poll_recover_trigger_failed|t10_first_recover_fail/);
+        return true;
+      },
+    );
+
+    const afterFail = await getXhighJob(job_id);
+    assert.ok(afterFail);
+    assert.notEqual(afterFail!.status, "failed");
+    assert.equal(
+      (await loadJob(job_id, generation_id)).value?.generation_epoch,
+      gen.value.generation_epoch,
+    );
+
+    // Inngest-style retry of the same Stage — RECOVER succeeds → park.
+    await runFinalDeliveryStage(job_id, "segments");
+    assert.equal(recoverAttempts, 2);
+    const afterRetry = await getXhighJob(job_id);
+    assert.notEqual(afterRetry!.status, "failed");
+
+    const recoverEvt = captured.filter(
+      (e) => e.name === REPORT_BATCH2_EVENTS.RECOVER,
+    );
+    assert.ok(recoverEvt.length >= 2);
+    await invokeBatch2HandlerAdapter({
+      name: REPORT_BATCH2_EVENTS.RECOVER,
+      data: recoverEvt.at(-1)!.data,
+      adapter_invocation_id: randomUUID(),
+    });
+    const intents = await listPendingIntents({
+      report_id: job_id,
+      generation_id,
+    });
+    assert.equal(
+      intents.value!.filter((i) => i.status === "failed").length,
+      0,
+    );
+    console.log(
+      "D-T10 ok — Stage Runner rethrows RetryableError; retry parks + Intent sent",
+    );
+  }
+
+  // --- D-T11: Initial ORCHESTRATE+RECOVER dual fail → Stage retry ---
+  {
+    await cleanup();
+    const session_id = "sess_ud_t11";
+    const dc = baseDc();
+    const formal = await createXhighJob({
+      phase: "final_delivery",
+      session_id,
+      locale: "en",
+      deploy_generation: currentDeliveryDeployGeneration(),
+      job_input: {
+        kind: "final_delivery",
+        session_id,
+        locale: "en",
+        agent_v2: { original_question: "t11" } as FinalDeliveryJobInput["agent_v2"],
+        breakthrough_core: null,
+        covered_agenda: [],
+        base_analysis: {},
+        delivery_mode: "full",
+        decision_context_snapshot: dc,
+        require_decision_context: true,
+      },
+    });
+    const job_id = formal.job_id;
+    const expected_gid = `${job_id}:batch2`;
+
+    let orchAttempts = 0;
+    let recoverAttempts = 0;
+    const captured: CapturedEvent[] = [];
+    setReportBatch2EventSenderForTests({
+      send: async (events) => {
+        for (const e of events) {
+          captured.push({ name: e.name, data: e.data });
+          if (e.name === REPORT_BATCH2_EVENTS.ORCHESTRATE) {
+            orchAttempts += 1;
+            if (orchAttempts === 1) {
+              return {
+                ok: false,
+                code: "inngest_send_failed",
+                detail: "t11_orch_fail",
+              };
+            }
+          }
+          if (e.name === REPORT_BATCH2_EVENTS.RECOVER) {
+            recoverAttempts += 1;
+            if (recoverAttempts === 1) {
+              return {
+                ok: false,
+                code: "inngest_send_failed",
+                detail: "t11_recover_fail",
+              };
+            }
+          }
+        }
+        return { ok: true };
+      },
+    });
+
+    await assert.rejects(
+      () => runFinalDeliveryStage(job_id, "segments"),
+      (err: unknown) => {
+        assert.ok(isReportBatch2RetryableError(err));
+        assert.match(
+          err.message,
+          /orchestrate_dispatch_failed|recover_trigger_failed|t11_/,
+        );
+        return true;
+      },
+    );
+    const after1 = await getXhighJob(job_id);
+    assert.notEqual(after1!.status, "failed");
+    const job1 = await loadJob(job_id, expected_gid);
+    assert.ok(job1.ok && job1.value);
+    const epoch1 = job1.value!.generation_epoch;
+
+    await runFinalDeliveryStage(job_id, "segments");
+    const job2 = await loadJob(job_id, expected_gid);
+    assert.equal(job2.value?.generation_id, expected_gid);
+    assert.equal(job2.value?.generation_epoch, epoch1);
+    assert.ok(recoverAttempts >= 2);
+
+    const recoverEvt = captured.filter(
+      (e) => e.name === REPORT_BATCH2_EVENTS.RECOVER,
+    );
+    assert.ok(recoverEvt.length >= 1);
+    await invokeBatch2HandlerAdapter({
+      name: REPORT_BATCH2_EVENTS.RECOVER,
+      data: recoverEvt.at(-1)!.data,
+      adapter_invocation_id: randomUUID(),
+    });
+    const intents = await listPendingIntents({
+      report_id: job_id,
+      generation_id: expected_gid,
+    });
+    assert.equal(
+      intents.value!.filter((i) => i.status === "failed").length,
+      0,
+    );
+    console.log(
+      "D-T11 ok — dual ORCHESTRATE/RECOVER fail throws Retryable; Stage retry recovers",
+    );
+  }
+
+  // --- D-T12: Recovery needed but event bus unavailable ---
+  {
+    await cleanup();
+    const job_id = "rpt_ud_t12";
+    const generation_id = `${job_id}:batch2`;
+    const gen = await allocateGeneration({
+      report_id: job_id,
+      locale: "en",
+      generation_id,
+    });
+    assert.ok(gen.ok);
+    if (!gen.ok) throw new Error("alloc");
+    await activateGeneration({ record: gen.value, job_id });
+    await createJob({
+      report_id: job_id,
+      generation_id,
+      locale: "en",
+      inputs: inputs(job_id),
+      generation_epoch: gen.value.generation_epoch,
+      status: "running",
+    });
+    const intent = await enqueueDispatchIntent({
+      report_id: job_id,
+      generation_id,
+      generation_epoch: gen.value.generation_epoch,
+      event_name: REPORT_BATCH2_EVENTS.ORCHESTRATE,
+      payload: {
+        report_id: job_id,
+        generation_id,
+        locale: "en",
+        generation_epoch: gen.value.generation_epoch,
+      },
+    });
+    assert.ok(intent.ok);
+    assert.ok((await markIntentFailed(intent.value!, "t12_intent")).ok);
+
+    setReportBatch2EventSenderForTests(null);
+    delete process.env.INNGEST_EVENT_KEY;
+
+    await assert.rejects(
+      () => pollFinalDeliveryReportBatch2(job_id, fakeFinalDeliveryInput()),
+      (err: unknown) => {
+        assert.ok(isReportBatch2RetryableError(err));
+        assert.match(err.message, /poll_recover_trigger_failed|inngest_unavailable/);
+        return true;
+      },
+    );
+
+    const session_id = "sess_ud_t12";
+    const formal = await createXhighJob({
+      phase: "final_delivery",
+      session_id,
+      locale: "en",
+      deploy_generation: currentDeliveryDeployGeneration(),
+      job_input: {
+        kind: "final_delivery",
+        session_id,
+        locale: "en",
+        agent_v2: { original_question: "t12" } as FinalDeliveryJobInput["agent_v2"],
+        breakthrough_core: null,
+        covered_agenda: [],
+        base_analysis: {},
+        delivery_mode: "full",
+        decision_context_snapshot: baseDc(),
+        require_decision_context: true,
+      },
+    });
+    // Re-point Batch2 under the formal job id for Stage Runner path.
+    const stageJobId = formal.job_id;
+    const stageGid = `${stageJobId}:batch2`;
+    const gen2 = await allocateGeneration({
+      report_id: stageJobId,
+      locale: "en",
+      generation_id: stageGid,
+    });
+    assert.ok(gen2.ok);
+    if (!gen2.ok) throw new Error("alloc");
+    await activateGeneration({ record: gen2.value, job_id: stageJobId });
+    await createJob({
+      report_id: stageJobId,
+      generation_id: stageGid,
+      locale: "en",
+      inputs: inputs(stageJobId),
+      generation_epoch: gen2.value.generation_epoch,
+      status: "running",
+    });
+    const intent2 = await enqueueDispatchIntent({
+      report_id: stageJobId,
+      generation_id: stageGid,
+      generation_epoch: gen2.value.generation_epoch,
+      event_name: REPORT_BATCH2_EVENTS.ORCHESTRATE,
+      payload: {
+        report_id: stageJobId,
+        generation_id: stageGid,
+        locale: "en",
+        generation_epoch: gen2.value.generation_epoch,
+      },
+    });
+    assert.ok(intent2.ok);
+    assert.ok((await markIntentFailed(intent2.value!, "t12_stage")).ok);
+    setReportBatch2EventSenderForTests(null);
+
+    await assert.rejects(
+      () => runFinalDeliveryStage(stageJobId, "segments"),
+      (err: unknown) => {
+        assert.ok(isReportBatch2RetryableError(err));
+        return true;
+      },
+    );
+    assert.notEqual((await getXhighJob(stageJobId))!.status, "failed");
+    assert.ok(
+      (
+        await listPendingIntents({
+          report_id: stageJobId,
+          generation_id: stageGid,
+        })
+      ).value!.some((i) => i.status === "failed"),
+    );
+    console.log(
+      "D-T12 ok — no event bus + pending Intent → RetryableError (not running)",
+    );
+  }
+
+  // --- D-T13: healthy running (reaffirm D-T9 via RetryableError contract) ---
+  {
+    await cleanup();
+    const job_id = "rpt_ud_t13";
+    const generation_id = `${job_id}:batch2`;
+    const gen = await allocateGeneration({
+      report_id: job_id,
+      locale: "en",
+      generation_id,
+    });
+    assert.ok(gen.ok);
+    if (!gen.ok) throw new Error("alloc");
+    await activateGeneration({ record: gen.value, job_id });
+    await createJob({
+      report_id: job_id,
+      generation_id,
+      locale: "en",
+      inputs: inputs(job_id),
+      generation_epoch: gen.value.generation_epoch,
+    });
+    const intent = await enqueueDispatchIntent({
+      report_id: job_id,
+      generation_id,
+      generation_epoch: gen.value.generation_epoch,
+      event_name: REPORT_BATCH2_EVENTS.ORCHESTRATE,
+      payload: {
+        report_id: job_id,
+        generation_id,
+        locale: "en",
+        generation_epoch: gen.value.generation_epoch,
+      },
+    });
+    assert.ok(intent.ok);
+    const { markIntentSent } = await import(
+      "@/lib/llm/pro/delivery/decision-report-v2/batch3/dispatch-intent"
+    );
+    assert.ok((await markIntentSent(intent.value!)).ok);
+    const job = await loadJob(job_id, generation_id);
+    job.value!.dispatch_log.push({
+      at: new Date().toISOString(),
+      event_name: REPORT_BATCH2_EVENTS.ORCHESTRATE,
+      page_id: null,
+    });
+    assert.ok((await saveJob(job.value!)).ok);
+    assert.ok((await updateJobStatus(job_id, generation_id, "running")).ok);
+
+    const captured: CapturedEvent[] = [];
+    setReportBatch2EventSenderForTests({
+      send: async (events) => {
+        for (const e of events) captured.push({ name: e.name, data: e.data });
+        return { ok: true };
+      },
+    });
+    const polled = await pollFinalDeliveryReportBatch2(
+      job_id,
+      fakeFinalDeliveryInput(),
+    );
+    assert.equal(polled.phase, "running");
+    assert.equal(
+      captured.filter((e) => e.name === REPORT_BATCH2_EVENTS.RECOVER).length,
+      0,
+    );
+    void ReportBatch2RetryableError;
+    console.log("D-T13 ok — healthy running does not send RECOVER");
   }
 
   console.log("UNIT_D_RECOVERY_TRIGGER: PASS");

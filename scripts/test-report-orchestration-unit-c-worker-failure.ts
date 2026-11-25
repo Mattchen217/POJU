@@ -20,6 +20,7 @@ import {
   runReportPageGenerateOnce,
   runReportPageRepairOnce,
   setBatch2ModelInvokeForTests,
+  setReportBatch2EventSenderForTests,
   type ReportBatch2JobInputs,
 } from "@/lib/llm/pro/delivery/decision-report-v2/batch2";
 import {
@@ -167,6 +168,10 @@ async function cleanup(): Promise<void> {
   setResolveFenceReadFailOnceForTests(null);
   setResumeFenceReadFailOnceForTests(null);
   setResumeTaskReadFailOnceForTests(null);
+  // Unit D R2: needs_repair Handler must dispatch REPAIR (or RECOVER) — provide a bus.
+  setReportBatch2EventSenderForTests({
+    send: async () => ({ ok: true }),
+  });
 }
 
 async function boot(report_id: string, generation_id: string) {

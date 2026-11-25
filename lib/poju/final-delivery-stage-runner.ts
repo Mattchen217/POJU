@@ -2789,6 +2789,14 @@ export async function runFinalDeliveryStage(
       });
     }
   } catch (e) {
+    // Unit D R2: Batch2 recoverable scheduling errors must reach Inngest
+    // (pojuFinalDeliveryContinue retries:2). Do not failStage / terminal-fail.
+    const { isReportBatch2RetryableError } = await import(
+      "@/lib/llm/pro/delivery/decision-report-v2/batch2/production-entry"
+    );
+    if (isReportBatch2RetryableError(e)) {
+      throw e;
+    }
     const msg = e instanceof Error ? e.message : String(e);
     await failStage(job_id, input.session_id, stage, msg, {
       where: `${stage}/exception`,
