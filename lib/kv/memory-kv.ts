@@ -237,4 +237,43 @@ export class MemoryKv {
     }
     return 0;
   }
+
+  /**
+   * In-process atomic multi-key section (MemoryKv counterpart to Redis Lua).
+   * Callback must not await — all ops are synchronous.
+   */
+  runAtomic<T>(fn: (ops: MemoryKvAtomicOps) => T): T {
+    const self = this;
+    const ops: MemoryKvAtomicOps = {
+      getJson(key: string): unknown | null {
+        return self.read(key);
+      },
+      setJson(key: string, value: unknown, exSeconds?: number): void {
+        const expiresAt =
+          exSeconds != null && exSeconds > 0 ? now() + exSeconds * 1000 : null;
+        self.store.set(key, { value, expiresAt });
+      },
+      del(key: string): void {
+        self.store.delete(key);
+        self.lists.delete(key);
+      },
+      rpush(key: string, value: unknown): void {
+        const list = self.lists.get(key) ?? [];
+        list.push(value);
+        self.lists.set(key, list);
+      },
+      lrange(key: string): unknown[] {
+        return [...(self.lists.get(key) ?? [])];
+      },
+    };
+    return fn(ops);
+  }
 }
+
+export type MemoryKvAtomicOps = {
+  getJson: (key: string) => unknown | null;
+  setJson: (key: string, value: unknown, exSeconds?: number) => void;
+  del: (key: string) => void;
+  rpush: (key: string, value: unknown) => void;
+  lrange: (key: string) => unknown[];
+};

@@ -8,6 +8,7 @@ import type {
   ReportUpstreamOutputFingerprints,
 } from "../orchestration/types";
 import { assertGenerationActive } from "./generation-store";
+import { ensurePageFence } from "./page-fence";
 import { computeTaskKey } from "./task-identity";
 import { claimTask, ensureQueuedTask } from "./task-store";
 import type { Batch3Result, TaskRecord, TaskType } from "./types";
@@ -22,7 +23,12 @@ export async function fenceAndClaimPageTask(input: {
   upstream_output_fingerprints: ReportUpstreamOutputFingerprints;
   worker_id: string;
 }): Promise<
-  Batch3Result<{ task: TaskRecord; task_key: string; attempt_id: string }>
+  Batch3Result<{
+    task: TaskRecord;
+    task_key: string;
+    attempt_id: string;
+    validity_rev: number;
+  }>
 > {
   const fence = await assertGenerationActive({
     report_id: input.report_id,
@@ -30,6 +36,21 @@ export async function fenceAndClaimPageTask(input: {
     generation_epoch: input.generation_epoch,
   });
   if (!fence.ok) return fence;
+
+  const pageFence = await ensurePageFence({
+    report_id: input.report_id,
+    generation_id: input.generation_id,
+    generation_epoch: input.generation_epoch,
+    page_id: input.page_id,
+  });
+  if (!pageFence.ok) return pageFence;
+  if (pageFence.value.status === "stale") {
+    return {
+      ok: false,
+      code: "stale_page",
+      detail: `page ${input.page_id} fence stale rev=${pageFence.value.validity_rev}`,
+    };
+  }
 
   const def = reportPageDefinition(input.page_id);
   const task_key = computeTaskKey({
@@ -65,6 +86,7 @@ export async function fenceAndClaimPageTask(input: {
     generation_id: input.generation_id,
     task_key,
     worker_id: input.worker_id,
+    validity_rev: pageFence.value.validity_rev,
   });
   if (!claimed.ok) return claimed;
   if (!claimed.value.attempt_id) {
@@ -77,6 +99,7 @@ export async function fenceAndClaimPageTask(input: {
       task: claimed.value,
       task_key,
       attempt_id: claimed.value.attempt_id,
+      validity_rev: claimed.value.validity_rev,
     },
   };
 }

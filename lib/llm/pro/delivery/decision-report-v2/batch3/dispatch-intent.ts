@@ -1,5 +1,5 @@
 /**
- * Durable dispatch outbox — persist intent before send; recovery can resend.
+ * Durable dispatch outbox — atomic intent+index write; recovery can resend.
  */
 
 import { randomUUID } from "node:crypto";
@@ -7,11 +7,12 @@ import { randomUUID } from "node:crypto";
 import type { ReportPageId } from "../orchestration/types";
 import {
   casSet,
+  enqueueIntentAtomic,
   isBatch3SharedStoreAvailable,
   kvGet,
   kvUnavailable,
-  listPush,
   listRange,
+  trackBatch3Key,
 } from "./kv-cas";
 import type { Batch3Result, DispatchIntent, DispatchIntentStatus } from "./types";
 
@@ -25,6 +26,11 @@ function intentKey(
 
 function outboxKey(report_id: string, generation_id: string): string {
   return `report-batch3:${report_id.trim()}:${generation_id.trim()}:outbox`;
+}
+
+/** Secondary index of intent ids for recovery when list is incomplete. */
+function intentIndexKey(report_id: string, generation_id: string): string {
+  return `report-batch3:${report_id.trim()}:${generation_id.trim()}:intent-index`;
 }
 
 export async function enqueueDispatchIntent(input: {
@@ -57,14 +63,24 @@ export async function enqueueDispatchIntent(input: {
     acked_at: null,
     last_error: null,
   };
-  const saved = await casSet(
-    intentKey(input.report_id, input.generation_id, intent_id),
-    null,
+
+  const iKey = intentKey(input.report_id, input.generation_id, intent_id);
+  const oKey = outboxKey(input.report_id, input.generation_id);
+  const idxKey = intentIndexKey(input.report_id, input.generation_id);
+  trackBatch3Key(idxKey);
+
+  const saved = await enqueueIntentAtomic({
+    intentKey: iKey,
+    outboxKey: oKey,
     intent,
-  );
+    intent_id,
+  });
   if (!saved.ok) return saved;
-  const listed = await listPush(outboxKey(input.report_id, input.generation_id), intent_id);
-  if (!listed.ok) return listed;
+
+  // Mirror id into secondary index list (intent body already written).
+  const { listPush } = await import("./kv-cas");
+  await listPush(idxKey, intent_id);
+
   return { ok: true, value: intent };
 }
 
@@ -124,13 +140,22 @@ export async function listPendingIntents(input: {
   generation_id: string;
   limit?: number;
 }): Promise<Batch3Result<DispatchIntent[]>> {
-  const ids = await listRange<string>(
+  const primary = await listRange<string>(
     outboxKey(input.report_id, input.generation_id),
   );
-  if (!ids.ok) return ids;
+  if (!primary.ok) return primary;
+  const secondary = await listRange<string>(
+    intentIndexKey(input.report_id, input.generation_id),
+  );
+  const ids = [
+    ...new Set([
+      ...primary.value,
+      ...(secondary.ok ? secondary.value : []),
+    ]),
+  ];
   const limit = input.limit ?? 50;
   const out: DispatchIntent[] = [];
-  for (const id of ids.value.slice(-limit * 2)) {
+  for (const id of ids.slice(-limit * 2)) {
     const row = await readIntent(input.report_id, input.generation_id, id);
     if (!row.ok) return row;
     if (row.value && (row.value.status === "pending" || row.value.status === "failed")) {

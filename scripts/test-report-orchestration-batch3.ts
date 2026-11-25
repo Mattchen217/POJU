@@ -31,6 +31,7 @@ import {
   computeTaskKey,
   enqueueDispatchIntent,
   ensureQueuedTask,
+  ensurePageFence,
   fenceAndClaimPageTask,
   invalidateFromPage,
   listPendingIntents,
@@ -133,11 +134,21 @@ async function main(): Promise<void> {
     });
     assert.equal(active.ok, true);
 
-    // Concurrent activate: second lower epoch cannot steal
+    // Late lower-epoch activate must fail (monotonic + terminal protect)
     const steal = await activateGeneration({ record: g1.value, job_id: report_id });
-    // May succeed CAS but then active should still prefer higher if we re-read —
-    // our activate always sets the provided record as active. Protect by checking epoch order at call sites.
-    // Explicit: after g2 active, g1 claim/commit must fail.
+    assert.equal(steal.ok, false, JSON.stringify(steal));
+    assert.ok(
+      !steal.ok &&
+        (steal.code === "stale_generation" || steal.code === "generation_terminal"),
+    );
+
+    const stillG2 = await assertGenerationActive({
+      report_id,
+      generation_id: g2.value.generation_id,
+      generation_epoch: g2.value.generation_epoch,
+    });
+    assert.equal(stillG2.ok, true);
+
     await createJob({
       report_id,
       generation_id: g1.value.generation_id,
@@ -145,9 +156,6 @@ async function main(): Promise<void> {
       inputs: inputs(report_id),
       generation_epoch: g1.value.generation_epoch,
     });
-
-    // Ensure g2 is active again
-    await activateGeneration({ record: g2.value, job_id: report_id });
 
     const lateCommit = await commitPageResult({
       report_id,
@@ -175,8 +183,13 @@ async function main(): Promise<void> {
       },
     });
     assert.equal(lateCommit.ok, false);
-    assert.equal(lateCommit.ok ? "" : lateCommit.code, "stale_generation");
-    void steal;
+    assert.ok(
+      !lateCommit.ok &&
+        (lateCommit.code === "stale_generation" ||
+          lateCommit.code === "not_found" ||
+          lateCommit.code === "stale_page"),
+      JSON.stringify(lateCommit),
+    );
     console.log("A ok — generation fencing rejects stale commits");
   }
 
@@ -215,6 +228,15 @@ async function main(): Promise<void> {
     });
     assert.notEqual(task_key, task_key2);
 
+    const pageFence = await ensurePageFence({
+      report_id,
+      generation_id: gen.value.generation_id,
+      generation_epoch: gen.value.generation_epoch,
+      page_id: "01",
+    });
+    assert.equal(pageFence.ok, true);
+    if (!pageFence.ok) throw new Error("fence");
+
     await ensureQueuedTask({
       report_id,
       generation_id: gen.value.generation_id,
@@ -234,6 +256,7 @@ async function main(): Promise<void> {
       generation_id: gen.value.generation_id,
       task_key,
       worker_id: "w1",
+      validity_rev: pageFence.value.validity_rev,
     });
     assert.equal(c1.ok, true);
     const c2 = await claimTask({
@@ -241,6 +264,7 @@ async function main(): Promise<void> {
       generation_id: gen.value.generation_id,
       task_key,
       worker_id: "w2",
+      validity_rev: pageFence.value.validity_rev,
     });
     assert.equal(c2.ok, false);
     assert.equal(c2.ok ? "" : c2.code, "already_claimed");
@@ -268,6 +292,7 @@ async function main(): Promise<void> {
       generation_id: gen.value.generation_id,
       task_key,
       worker_id: "w3",
+      validity_rev: pageFence.value.validity_rev,
     });
     assert.equal(c3.ok, true);
     if (!c3.ok) throw new Error("c3");
@@ -304,6 +329,7 @@ async function main(): Promise<void> {
         output_fingerprint: "fp",
         attempt_id: c1.ok ? c1.value.attempt_id! : "x",
         task_key,
+        validity_rev: pageFence.value.validity_rev,
       },
     });
     assert.equal(late.ok, false);
@@ -333,6 +359,7 @@ async function main(): Promise<void> {
         output_fingerprint: hashCanonicalPayload({ page: "01", ok: true }),
         attempt_id: c3.value.attempt_id!,
         task_key,
+        validity_rev: pageFence.value.validity_rev,
       },
     });
     assert.equal(okCommit.ok, true, JSON.stringify(okCommit));
@@ -392,6 +419,7 @@ async function main(): Promise<void> {
         output_fingerprint: fp,
         attempt_id: "a",
         task_key: "t",
+        validity_rev: 0,
         completed_at: new Date().toISOString(),
         stale: false,
       });

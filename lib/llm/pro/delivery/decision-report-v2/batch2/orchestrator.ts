@@ -281,15 +281,31 @@ export async function startReportBatch2Production(input: {
     locale: input.locale,
     generation_epoch,
   });
+  const { enqueueDispatchIntent, markIntentFailed, markIntentSent } = await import(
+    "../batch3/dispatch-intent"
+  );
+  const intent = await enqueueDispatchIntent({
+    report_id,
+    generation_id: gid,
+    generation_epoch,
+    event_name: payload.name,
+    payload: { ...payload.data },
+  });
+  if (!intent.ok) {
+    await updateJobStatus(report_id, gid, "failed").catch(() => undefined);
+    return { ok: false, code: intent.code, detail: intent.detail };
+  }
   const send = await sendReportBatch2Events([payload]);
   if (!send.ok) {
+    await markIntentFailed(intent.value, send.detail);
     await updateJobStatus(report_id, gid, "failed").catch(() => undefined);
     return {
       ok: false,
       code: send.code,
-      detail: `${send.detail} (job left status=failed after event send failure)`,
+      detail: `${send.detail} (job left status=failed after event send failure; intent retained)`,
     };
   }
+  await markIntentSent(intent.value);
 
   return { ok: true, report_id, generation_id: gid, generation_epoch };
 }

@@ -22,7 +22,7 @@ import {
   markIntentSent,
   readIntent,
 } from "./dispatch-intent";
-import { assertGenerationActive } from "./generation-store";
+import { assertGenerationActive, readGeneration } from "./generation-store";
 import type { Batch3Result } from "./types";
 import { DEFAULT_RECOVERY_LIMIT } from "./types";
 
@@ -33,7 +33,8 @@ export type RecoveryAction = {
     | "dispatch_ready"
     | "dispatch_repair"
     | "skipped_superseded"
-    | "skipped_completed";
+    | "skipped_completed"
+    | "job_missing";
   detail: string;
   page_id?: ReportPageId | null;
 };
@@ -74,6 +75,23 @@ export async function runReportBatch3Recovery(input: {
     return fence;
   }
 
+  const gen = await readGeneration(input.report_id, input.generation_id);
+  if (!gen.ok) return gen;
+  if (!gen.value || gen.value.status !== "active") {
+    return {
+      ok: true,
+      value: {
+        recovery_id,
+        actions: [
+          {
+            kind: "skipped_superseded",
+            detail: `generation status=${gen.value?.status ?? "missing"}`,
+          },
+        ],
+      },
+    };
+  }
+
   const loaded = await loadJob(input.report_id, input.generation_id);
   if (!loaded.ok) {
     return {
@@ -83,38 +101,15 @@ export async function runReportBatch3Recovery(input: {
     };
   }
   if (!loaded.value) {
-    // Job created intent missing — send orchestrate after ensuring job exists is caller's job
-    const intent = await enqueueDispatchIntent({
-      report_id: input.report_id,
-      generation_id: input.generation_id,
-      generation_epoch: input.generation_epoch,
-      event_name: REPORT_BATCH2_EVENTS.ORCHESTRATE,
-      payload: {
-        report_id: input.report_id,
-        generation_id: input.generation_id,
-        locale: input.locale ?? "en",
-        generation_epoch: input.generation_epoch,
-      },
-    });
-    if (!intent.ok) return intent;
-    const send = await sendReportBatch2Events([
-      buildOrchestratePayload({
-        report_id: input.report_id,
-        generation_id: input.generation_id,
-        locale: input.locale ?? "en",
-      }),
-    ]);
-    if (!send.ok) {
-      await markIntentFailed(intent.value, send.detail);
-      return {
-        ok: false,
-        code: "kv_write_failed",
-        detail: send.detail,
-      };
-    }
-    await markIntentSent(intent.value);
-    actions.push({ kind: "orchestrate", detail: "job_missing_sent_orchestrate" });
-    return { ok: true, value: { recovery_id, actions } };
+    // Generation active but Job never persisted — fail closed; do not pretend
+    // ORCHESTRATE succeeded. Caller must re-run job bootstrap.
+    return {
+      ok: false,
+      code: "job_missing",
+      detail:
+        "active generation has no Job record — refuse orchestrate; bootstrap job then retry recovery",
+      // Batch3Result doesn't allow extra fields on fail — keep detail only
+    };
   }
 
   const job = loaded.value;
@@ -183,6 +178,7 @@ export async function runReportBatch3Recovery(input: {
       page_id,
       locale,
       input_fingerprint: pendingRepair.input_fingerprint,
+      generation_epoch: input.generation_epoch,
     });
     const intent = await enqueueDispatchIntent({
       report_id: input.report_id,
@@ -230,12 +226,12 @@ export async function runReportBatch3Recovery(input: {
       });
     }
   } else if (job.status === "pending" || job.status === "orchestrating") {
-    // Ensure orchestrate fires if nothing is running
     if (actions.length < limit && job.dispatch_log.length === 0) {
       const payload = buildOrchestratePayload({
         report_id: input.report_id,
         generation_id: input.generation_id,
         locale,
+        generation_epoch: input.generation_epoch,
       });
       const intent = await enqueueDispatchIntent({
         report_id: input.report_id,

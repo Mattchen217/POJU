@@ -213,7 +213,11 @@ export async function runReportPageGenerateOnce(input: {
   }
 
   // Batch3: fence + claim before model. Skip when legacy jobs lack epoch.
-  let batch3Attempt: { task_key: string; attempt_id: string } | null = null;
+  let batch3Attempt: {
+    task_key: string;
+    attempt_id: string;
+    validity_rev: number;
+  } | null = null;
   const epoch = input.event.generation_epoch ?? job.generation_epoch;
   if (typeof epoch === "number") {
     const { fenceAndClaimPageTask } = await import("../batch3/worker-guard");
@@ -231,7 +235,10 @@ export async function runReportPageGenerateOnce(input: {
       if (claimed.code === "already_completed" || claimed.code === "already_claimed") {
         return { status: "skipped" };
       }
-      if (claimed.code === "stale_generation") {
+      if (
+        claimed.code === "stale_generation" ||
+        claimed.code === "stale_page"
+      ) {
         return { status: "failed", code: claimed.code, detail: claimed.detail };
       }
       return { status: "failed", code: claimed.code, detail: claimed.detail };
@@ -239,6 +246,7 @@ export async function runReportPageGenerateOnce(input: {
     batch3Attempt = {
       task_key: claimed.value.task_key,
       attempt_id: claimed.value.attempt_id,
+      validity_rev: claimed.value.validity_rev,
     };
   }
 
@@ -354,6 +362,7 @@ export async function runReportPageGenerateOnce(input: {
         output_fingerprint: output_fp,
         attempt_id: batch3Attempt.attempt_id,
         task_key: batch3Attempt.task_key,
+        validity_rev: batch3Attempt.validity_rev,
       },
     });
     if (!committed.ok) {

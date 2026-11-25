@@ -61,6 +61,7 @@ export async function ensureQueuedTask(input: {
     attempt_id: null,
     lease_expires_at: null,
     worker_id: null,
+    validity_rev: 0,
     input_fingerprint: input.input_fingerprint,
     upstream_output_fingerprints: input.upstream_output_fingerprints,
     page_contract_version: input.page_contract_version,
@@ -87,6 +88,8 @@ export async function claimTask(input: {
   task_key: string;
   worker_id: string;
   lease_ms?: number;
+  /** Bound page fence validity_rev at claim time. */
+  validity_rev?: number;
 }): Promise<Batch3Result<TaskRecord>> {
   if (!isBatch3SharedStoreAvailable()) return kvUnavailable();
   const key = taskKeyPath(input.report_id, input.generation_id, input.task_key);
@@ -135,6 +138,10 @@ export async function claimTask(input: {
       lease_expires_at: new Date(now + leaseMs).toISOString(),
       updated_at: new Date().toISOString(),
       failure_detail: null,
+      validity_rev:
+        typeof input.validity_rev === "number"
+          ? input.validity_rev
+          : (task.validity_rev ?? 0),
     };
     const saved = await casSet(key, JSON.stringify(task), next);
     if (!saved.ok) {

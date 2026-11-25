@@ -8,9 +8,12 @@ import { durableKv, KV_TTL } from "@/lib/kv/client";
 import {
   casSet,
   isBatch3SharedStoreAvailable,
+  isMemoryAtomicAvailable,
   kvGet,
   kvUnavailable,
+  runMemoryAtomic,
   trackBatch3Key,
+  evalTxn,
 } from "./kv-cas";
 import type {
   ActiveGenerationPointer,
@@ -42,6 +45,55 @@ const TERMINAL: ReadonlySet<GenerationStatus> = new Set([
   "cancelled",
 ]);
 
+const ACTIVATE_LUA = `
+local activeKey = KEYS[1]
+local newGenKey = KEYS[2]
+local prevGenKey = KEYS[3]
+local b2Key = KEYS[4]
+local newEpoch = tonumber(ARGV[1])
+local newGenId = ARGV[2]
+local newPointerJson = ARGV[3]
+local newGenJson = ARGV[4]
+local prevGenJson = ARGV[5]
+local b2Json = ARGV[6]
+local ttl = tonumber(ARGV[7])
+
+local cur = redis.call("GET", activeKey)
+if cur ~= false and cur ~= nil then
+  local ok, live = pcall(cjson.decode, cur)
+  if ok and live then
+    if live.generation_id == newGenId and tonumber(live.generation_epoch) == newEpoch then
+      return 1
+    end
+    if tonumber(live.generation_epoch) >= newEpoch then
+      return -1
+    end
+  end
+end
+
+local gcur = redis.call("GET", newGenKey)
+if gcur == false or gcur == nil then return -3 end
+local gok, grec = pcall(cjson.decode, gcur)
+if not gok or not grec then return -3 end
+if grec.status == "superseded" or grec.status == "completed" or grec.status == "failed" or grec.status == "cancelled" then
+  return -2
+end
+
+if prevGenKey ~= "" and prevGenJson ~= "" then
+  local pcur = redis.call("GET", prevGenKey)
+  if pcur ~= false and pcur ~= nil then
+    redis.call("SET", prevGenKey, prevGenJson, "EX", ttl)
+  end
+end
+
+redis.call("SET", activeKey, newPointerJson, "EX", ttl)
+redis.call("SET", newGenKey, newGenJson, "EX", ttl)
+if b2Key ~= "" then
+  redis.call("SET", b2Key, b2Json, "EX", ttl)
+end
+return 1
+`;
+
 export async function allocateGeneration(input: {
   report_id: string;
   locale: string;
@@ -69,7 +121,7 @@ export async function allocateGeneration(input: {
       report_id,
       generation_id,
       generation_epoch: nextEpoch,
-      status: "active",
+      status: "pending",
       locale: input.locale.trim() || "en",
       created_at: now,
       updated_at: now,
@@ -86,22 +138,134 @@ export async function allocateGeneration(input: {
 
 /**
  * Atomically activate a generation as the report's sole active generation.
- * Marks previous active as superseded. Updates Batch2 active pointer.
+ * Requires new epoch strictly greater than current active epoch (idempotent same gen).
  */
 export async function activateGeneration(input: {
   record: GenerationRecord;
-  /** Final-delivery job_id (usually equals report_id). */
   job_id?: string;
 }): Promise<Batch3Result<ActiveGenerationPointer>> {
   if (!isBatch3SharedStoreAvailable()) return kvUnavailable();
   const { record } = input;
   const report_id = record.report_id.trim();
   const aKey = activeKey(report_id);
+  const gKey = genKey(report_id, record.generation_id);
+  const job_id = (input.job_id ?? report_id).trim();
+  const b2Key = batch2PointerKey(job_id);
   trackBatch3Key(aKey);
+  trackBatch3Key(gKey);
+  trackBatch3Key(b2Key);
 
+  const liveGen = await kvGet<GenerationRecord>(gKey);
+  if (!liveGen.ok) return liveGen;
+  if (!liveGen.value) {
+    return { ok: false, code: "not_found", detail: "generation record missing" };
+  }
+  if (TERMINAL.has(liveGen.value.status)) {
+    return {
+      ok: false,
+      code: "generation_terminal",
+      detail: `cannot activate ${liveGen.value.status} generation`,
+    };
+  }
+  if (liveGen.value.generation_epoch !== record.generation_epoch) {
+    return {
+      ok: false,
+      code: "stale_generation",
+      detail: "record epoch mismatch vs stored generation",
+    };
+  }
+
+  const now = new Date().toISOString();
+  const pointer: ActiveGenerationPointer = {
+    report_id,
+    generation_id: record.generation_id,
+    generation_epoch: record.generation_epoch,
+    switched_at: now,
+  };
+  const activeRec: GenerationRecord = {
+    ...liveGen.value,
+    status: "active",
+    updated_at: now,
+    superseded_at: null,
+    superseded_by: null,
+  };
+  const b2Pointer = {
+    report_id,
+    generation_id: record.generation_id,
+    started_at: now,
+    generation_epoch: record.generation_epoch,
+  };
+
+  if (isMemoryAtomicAvailable()) {
+    const result = runMemoryAtomic((ops) => {
+      const live = ops.getJson(aKey) as ActiveGenerationPointer | null;
+      if (
+        live &&
+        live.generation_id === record.generation_id &&
+        live.generation_epoch === record.generation_epoch
+      ) {
+        return { code: 1 as const, pointer: live };
+      }
+      if (live && live.generation_epoch >= record.generation_epoch) {
+        return {
+          code: -1 as const,
+          detail: `active epoch ${live.generation_epoch} >= ${record.generation_epoch}`,
+        };
+      }
+      const grec = ops.getJson(gKey) as GenerationRecord | null;
+      if (!grec) return { code: -3 as const, detail: "generation missing" };
+      if (TERMINAL.has(grec.status)) {
+        return { code: -2 as const, detail: `status=${grec.status}` };
+      }
+
+      if (live?.generation_id) {
+        const prevKey = genKey(report_id, live.generation_id);
+        const prev = ops.getJson(prevKey) as GenerationRecord | null;
+        if (prev && !TERMINAL.has(prev.status)) {
+          ops.setJson(
+            prevKey,
+            {
+              ...prev,
+              status: "superseded",
+              updated_at: now,
+              superseded_at: now,
+              superseded_by: record.generation_id,
+            },
+            KV_TTL.REPORT_BATCH2_JOB,
+          );
+          trackBatch3Key(prevKey);
+        }
+      }
+
+      ops.setJson(aKey, pointer, KV_TTL.REPORT_BATCH2_JOB);
+      ops.setJson(gKey, activeRec, KV_TTL.REPORT_BATCH2_JOB);
+      ops.setJson(b2Key, b2Pointer, KV_TTL.REPORT_BATCH2_JOB);
+      return { code: 1 as const, pointer };
+    });
+    if (!result.ok) return result;
+    if (result.value.code === -1) {
+      return {
+        ok: false,
+        code: "stale_generation",
+        detail: result.value.detail ?? "epoch not monotonic",
+      };
+    }
+    if (result.value.code === -2) {
+      return {
+        ok: false,
+        code: "generation_terminal",
+        detail: result.value.detail ?? "terminal generation",
+      };
+    }
+    if (result.value.code === -3) {
+      return { ok: false, code: "not_found", detail: result.value.detail ?? "missing" };
+    }
+    return { ok: true, value: result.value.pointer! };
+  }
+
+  // Redis Lua path
   const live = await kvGet<ActiveGenerationPointer>(aKey);
   if (!live.ok) return live;
-
   if (
     live.value &&
     live.value.generation_id === record.generation_id &&
@@ -109,81 +273,61 @@ export async function activateGeneration(input: {
   ) {
     return { ok: true, value: live.value };
   }
+  if (live.value && live.value.generation_epoch >= record.generation_epoch) {
+    return {
+      ok: false,
+      code: "stale_generation",
+      detail: `active epoch ${live.value.generation_epoch} >= ${record.generation_epoch}`,
+    };
+  }
 
-  if (live.value) {
-    const prevKey = genKey(report_id, live.value.generation_id);
+  let prevKey = "";
+  let prevGenJson = "";
+  if (live.value?.generation_id) {
+    prevKey = genKey(report_id, live.value.generation_id);
     const prev = await kvGet<GenerationRecord>(prevKey);
     if (!prev.ok) return prev;
     if (prev.value && !TERMINAL.has(prev.value.status)) {
-      const superseded: GenerationRecord = {
+      prevGenJson = JSON.stringify({
         ...prev.value,
         status: "superseded",
-        updated_at: new Date().toISOString(),
-        superseded_at: new Date().toISOString(),
+        updated_at: now,
+        superseded_at: now,
         superseded_by: record.generation_id,
-      };
-      const marked = await casSet(
-        prevKey,
-        JSON.stringify(prev.value),
-        superseded,
-      );
-      if (!marked.ok && marked.code !== "conflict") return marked;
+      });
+      trackBatch3Key(prevKey);
+    } else {
+      prevKey = "";
     }
   }
 
-  const pointer: ActiveGenerationPointer = {
-    report_id,
-    generation_id: record.generation_id,
-    generation_epoch: record.generation_epoch,
-    switched_at: new Date().toISOString(),
-  };
-  const expected = live.value == null ? null : JSON.stringify(live.value);
-  const switched = await casSet(aKey, expected, pointer);
-  if (!switched.ok) return switched;
-
-  // Ensure gen record is active
-  const gKey = genKey(report_id, record.generation_id);
-  const curGen = await kvGet<GenerationRecord>(gKey);
-  if (!curGen.ok) return curGen;
-  if (curGen.value) {
-    if (TERMINAL.has(curGen.value.status) && curGen.value.status !== "active") {
-      // allow activating a freshly allocated record only
-      if (curGen.value.status !== "superseded") {
-        /* keep */
-      }
-    }
-    const activeRec: GenerationRecord = {
-      ...curGen.value,
-      status: "active",
-      updated_at: new Date().toISOString(),
-    };
-    await casSet(gKey, JSON.stringify(curGen.value), activeRec);
+  const evaled = await evalTxn(
+    ACTIVATE_LUA,
+    [aKey, gKey, prevKey, b2Key],
+    [
+      String(record.generation_epoch),
+      record.generation_id,
+      JSON.stringify(pointer),
+      JSON.stringify(activeRec),
+      prevGenJson,
+      JSON.stringify(b2Pointer),
+      String(KV_TTL.REPORT_BATCH2_JOB),
+    ],
+  );
+  if (!evaled.ok) return evaled;
+  const code = Number(evaled.value);
+  if (code === 1) return { ok: true, value: pointer };
+  if (code === -1) {
+    return { ok: false, code: "stale_generation", detail: "epoch not monotonic (lua)" };
   }
-
-  // Batch2 production pointer (tri-state readers)
-  const job_id = (input.job_id ?? report_id).trim();
-  const b2Key = batch2PointerKey(job_id);
-  trackBatch3Key(b2Key);
-  try {
-    await durableKv().set(
-      b2Key,
-      {
-        report_id,
-        generation_id: record.generation_id,
-        started_at: pointer.switched_at,
-        generation_epoch: record.generation_epoch,
-      },
-      { ex: KV_TTL.REPORT_BATCH2_JOB },
-    );
-  } catch (err) {
+  if (code === -2) {
     return {
       ok: false,
-      code: "pointer_write_failed",
-      detail: err instanceof Error ? err.message : String(err),
+      code: "generation_terminal",
+      detail: "cannot reactivate terminal generation (lua)",
     };
   }
-
-  return { ok: true, value: pointer };
+  return { ok: false, code: "not_found", detail: `activate lua code=${code}` };
 }
 
 export async function readActiveGeneration(
@@ -279,3 +423,14 @@ export async function transitionGenerationStatus(input: {
   if (!saved.ok) return saved;
   return { ok: true, value: next };
 }
+
+/** Exported for tests / recovery key construction. */
+export const generationStoreKeys = {
+  epochKey,
+  activeKey,
+  genKey,
+  batch2PointerKey,
+};
+
+// Keep durableKv import referenced for pointer writes on non-atomic paths.
+void durableKv;

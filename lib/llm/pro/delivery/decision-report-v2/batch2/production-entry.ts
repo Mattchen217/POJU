@@ -220,22 +220,37 @@ export async function startFinalDeliveryReportBatch2(
     return ptrWrite;
   }
 
-  const send = await sendReportBatch2Events([
-    buildOrchestratePayload({
-      report_id: job_id,
-      generation_id: gid,
-      locale: input.locale,
-      generation_epoch,
-    }),
-  ]);
+  const payload = buildOrchestratePayload({
+    report_id: job_id,
+    generation_id: gid,
+    locale: input.locale,
+    generation_epoch,
+  });
+  const { enqueueDispatchIntent, markIntentFailed, markIntentSent } = await import(
+    "../batch3/dispatch-intent"
+  );
+  const intent = await enqueueDispatchIntent({
+    report_id: job_id,
+    generation_id: gid,
+    generation_epoch,
+    event_name: payload.name,
+    payload: { ...payload.data },
+  });
+  if (!intent.ok) {
+    await updateJobStatus(job_id, gid, "failed").catch(() => undefined);
+    return { ok: false, code: intent.code, detail: intent.detail };
+  }
+  const send = await sendReportBatch2Events([payload]);
   if (!send.ok) {
+    await markIntentFailed(intent.value, send.detail);
     await updateJobStatus(job_id, gid, "failed").catch(() => undefined);
     return {
       ok: false,
       code: send.code,
-      detail: `${send.detail} (pointer retained; job status=failed)`,
+      detail: `${send.detail} (pointer retained; job status=failed; intent retained)`,
     };
   }
+  await markIntentSent(intent.value);
 
   return { ok: true, generation_id: gid, generation_epoch };
 }

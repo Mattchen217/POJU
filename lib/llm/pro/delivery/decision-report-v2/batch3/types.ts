@@ -8,6 +8,7 @@ import type {
 } from "../orchestration/types";
 
 export type GenerationStatus =
+  | "pending"
   | "active"
   | "completed"
   | "failed"
@@ -56,6 +57,8 @@ export type TaskRecord = {
   attempt_id: string | null;
   lease_expires_at: string | null;
   worker_id: string | null;
+  /** Page fence validity_rev bound at claim — commit must match. */
+  validity_rev: number;
   input_fingerprint: string;
   upstream_output_fingerprints: ReportUpstreamOutputFingerprints;
   page_contract_version: string;
@@ -65,6 +68,23 @@ export type TaskRecord = {
   updated_at: string;
   completed_at?: string | null;
   failure_detail?: string | null;
+};
+
+/** Authority gate for page validity vs late commits / invalidation. */
+export type PageFence = {
+  report_id: string;
+  generation_id: string;
+  generation_epoch: number;
+  page_id: ReportPageId;
+  /** Monotonic; invalidation increments; commit requires exact match. */
+  validity_rev: number;
+  status: "open" | "committed" | "stale";
+  attempt_id: string | null;
+  task_key: string | null;
+  input_fingerprint: string | null;
+  upstream_output_fingerprints: ReportUpstreamOutputFingerprints | null;
+  output_fingerprint: string | null;
+  updated_at: string;
 };
 
 export type PageProvenance = {
@@ -80,6 +100,7 @@ export type PageProvenance = {
   output_fingerprint: string;
   attempt_id: string;
   task_key: string;
+  validity_rev: number;
   completed_at: string;
   stale: boolean;
   stale_reason?: string | null;
@@ -120,7 +141,9 @@ export type Batch3FailCode =
   | "pointer_write_failed"
   | "not_found"
   | "generation_terminal"
-  | "limit_reached";
+  | "stale_page"
+  | "limit_reached"
+  | "job_missing";
 
 export type Batch3Result<T> =
   | { ok: true; value: T }
