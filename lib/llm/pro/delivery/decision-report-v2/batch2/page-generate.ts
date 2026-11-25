@@ -117,7 +117,16 @@ export async function runReportPageGenerateOnce(input: {
       return { status: "skipped" };
     }
     if (outcome === "repair_queued") {
-      return { status: "skipped" };
+      // Unit B R1: Repair Pending already saved — finish Generate→Repair
+      // handoff if Fence still held by Generate (crash / handoff-fail window).
+      const resumed = await resumeGenerateToRepairHandoffIfNeeded({
+        job,
+        page_id,
+        report_id: input.event.report_id,
+        generation_id: input.event.generation_id,
+        generation_epoch: input.event.generation_epoch ?? job.generation_epoch,
+      });
+      return resumed;
     }
   }
 
@@ -425,21 +434,8 @@ async function queueRepair(
     attempt_id: string;
   } | null,
 ): Promise<ReportBatch2WorkerResult | null> {
-  // Unit B: release Generate Fence before Repair Claim (different task_key).
-  if (batch3Handoff) {
-    const { releasePageClaimForHandoff } = await import(
-      "../batch3/claim-page-execution"
-    );
-    const released = await releasePageClaimForHandoff(batch3Handoff);
-    if (!released.ok) {
-      return {
-        status: "failed",
-        code: released.code,
-        detail: released.detail,
-      };
-    }
-  }
-
+  // Unit B R1: persist Repair Pending BEFORE releasing Generate Fence so a
+  // crash / save failure never leaves Batch3 handed-off without Batch2 intent.
   setRepairPending(job, page_id, {
     page_id,
     system: prep.system,
@@ -457,7 +453,102 @@ async function queueRepair(
   if (!saved.ok) {
     return { status: "failed", code: saved.code, detail: saved.detail };
   }
+
+  // Then handoff Generate Claim → open Fence for Repair Claim.
+  if (batch3Handoff) {
+    const { releasePageClaimForHandoff } = await import(
+      "../batch3/claim-page-execution"
+    );
+    const released = await releasePageClaimForHandoff(batch3Handoff);
+    if (!released.ok) {
+      // Pending is already durable — replay can resume handoff. Do not clear it.
+      return {
+        status: "failed",
+        code: released.code,
+        detail: released.detail,
+      };
+    }
+  }
   return null;
+}
+
+/**
+ * When Batch2 already has repair_queued + repair_pending but Generate still
+ * holds the Fence (handoff interrupted), finish the handoff without re-claiming.
+ */
+async function resumeGenerateToRepairHandoffIfNeeded(input: {
+  job: ReportBatch2JobRecord;
+  page_id: ReportPageId;
+  report_id: string;
+  generation_id: string;
+  generation_epoch: number | undefined;
+}): Promise<ReportBatch2WorkerResult> {
+  if (!input.job.repair_pending[input.page_id]) {
+    return { status: "skipped" };
+  }
+  const epoch = input.generation_epoch;
+  if (typeof epoch !== "number") {
+    return { status: "skipped" };
+  }
+
+  const { readPageFence } = await import("../batch3/page-fence");
+  const { readTask } = await import("../batch3/task-store");
+  const fence = await readPageFence(
+    input.report_id,
+    input.generation_id,
+    input.page_id,
+  );
+  if (!fence.ok) {
+    return { status: "failed", code: fence.code, detail: fence.detail };
+  }
+  if (!fence.value || fence.value.status === "open") {
+    // Handoff already done — Repair can Claim.
+    return { status: "needs_repair" };
+  }
+  if (fence.value.status === "committed" || fence.value.status === "stale") {
+    return { status: "skipped" };
+  }
+  if (
+    fence.value.status !== "claimed" ||
+    !fence.value.task_key ||
+    !fence.value.attempt_id
+  ) {
+    return { status: "skipped" };
+  }
+
+  const task = await readTask(
+    input.report_id,
+    input.generation_id,
+    fence.value.task_key,
+  );
+  if (!task.ok) {
+    return { status: "failed", code: task.code, detail: task.detail };
+  }
+  // Only release if Generate still owns the Fence — never steal Repair / other.
+  if (task.value && task.value.task_type !== "generate") {
+    return { status: "skipped" };
+  }
+  // Generate Task already completed but Fence still claimed is inconsistent;
+  // still attempt handoff with fence identity (release allows completed task).
+  const { releasePageClaimForHandoff } = await import(
+    "../batch3/claim-page-execution"
+  );
+  const released = await releasePageClaimForHandoff({
+    report_id: input.report_id,
+    generation_id: input.generation_id,
+    generation_epoch: epoch,
+    page_id: input.page_id,
+    task_key: fence.value.task_key,
+    attempt_id: fence.value.attempt_id,
+  });
+  if (!released.ok) {
+    return {
+      status: "failed",
+      code: released.code,
+      detail: released.detail,
+    };
+  }
+  return { status: "needs_repair" };
 }
 
 function parsePageJson(page_id: ReportPageId, rawText: string): unknown | null {

@@ -695,6 +695,282 @@ async function main(): Promise<void> {
     console.log("B7 ok — worker Repair fail clears Fence + explicit failed");
   }
 
+  // --- B8. Worker: Generate fail → Repair Worker Validator + Authority Commit ---
+  {
+    await cleanup();
+    const report_id = "rpt_ub_b8";
+    const gen = await boot(report_id, "g_ub_b8");
+    const page_id: ReportPageId = "01";
+
+    setBatch2ModelInvokeForTests(async () => ({
+      content: "{ broken-generate",
+      tokens_used: 1,
+      model_call_id: "mc_gen_b8",
+    }));
+    const job0 = await loadJob(report_id, gen.generation_id);
+    assert.ok(job0.ok && job0.value);
+    const { buildPageProductionPrep, computePageInputFingerprintForJob } =
+      await import(
+        "@/lib/llm/pro/delivery/decision-report-v2/batch2/page-prep"
+      );
+    const prep = buildPageProductionPrep(job0.value!, page_id);
+    assert.equal(prep.build_fail, undefined, JSON.stringify(prep));
+    const fp = computePageInputFingerprintForJob(job0.value!, page_id, prep);
+    assert.ok(fp.ok, JSON.stringify(fp));
+    if (!fp.ok) throw new Error("fp");
+    const { updatePageState, saveJob } = await import(
+      "@/lib/llm/pro/delivery/decision-report-v2/batch2/job-store"
+    );
+    updatePageState(job0.value!, page_id, { outcome: "queued" });
+    assert.ok((await saveJob(job0.value!)).ok);
+
+    const genResult = await runReportPageGenerateOnce({
+      event: {
+        report_id,
+        generation_id: gen.generation_id,
+        generation_epoch: gen.generation_epoch,
+        page_id,
+        locale: "en",
+        input_fingerprint: fp.result.fingerprint,
+        upstream_output_fingerprints: {},
+      },
+      invocation_id: randomUUID(),
+      worker_id: "w_ub_b8_gen",
+    });
+    assert.equal(genResult.status, "needs_repair", JSON.stringify(genResult));
+
+    const jobPending = await loadJob(report_id, gen.generation_id);
+    assert.ok(jobPending.ok && jobPending.value);
+    assert.ok(jobPending.value!.repair_pending[page_id]);
+    assert.equal(
+      jobPending.value!.page_states.find((s) => s.page_id === page_id)?.outcome,
+      "repair_queued",
+    );
+
+    // Build a Validator-passing Face01 payload from the same production ctx.
+    const { validateFace01ProductionOutput } = await import(
+      "@/lib/llm/pro/delivery/decision-report-v2/page01/production"
+    );
+    type Face01Ctx = import("@/lib/llm/pro/delivery/decision-report-v2/page01/production").Face01ProductionContext;
+    const ctx = prep.ctx as Face01Ctx;
+    const claimId =
+      ctx.slice.report_analysis.key_claims[0]?.claim_id ||
+      Object.keys(ctx.registry.claims)[0]!;
+    const evId =
+      ctx.slice.evidence_registry.evidence.find(
+        (e) => e.evidence_id !== `ev_fact_${e.source_id}`,
+      )?.evidence_id ||
+      ctx.page02PlannedEvidenceIds[0] ||
+      ctx.slice.evidence_registry.evidence[0]!.evidence_id;
+    const factId = ctx.slice.reality_context.facts[0]!.fact_id;
+    const validRaw = {
+      page: "01",
+      face: "01",
+      schema_version: "face01-v2",
+      page_title: "Decision",
+      page_subtitle: "",
+      core_judgment: {
+        text: "Keep the job cash floor while exploring the offer in a bounded window.",
+        claim_ids: [claimId],
+      },
+      why_this_path: [
+        {
+          text: "Runway and optionality both stay intact under a staged path.",
+          claim_ids: [claimId],
+          evidence_ids: [evId],
+          target_page: "02",
+          target_evidence_ids: [ctx.page02PlannedEvidenceIds[0] || evId],
+        },
+      ],
+      recommendation_conditions: [
+        {
+          condition: "Personal runway remains near the confirmed window.",
+          status: "satisfied",
+          source_ids: [factId],
+        },
+        {
+          condition: "Offer terms remain within the reviewed band.",
+          status: "satisfied",
+          source_ids: [
+            ctx.slice.reality_context.facts[1]?.fact_id || factId,
+          ],
+        },
+      ],
+      not_recommended: [
+        {
+          option: "Resign immediately for the offer.",
+          reason: "Burns the cash floor before terms are clear.",
+          cost_or_conflict: "Loss of runway buffer.",
+          claim_ids: [claimId],
+          evidence_ids: [evId],
+        },
+      ],
+      applicability_boundary: {
+        current_basis: ["Confirmed runway and open equity conflict."],
+        invalidation_conditions: [
+          "Runway collapses or equity terms lock unfavorably.",
+        ],
+        page02_evidence_ids: [ctx.page02PlannedEvidenceIds[0] || evId],
+        page08_review_refs: [],
+      },
+    };
+    const validated = validateFace01ProductionOutput({
+      raw: validRaw,
+      locale: "en",
+      ctx,
+    });
+    assert.ok(validated.ok, JSON.stringify(validated));
+    if (!validated.ok) throw new Error("validRaw must pass Face01 validator");
+    const repairFp = hashCanonicalPayload(validated.page);
+
+    setBatch2ModelInvokeForTests(async () => ({
+      content: JSON.stringify(validRaw),
+      tokens_used: 2,
+      model_call_id: "mc_repair_b8",
+    }));
+
+    const repairResult = await runReportPageRepairOnce({
+      event: {
+        report_id,
+        generation_id: gen.generation_id,
+        generation_epoch: gen.generation_epoch,
+        page_id,
+        locale: "en",
+        input_fingerprint: fp.result.fingerprint,
+      },
+      invocation_id: randomUUID(),
+      worker_id: "w_ub_b8_repair",
+    });
+    assert.equal(
+      repairResult.status,
+      "completed",
+      JSON.stringify(repairResult),
+    );
+
+    const fence = await readPageFence(report_id, gen.generation_id, page_id);
+    assert.equal(fence.value?.status, "committed");
+
+    const auth = await readAuthorityPageOutput(
+      report_id,
+      gen.generation_id,
+      page_id,
+    );
+    assert.ok(auth.ok && auth.value);
+    assert.equal(hashCanonicalPayload(auth.value!.output), repairFp);
+
+    const jobDone = await loadJob(report_id, gen.generation_id);
+    assert.ok(jobDone.ok && jobDone.value);
+    assert.equal(jobDone.value!.repair_pending[page_id], undefined);
+    assert.equal(
+      jobDone.value!.page_states.find((s) => s.page_id === page_id)?.outcome,
+      "completed",
+    );
+    console.log(
+      "B8 ok — Repair Worker Validator + Authority Commit closed loop",
+    );
+  }
+
+  // --- B9. R1: repair_queued persisted, Generate still holds Fence → resume handoff ---
+  {
+    await cleanup();
+    const report_id = "rpt_ub_b9";
+    const gen = await boot(report_id, "g_ub_b9");
+    const page_id: ReportPageId = "01";
+    const genClaim = await claimGenerate(
+      report_id,
+      gen.generation_id,
+      gen.generation_epoch,
+      page_id,
+      "fp_b9",
+    );
+
+    const job0 = await loadJob(report_id, gen.generation_id);
+    assert.ok(job0.ok && job0.value);
+    const { setRepairPending, updatePageState, saveJob } = await import(
+      "@/lib/llm/pro/delivery/decision-report-v2/batch2/job-store"
+    );
+    setRepairPending(job0.value!, page_id, {
+      page_id,
+      system: "s",
+      user: "u",
+      previous_raw: "{ bad",
+      issues: [{ code: "json_parse_failed", detail: "x" }],
+      input_fingerprint: "fp_b9",
+      locale: "en",
+      validator_version: "v",
+      production_version: "v",
+      prompt_version: "v",
+    });
+    updatePageState(job0.value!, page_id, { outcome: "repair_queued" });
+    assert.ok((await saveJob(job0.value!)).ok);
+
+    // Fence still claimed by Generate — simulate crash after Pending save.
+    const fenceBefore = await readPageFence(
+      report_id,
+      gen.generation_id,
+      page_id,
+    );
+    assert.equal(fenceBefore.value?.status, "claimed");
+    assert.equal(fenceBefore.value?.task_key, genClaim.task_key);
+
+    const resumed = await runReportPageGenerateOnce({
+      event: {
+        report_id,
+        generation_id: gen.generation_id,
+        generation_epoch: gen.generation_epoch,
+        page_id,
+        locale: "en",
+        input_fingerprint: "fp_b9",
+        upstream_output_fingerprints: {},
+      },
+      invocation_id: randomUUID(),
+      worker_id: "w_ub_b9_resume",
+    });
+    assert.equal(resumed.status, "needs_repair", JSON.stringify(resumed));
+
+    const fenceAfter = await readPageFence(
+      report_id,
+      gen.generation_id,
+      page_id,
+    );
+    assert.equal(fenceAfter.value?.status, "open");
+    assert.equal(fenceAfter.value?.task_key, null);
+
+    const genTask = await readTask(
+      report_id,
+      gen.generation_id,
+      genClaim.task_key,
+    );
+    assert.equal(genTask.value?.status, "completed");
+
+    // Must not re-claim the completed Generate Task.
+    const reclaim = await claimPageExecution({
+      report_id,
+      generation_id: gen.generation_id,
+      generation_epoch: gen.generation_epoch,
+      page_id,
+      task_type: "generate",
+      input_fingerprint: "fp_b9",
+      upstream_output_fingerprints: {},
+      worker_id: "w_ub_b9_reclaim",
+    });
+    assert.equal(reclaim.ok, false);
+    assert.equal(reclaim.ok ? "" : reclaim.code, "already_completed");
+
+    const repairClaim = await fenceAndClaimPageTask({
+      report_id,
+      generation_id: gen.generation_id,
+      generation_epoch: gen.generation_epoch,
+      page_id,
+      task_type: "repair",
+      input_fingerprint: "fp_b9",
+      upstream_output_fingerprints: {},
+      worker_id: "w_ub_b9_repair",
+    });
+    assert.ok(repairClaim.ok, JSON.stringify(repairClaim));
+    console.log("B9 ok — resume handoff after repair_queued without re-claim");
+  }
+
   console.log("UNIT_B_REPAIR_CLAIM: PASS");
   console.log("REDIS_INTEGRATION: NOT_VERIFIED");
 }

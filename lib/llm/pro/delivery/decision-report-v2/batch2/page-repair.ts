@@ -154,12 +154,12 @@ export async function runReportPageRepairOnce(input: {
     code: string,
     detail: string,
   ): Promise<ReportBatch2WorkerResult> {
-    // Unit B: do not leave Repair Fence permanently claimed.
+    // Unit B R1: release Fence first; only clear Pending after release succeeds.
     if (batch3Attempt && typeof epoch === "number") {
       const { failAndReleasePageClaim } = await import(
         "../batch3/claim-page-execution"
       );
-      await failAndReleasePageClaim({
+      const released = await failAndReleasePageClaim({
         report_id: input.event.report_id,
         generation_id: input.event.generation_id,
         generation_epoch: epoch,
@@ -168,6 +168,14 @@ export async function runReportPageRepairOnce(input: {
         attempt_id: batch3Attempt.attempt_id,
         detail: `${code}: ${detail}`,
       });
+      if (!released.ok) {
+        // Keep repair_pending + claimed Fence for recovery; surface release error.
+        return {
+          status: "failed",
+          code: released.code,
+          detail: `fail_release_failed: ${released.detail} (repair=${code}: ${detail})`,
+        };
+      }
     }
     updatePageState(job, page_id, { outcome: "failed" });
     clearRepairPending(job, page_id);
@@ -274,11 +282,8 @@ export async function runReportPageRepairOnce(input: {
     if (!committed.ok) {
       return failRepair(committed.code, committed.detail);
     }
-    // Job already mutated for invocation log / repair_pending clear — persist non-page fields.
-    const savedMeta = await saveJob(job);
-    if (!savedMeta.ok) {
-      return { status: "failed", code: savedMeta.code, detail: savedMeta.detail };
-    }
+    // Authority Commit already persisted completed + cleared repair on the page
+    // blob. Do not saveJob the pre-commit in-memory "running" snapshot (stale rev).
     return { status: "completed" };
   }
 
