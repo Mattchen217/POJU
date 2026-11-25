@@ -24,6 +24,7 @@ import {
 } from "@/lib/llm/pro/delivery/decision-report-v2/batch2";
 import {
   setAfterGenerateModelHookForTests,
+  setQueueRepairSaveJobFailForTests,
   setValidatePageOutputHookForTests,
 } from "@/lib/llm/pro/delivery/decision-report-v2/batch2/page-generate";
 import { reportPageGenerate } from "@/lib/inngest/functions/report-page-generate";
@@ -155,6 +156,7 @@ async function cleanup(): Promise<void> {
   setBatch2ModelInvokeForTests(null);
   setAfterGenerateModelHookForTests(null);
   setValidatePageOutputHookForTests(null);
+  setQueueRepairSaveJobFailForTests(null);
 }
 
 async function boot(report_id: string, generation_id: string) {
@@ -463,6 +465,103 @@ async function main(): Promise<void> {
     assert.equal(fenceAfter.value?.status, "open");
     console.log(
       "C-T2b ok — Validator-path throw releases Claim; handler throws; retry Claims",
+    );
+  }
+
+  // --- C-T2c: Repair Pending saveJob fails → release Generate Claim (no durable Pending) ---
+  {
+    await cleanup();
+    const report_id = "rpt_uc_t2c";
+    const gen = await boot(report_id, "g_uc_t2c");
+    const { page_id, fingerprint } = await prepGenerate(
+      report_id,
+      gen.generation_id,
+    );
+    setBatch2ModelInvokeForTests(async () => ({
+      content: "{ not-json-triggers-repair",
+      tokens_used: 1,
+      model_call_id: "mc_t2c",
+    }));
+    setQueueRepairSaveJobFailForTests({
+      code: "kv_write_failed",
+      detail: "injected_queue_repair_save_fail",
+    });
+
+    const result = await runReportPageGenerateOnce({
+      event: {
+        report_id,
+        generation_id: gen.generation_id,
+        generation_epoch: gen.generation_epoch,
+        page_id,
+        locale: "en",
+        input_fingerprint: fingerprint,
+        upstream_output_fingerprints: {},
+      },
+      invocation_id: randomUUID(),
+      worker_id: "w_uc_t2c",
+    });
+    setQueueRepairSaveJobFailForTests(null);
+
+    assert.equal(result.status, "failed");
+    assert.equal(
+      result.status === "failed" ? result.code : "",
+      "kv_write_failed",
+    );
+    assert.equal(result.status === "failed" ? result.retryable : false, true);
+
+    const job = await loadJob(report_id, gen.generation_id);
+    assert.ok(job.ok && job.value);
+    assert.equal(
+      job.value!.repair_pending[page_id],
+      undefined,
+      "no durable repair_pending after save fail",
+    );
+    assert.equal(
+      job.value!.page_states.find((s) => s.page_id === page_id)?.outcome,
+      "running",
+    );
+
+    const fence = await readPageFence(report_id, gen.generation_id, page_id);
+    assert.equal(fence.value?.status, "open");
+    assert.equal(fence.value?.task_key, null);
+
+    const task_key = generateTaskKey({
+      report_id,
+      generation_id: gen.generation_id,
+      generation_epoch: gen.generation_epoch,
+      page_id,
+      input_fingerprint: fingerprint,
+    });
+    const task = await readTask(report_id, gen.generation_id, task_key);
+    assert.equal(task.value?.status, "failed");
+
+    // Retry can re-claim after Fence opened (no stuck Claim).
+    setBatch2ModelInvokeForTests(async () => ({
+      content: "{ still-broken",
+      tokens_used: 1,
+      model_call_id: "mc_t2c_retry",
+    }));
+    const retry = await runReportPageGenerateOnce({
+      event: {
+        report_id,
+        generation_id: gen.generation_id,
+        generation_epoch: gen.generation_epoch,
+        page_id,
+        locale: "en",
+        input_fingerprint: fingerprint,
+        upstream_output_fingerprints: {},
+      },
+      invocation_id: randomUUID(),
+      worker_id: "w_uc_t2c_retry",
+    });
+    assert.equal(retry.status, "needs_repair");
+    assert.ok(
+      (await loadJob(report_id, gen.generation_id)).value?.repair_pending[
+        page_id
+      ],
+    );
+    console.log(
+      "C-T2c ok — Pending save fail releases Claim; retry can enter Repair",
     );
   }
 
