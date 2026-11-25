@@ -2,8 +2,8 @@
  * DAG-based invalidation — reuses Batch1 registry; bumps page fence rev so
  * late commits cannot restore invalidated pages.
  *
- * R5: refuse invalidation when a Finalization Claim is sealed for the
- * generation (atomic mutual exclusion with claimFinalization).
+ * R5/R6: refuse invalidation when a Finalization Claim is sealed (or
+ * unusable) for the generation — atomic mutual exclusion with claimFinalization.
  */
 
 import {
@@ -17,6 +17,7 @@ import {
   REPORT_PAGE_REGISTRY,
 } from "../orchestration";
 import type { ReportPageId } from "../orchestration/types";
+import { inspectFinalizationClaimValue } from "./claim-inspect";
 import { finalizationClaimKey, type FinalizationClaim } from "./finalization";
 import { assertGenerationActive } from "./generation-store";
 import {
@@ -67,22 +68,27 @@ function taskKeyPath(
   return `report-batch3:${report_id.trim()}:${generation_id.trim()}:task:${task_key}`;
 }
 
+/** Test hook: await before entering MemoryKv/Redis atomic invalidate. */
+let beforeInvalidateAtomicHook: (() => Promise<void>) | null = null;
+
+export function setBeforeInvalidateAtomicHookForTests(
+  hook: (() => Promise<void>) | null,
+): void {
+  beforeInvalidateAtomicHook = hook;
+}
+
 /**
  * Lua: KEYS[1]=claim, KEYS[2]=fence, KEYS[3]=prov, KEYS[4]=taskPlaceholder
  * ARGV[1]=report_id, ARGV[2]=generation_id, ARGV[3]=epoch, ARGV[4]=page_id,
- * ARGV[5]=reason, ARGV[6]=nowIso, ARGV[7]=ttl, ARGV[8]=taskKeyPrefix
+ * ARGV[5]=reason, ARGV[6]=nowIso, ARGV[7]=ttl
  *
  * Returns: nextRev (>=0) on success
- *  -10 finalization_locked
+ *  -10 finalization_locked (status claimed)
  *  -11 fence decode fail (fail closed)
  *  -12 unknown / bad args
- *
- * Task key is derived inside the script from fence/prov; KEYS[4] is the
- * precomputed task key when known, else empty string and script skips task.
- * Caller passes best-effort task key from a pre-read; script re-reads fence
- * and only updates task if KEYS[4] matches fence.task_key or prov.task_key.
+ *  -13 claim present but unusable (decode fail / unknown status / incomplete)
  */
-const INVALIDATE_LUA = `
+export const INVALIDATE_LUA = `
 local claimKey = KEYS[1]
 local fenceKey = KEYS[2]
 local provKey = KEYS[3]
@@ -94,13 +100,22 @@ local pageId = ARGV[4]
 local reason = ARGV[5]
 local nowIso = ARGV[6]
 local ttl = tonumber(ARGV[7])
+if not epoch or not ttl or type(reportId) ~= "string" or type(genId) ~= "string" then
+  return -12
+end
 
 local claimCur = redis.call("GET", claimKey)
 if claimCur ~= false and claimCur ~= nil then
   local cok, claim = pcall(cjson.decode, claimCur)
-  if cok and claim and claim.status == "claimed" then
+  if not cok or type(claim) ~= "table" then
+    return -13
+  end
+  local status = claim.status
+  if status == "claimed" then
     return -10
   end
+  -- Present but not a usable claimed seal → fail closed (never treat as absent).
+  return -13
 end
 
 local fcur = redis.call("GET", fenceKey)
@@ -157,7 +172,7 @@ end
 return nextRev
 `;
 
-function mapInvalidateLuaCode(
+export function mapInvalidateLuaCode(
   code: number,
 ): Batch3Result<{ validity_rev: number }> {
   if (Number.isFinite(code) && code >= 0) {
@@ -177,6 +192,21 @@ function mapInvalidateLuaCode(
       detail: "invalidation refused: fence undecodable",
     };
   }
+  if (code === -12) {
+    return {
+      ok: false,
+      code: "conflict",
+      detail: "invalidation refused: bad lua args",
+    };
+  }
+  if (code === -13) {
+    return {
+      ok: false,
+      code: "conflict",
+      detail:
+        "invalidation refused: finalization claim present but unusable (fail-closed)",
+    };
+  }
   return {
     ok: false,
     code: "conflict",
@@ -184,9 +214,18 @@ function mapInvalidateLuaCode(
   };
 }
 
+function refuseUnusableClaim(reason: string): Batch3Result<never> {
+  return {
+    ok: false,
+    code: "conflict",
+    detail: `invalidation refused: ${reason}`,
+  };
+}
+
 /**
  * Atomically bump page fence validity_rev, mark stale, invalidate provenance,
- * and stale the bound task attempt — refused if finalization claim exists.
+ * and stale the bound task attempt — refused if finalization claim exists
+ * or is present-but-unusable (fail-closed).
  */
 export async function invalidatePageAuthority(input: {
   report_id: string;
@@ -202,15 +241,27 @@ export async function invalidatePageAuthority(input: {
   trackBatch3Key(pKey);
   trackBatch3Key(cKey);
 
+  if (beforeInvalidateAtomicHook) {
+    await beforeInvalidateAtomicHook();
+  }
+
   if (isMemoryAtomicAvailable()) {
     const ran = runMemoryAtomic((ops) => {
-      const claim = ops.getJson(cKey) as FinalizationClaim | null;
-      if (claim?.status === "claimed") {
+      const claimRaw = ops.getJson(cKey);
+      const inspect = inspectFinalizationClaimValue(claimRaw);
+      if (inspect.kind === "claimed") {
         return {
           ok: false as const,
           code: "finalization_locked" as const,
           detail:
             "invalidation refused: finalization claim sealed for generation",
+        };
+      }
+      if (inspect.kind === "unusable") {
+        return {
+          ok: false as const,
+          code: "conflict" as const,
+          detail: `invalidation refused: ${inspect.reason}`,
         };
       }
 
@@ -336,8 +387,7 @@ export async function invalidatePageAuthority(input: {
 /**
  * Mark source page + DAG dependents as stale.
  * Optional consumers (Page02←01) invalidate only when provenance consumed that upstream.
- * If a finalization claim is sealed, the first page authority bump fails closed
- * and no partial cascade is applied.
+ * If a finalization claim is sealed or unusable, refuse before any fence bump.
  */
 export async function invalidateFromPage(input: {
   report_id: string;
@@ -353,18 +403,22 @@ export async function invalidateFromPage(input: {
   });
   if (!fence.ok) return fence;
 
-  // Fast fail: sealed claim blocks the entire cascade (no partial fence bumps).
-  const claim = await kvGet<FinalizationClaim>(
+  // Fast fail: sealed/unusable claim blocks the entire cascade (no partial bumps).
+  const claim = await kvGet<FinalizationClaim | unknown>(
     finalizationClaimKey(input.report_id, input.generation_id),
   );
   if (!claim.ok) return claim;
-  if (claim.value?.status === "claimed") {
+  const inspect = inspectFinalizationClaimValue(claim.value);
+  if (inspect.kind === "claimed") {
     return {
       ok: false,
       code: "finalization_locked",
       detail:
         "invalidateFromPage refused: finalization claim sealed for generation",
     };
+  }
+  if (inspect.kind === "unusable") {
+    return refuseUnusableClaim(inspect.reason);
   }
 
   const job = await getJob(input.report_id, input.generation_id);

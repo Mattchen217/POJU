@@ -1,11 +1,13 @@
 /**
  * Atomic finalization claim — binds required page fence versions before
- * final delivery. Mutual exclusion with invalidation (R5): once claimed,
+ * final delivery. Mutual exclusion with invalidation (R5/R6): once claimed,
  * invalidatePageAuthority refuses; once invalidated, claimFinalization fails.
+ * Corrupt existing claim must not be overwritten (fail-closed).
  */
 
 import type { ReportPageId } from "../orchestration/types";
 import type { AuthorityPageClaimIdentity } from "./authority-page-read";
+import { inspectFinalizationClaimValue } from "./claim-inspect";
 import { generationStoreKeys } from "./generation-store";
 import {
   evalTxn,
@@ -45,7 +47,7 @@ export function finalizationClaimKey(
   return `report-batch3:${report_id.trim()}:${generation_id.trim()}:finalization`;
 }
 
-function bindingsMatch(
+export function bindingsMatch(
   existing: FinalizationPageBinding[],
   next: FinalizationPageBinding[],
 ): boolean {
@@ -77,23 +79,45 @@ function fenceMatchesBinding(
   );
 }
 
+/** Test hook: await before entering MemoryKv/Redis atomic claim. */
+let beforeClaimAtomicHook: (() => Promise<void>) | null = null;
+
+export function setBeforeClaimAtomicHookForTests(
+  hook: (() => Promise<void>) | null,
+): void {
+  beforeClaimAtomicHook = hook;
+}
+
 /**
  * Lua: KEYS[1]=active, KEYS[2]=claim, KEYS[3..]=fence keys in page order.
- * ARGV[1]=expectGenId, ARGV[2]=expectEpoch, ARGV[3]=claimJson,
- * ARGV[4]=ttl, ARGV[5]=pageCount, ARGV[6]=claimId,
- * then per page: validity_rev, attempt_id, output_fingerprint, task_key
+ * ARGV[1]=expectReportId, ARGV[2]=expectGenId, ARGV[3]=expectEpoch,
+ * ARGV[4]=claimJson, ARGV[5]=ttl, ARGV[6]=pageCount, ARGV[7]=claimId,
+ * then per page: page_id, validity_rev, attempt_id, output_fingerprint, task_key
  *
- * Idempotent same claim_id still re-validates active + fences (no bypass).
+ * Returns:
+ *  1 created
+ *  2 idempotent (same seal / matching bindings)
+ *  -1 stale_generation
+ *  -2 fence missing
+ *  -3 stale_page
+ *  -4 existing claim different bindings / claim_id mismatch rules
+ *  -5 existing claim present but unusable (fail-closed, no overwrite)
  */
-const FINALIZE_LUA = `
+export const FINALIZE_LUA = `
 local activeKey = KEYS[1]
 local claimKey = KEYS[2]
-local expectGenId = ARGV[1]
-local expectEpoch = tonumber(ARGV[2])
-local claimJson = ARGV[3]
-local ttl = tonumber(ARGV[4])
-local pageCount = tonumber(ARGV[5])
-local claimId = ARGV[6]
+local expectReportId = ARGV[1]
+local expectGenId = ARGV[2]
+local expectEpoch = tonumber(ARGV[3])
+local claimJson = ARGV[4]
+local ttl = tonumber(ARGV[5])
+local pageCount = tonumber(ARGV[6])
+local claimId = ARGV[7]
+
+if not expectEpoch or not ttl or not pageCount or type(expectReportId) ~= "string"
+  or type(expectGenId) ~= "string" or type(claimId) ~= "string" then
+  return -1
+end
 
 local cur = redis.call("GET", activeKey)
 if cur == false or cur == nil then return -1 end
@@ -106,16 +130,18 @@ end
 -- Always verify fences against requested bindings (idempotent path included).
 for i = 1, pageCount do
   local fenceKey = KEYS[2 + i]
-  local base = 6 + (i - 1) * 4
-  local expectRev = tonumber(ARGV[base + 1])
-  local expectAttempt = ARGV[base + 2]
-  local expectFp = ARGV[base + 3]
-  local expectTask = ARGV[base + 4]
+  local base = 7 + (i - 1) * 5
+  local expectPageId = ARGV[base + 1]
+  local expectRev = tonumber(ARGV[base + 2])
+  local expectAttempt = ARGV[base + 3]
+  local expectFp = ARGV[base + 4]
+  local expectTask = ARGV[base + 5]
   local fcur = redis.call("GET", fenceKey)
   if fcur == false or fcur == nil then return -2 end
   local fok, fence = pcall(cjson.decode, fcur)
   if not fok or not fence then return -2 end
   if fence.status ~= "committed" then return -3 end
+  if fence.page_id ~= expectPageId then return -3 end
   if tonumber(fence.validity_rev) ~= expectRev then return -3 end
   if fence.attempt_id ~= expectAttempt then return -3 end
   if fence.output_fingerprint ~= expectFp then return -3 end
@@ -126,39 +152,56 @@ end
 local existing = redis.call("GET", claimKey)
 if existing ~= false and existing ~= nil then
   local eok, prev = pcall(cjson.decode, existing)
-  if eok and prev and prev.status == "claimed" then
-    -- Same claim_id still requires matching page bindings (no divergent seal).
-    local same = true
-    if tonumber(prev.generation_epoch) ~= expectEpoch or prev.generation_id ~= expectGenId then
-      same = false
-    end
-    if same and type(prev.pages) == "table" and #prev.pages == pageCount then
-      for i = 1, pageCount do
-        local p = prev.pages[i]
-        local base = 6 + (i - 1) * 4
-        local expectRev = tonumber(ARGV[base + 1])
-        local expectAttempt = ARGV[base + 2]
-        local expectFp = ARGV[base + 3]
-        local expectTask = ARGV[base + 4]
-        if not p or tonumber(p.validity_rev) ~= expectRev or p.attempt_id ~= expectAttempt
-          or p.output_fingerprint ~= expectFp or p.task_key ~= expectTask then
-          same = false
-          break
-        end
-      end
-    else
-      same = false
-    end
-    if same then return 2 end
-    return -4
+  if not eok or type(prev) ~= "table" then
+    return -5
   end
+  if prev.status ~= "claimed" then
+    return -5
+  end
+  if type(prev.report_id) ~= "string" or type(prev.generation_id) ~= "string"
+    or prev.claim_id == nil or type(prev.pages) ~= "table" then
+    return -5
+  end
+
+  local same = true
+  if prev.report_id ~= expectReportId then same = false end
+  if tonumber(prev.generation_epoch) ~= expectEpoch or prev.generation_id ~= expectGenId then
+    same = false
+  end
+  if same and #prev.pages == pageCount then
+    for i = 1, pageCount do
+      local p = prev.pages[i]
+      local base = 7 + (i - 1) * 5
+      local expectPageId = ARGV[base + 1]
+      local expectRev = tonumber(ARGV[base + 2])
+      local expectAttempt = ARGV[base + 3]
+      local expectFp = ARGV[base + 4]
+      local expectTask = ARGV[base + 5]
+      if not p or p.page_id ~= expectPageId
+        or tonumber(p.validity_rev) ~= expectRev or p.attempt_id ~= expectAttempt
+        or p.output_fingerprint ~= expectFp or p.task_key ~= expectTask then
+        same = false
+        break
+      end
+    end
+  else
+    same = false
+  end
+
+  -- Same claim_id + same bindings → idempotent.
+  -- Different claim_id + same bindings → return existing seal (no second claim).
+  -- Same claim_id + different bindings → conflict (-4).
+  if same then return 2 end
+  return -4
 end
 
 redis.call("SET", claimKey, claimJson, "EX", ttl)
 return 1
 `;
 
-function mapFinalizeCode(code: number): Batch3Result<"created" | "idempotent"> {
+export function mapFinalizeCode(
+  code: number,
+): Batch3Result<"created" | "idempotent"> {
   if (code === 1) return { ok: true, value: "created" };
   if (code === 2) return { ok: true, value: "idempotent" };
   if (code === -1) {
@@ -187,6 +230,14 @@ function mapFinalizeCode(code: number): Batch3Result<"created" | "idempotent"> {
       ok: false,
       code: "conflict",
       detail: "finalization refused: existing claim with different bindings",
+    };
+  }
+  if (code === -5) {
+    return {
+      ok: false,
+      code: "conflict",
+      detail:
+        "finalization refused: existing claim unusable (fail-closed, no overwrite)",
     };
   }
   return {
@@ -231,6 +282,10 @@ export async function claimFinalization(input: {
   trackBatch3Key(aKey);
   trackBatch3Key(cKey);
 
+  if (beforeClaimAtomicHook) {
+    await beforeClaimAtomicHook();
+  }
+
   if (isMemoryAtomicAvailable()) {
     const ran = runMemoryAtomic((ops) => {
       const active = ops.getJson(aKey) as ActiveGenerationPointer | null;
@@ -271,15 +326,24 @@ export async function claimFinalization(input: {
         }
       }
 
-      const existing = ops.getJson(cKey) as FinalizationClaim | null;
-      if (existing?.status === "claimed") {
-        // Same seal only when report/generation/epoch + all page bindings match.
-        // Same claim_id with divergent bindings must not succeed.
+      const existingRaw = ops.getJson(cKey);
+      const inspect = inspectFinalizationClaimValue(existingRaw);
+      if (inspect.kind === "unusable") {
+        return {
+          ok: false as const,
+          code: "conflict" as const,
+          detail: `existing finalization claim unusable: ${inspect.reason}`,
+        };
+      }
+      if (inspect.kind === "claimed") {
+        const existing = existingRaw as FinalizationClaim;
         if (
+          existing.report_id === input.report_id.trim() &&
           existing.generation_id === input.generation_id.trim() &&
           existing.generation_epoch === input.generation_epoch &&
           bindingsMatch(existing.pages, input.pages)
         ) {
+          // Same or different claim_id with identical bindings → single seal.
           return {
             ok: true as const,
             claim: existing,
@@ -307,6 +371,7 @@ export async function claimFinalization(input: {
     pageFenceKey(input.report_id, input.generation_id, p.page_id),
   );
   const args: string[] = [
+    input.report_id.trim(),
     input.generation_id.trim(),
     String(input.generation_epoch),
     JSON.stringify(claim),
@@ -316,6 +381,7 @@ export async function claimFinalization(input: {
   ];
   for (const p of input.pages) {
     args.push(
+      p.page_id,
       String(p.validity_rev),
       p.attempt_id,
       p.output_fingerprint,

@@ -30,6 +30,8 @@ import {
   readFinalizationClaim,
   readPageFence,
   resetBatch3KeysForTests,
+  setBeforeClaimAtomicHookForTests,
+  setBeforeInvalidateAtomicHookForTests,
   type FinalizationPageBinding,
 } from "@/lib/llm/pro/delivery/decision-report-v2/batch3";
 import { readPageProvenance } from "@/lib/llm/pro/delivery/decision-report-v2/batch3/provenance";
@@ -371,66 +373,195 @@ async function main(): Promise<void> {
     console.log("R5-B ok — invalidation first blocks old finalization");
   }
 
-  // --- C. Contended Promise.all at atomic boundary — at most one success ---
+  // --- C. True barrier race: both ops reach pre-atomic hook before either runs ---
+  // (Ordered A/B tests stay separate; this must NOT be Promise.all without barrier.)
   {
     let bothSucceeded = 0;
     let claimWins = 0;
     let invWins = 0;
+    let bothFailed = 0;
+
     for (let i = 0; i < 40; i++) {
       await cleanup();
       const report_id = `rpt_b3r5_c_${i}`;
       const gen = await boot(report_id, `g_c_${i}`);
       await commitAll(report_id, gen.generation_id, gen.generation_epoch);
-      const { bindings } = await buildBindings(
+      const { bindings, fenceRevs } = await buildBindings(
         report_id,
         gen.generation_id,
         gen.generation_epoch,
       );
+      const fence01Before = fenceRevs.get("01")!;
 
-      // Race the two MemoryKv runAtomic entries directly (not invalidateFromPage
-      // which has async pre-reads that bias scheduling toward claim).
-      const claimP = () =>
-        claimFinalization({
-          report_id,
-          generation_id: gen.generation_id,
-          generation_epoch: gen.generation_epoch,
-          claim_id: randomUUID(),
-          pages: bindings,
-        });
-      const invP = () =>
-        invalidatePageAuthority({
-          report_id,
-          generation_id: gen.generation_id,
-          generation_epoch: gen.generation_epoch,
-          page_id: "01",
-          reason: `r5_c_${i}`,
-        });
+      let claimArrived = false;
+      let invArrived = false;
+      let release!: () => void;
+      const gate = new Promise<void>((r) => {
+        release = r;
+      });
+      const arrived = {
+        claim: null as null | (() => void),
+        inv: null as null | (() => void),
+      };
+      const bothArrived = new Promise<void>((resolve) => {
+        const check = () => {
+          if (claimArrived && invArrived) resolve();
+        };
+        arrived.claim = () => {
+          claimArrived = true;
+          check();
+        };
+        arrived.inv = () => {
+          invArrived = true;
+          check();
+        };
+      });
 
-      const ordered =
-        i % 2 === 0
-          ? await Promise.all([claimP(), invP()])
-          : await Promise.all([invP(), claimP()]);
-      const claimR = i % 2 === 0 ? ordered[0] : ordered[1];
-      const invR = i % 2 === 0 ? ordered[1] : ordered[0];
+      setBeforeClaimAtomicHookForTests(async () => {
+        arrived.claim!();
+        await gate;
+      });
+      setBeforeInvalidateAtomicHookForTests(async () => {
+        arrived.inv!();
+        await gate;
+      });
 
-      if (claimR.ok && invR.ok) bothSucceeded += 1;
-      else if (claimR.ok && !invR.ok) {
-        claimWins += 1;
-        assert.equal(invR.ok ? "" : invR.code, "finalization_locked");
-      } else if (!claimR.ok && invR.ok) {
-        invWins += 1;
-        assert.equal(claimR.ok ? "" : claimR.code, "stale_page");
-      } else {
-        assert.fail(
-          `both failed i=${i} claim=${JSON.stringify(claimR)} inv=${JSON.stringify(invR)}`,
+      try {
+        // Alternate which op starts first so gate waiters resume in both orders.
+        // Both must still arrive at the barrier before either enters runMemoryAtomic.
+        let claimP: ReturnType<typeof claimFinalization>;
+        let invP: ReturnType<typeof invalidatePageAuthority>;
+        if (i % 2 === 0) {
+          claimP = claimFinalization({
+            report_id,
+            generation_id: gen.generation_id,
+            generation_epoch: gen.generation_epoch,
+            claim_id: randomUUID(),
+            pages: bindings,
+          });
+          invP = invalidatePageAuthority({
+            report_id,
+            generation_id: gen.generation_id,
+            generation_epoch: gen.generation_epoch,
+            page_id: "01",
+            reason: `r5_c_${i}`,
+          });
+        } else {
+          invP = invalidatePageAuthority({
+            report_id,
+            generation_id: gen.generation_id,
+            generation_epoch: gen.generation_epoch,
+            page_id: "01",
+            reason: `r5_c_${i}`,
+          });
+          claimP = claimFinalization({
+            report_id,
+            generation_id: gen.generation_id,
+            generation_epoch: gen.generation_epoch,
+            claim_id: randomUUID(),
+            pages: bindings,
+          });
+        }
+
+        await bothArrived;
+        assert.equal(claimArrived, true);
+        assert.equal(invArrived, true);
+
+        // Confirm neither finished before release (still pending at barrier).
+        let claimSettledEarly = false;
+        let invSettledEarly = false;
+        void claimP.then(
+          () => {
+            claimSettledEarly = true;
+          },
+          () => {
+            claimSettledEarly = true;
+          },
         );
+        void invP.then(
+          () => {
+            invSettledEarly = true;
+          },
+          () => {
+            invSettledEarly = true;
+          },
+        );
+        await Promise.resolve();
+        assert.equal(
+          claimSettledEarly,
+          false,
+          "claim must not finish before barrier release",
+        );
+        assert.equal(
+          invSettledEarly,
+          false,
+          "invalidate must not finish before barrier release",
+        );
+
+        // Simultaneous release — both already started; MemoryKv serializes atomics.
+        release();
+        const [claimR, invR] = await Promise.all([claimP, invP]);
+
+        if (claimR.ok && invR.ok) bothSucceeded += 1;
+        else if (claimR.ok && !invR.ok) {
+          claimWins += 1;
+          assert.equal(invR.ok ? "" : invR.code, "finalization_locked");
+          const still = await readFinalizationClaim(
+            report_id,
+            gen.generation_id,
+          );
+          assert.ok(still.ok && still.value?.status === "claimed");
+          const fence = await readPageFence(
+            report_id,
+            gen.generation_id,
+            "01",
+          );
+          assert.equal(fence.value!.status, "committed");
+          assert.equal(fence.value!.validity_rev, fence01Before);
+          const prov = await readPageProvenance(
+            report_id,
+            gen.generation_id,
+            "01",
+          );
+          assert.ok(prov.ok && prov.value && prov.value.stale !== true);
+        } else if (!claimR.ok && invR.ok) {
+          invWins += 1;
+          assert.equal(claimR.ok ? "" : claimR.code, "stale_page");
+          const noClaim = await readFinalizationClaim(
+            report_id,
+            gen.generation_id,
+          );
+          assert.ok(noClaim.ok && noClaim.value == null);
+          const fence = await readPageFence(
+            report_id,
+            gen.generation_id,
+            "01",
+          );
+          assert.equal(fence.value!.status, "stale");
+          assert.ok((fence.value!.validity_rev ?? 0) > fence01Before);
+          const prov = await readPageProvenance(
+            report_id,
+            gen.generation_id,
+            "01",
+          );
+          assert.ok(prov.ok && prov.value?.stale === true);
+        } else {
+          bothFailed += 1;
+          assert.fail(
+            `both failed i=${i} claim=${JSON.stringify(claimR)} inv=${JSON.stringify(invR)}`,
+          );
+        }
+      } finally {
+        setBeforeClaimAtomicHookForTests(null);
+        setBeforeInvalidateAtomicHookForTests(null);
       }
     }
     assert.equal(bothSucceeded, 0, "claim and invalidate must never both succeed");
-    assert.ok(claimWins > 0, "claim should win some races");
-    assert.ok(invWins > 0, "invalidate should win some races");
+    assert.equal(bothFailed, 0, "both-fail must not be treated as mutex success");
+    assert.ok(claimWins > 0, "claim should win some barrier races");
+    assert.ok(invWins > 0, "invalidate should win some barrier races");
     console.log(
-      `R5-C ok — contended races claimWins=${claimWins} invWins=${invWins} both=0`,
+      `R5-C ok — barrier races claimWins=${claimWins} invWins=${invWins} both=0`,
     );
   }
 

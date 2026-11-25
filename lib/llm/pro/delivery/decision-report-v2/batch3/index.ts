@@ -20,7 +20,12 @@ export { writePageProvenance, readPageProvenance } from "./provenance";
 export { listPendingIntents, markIntentFailed, markIntentSent } from "./dispatch-intent";
 export { readActiveGeneration, assertGenerationActive } from "./generation-store";
 export { ensurePageFence, readPageFence } from "./page-fence";
-export { invalidatePageAuthority } from "./invalidation";
+export {
+  invalidatePageAuthority,
+  setBeforeInvalidateAtomicHookForTests,
+  mapInvalidateLuaCode,
+  INVALIDATE_LUA,
+} from "./invalidation";
 export { readAuthorityPageOutput } from "./auth-output";
 export {
   persistPageBlobUnderCommittedFence,
@@ -37,4 +42,9 @@ export {
   claimFinalization,
   readFinalizationClaim,
   finalizationClaimKey,
+  setBeforeClaimAtomicHookForTests,
+  mapFinalizeCode,
+  FINALIZE_LUA,
+  bindingsMatch,
 } from "./finalization";
+export { inspectFinalizationClaimValue } from "./claim-inspect";
