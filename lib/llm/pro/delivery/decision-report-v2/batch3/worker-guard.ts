@@ -44,8 +44,11 @@ export async function fenceAndClaimPageTask(input: {
     page_id: input.page_id,
   });
   if (!reopened.ok && reopened.code !== "stale_page") {
-    // deps_unmet / conflict: fall through to ensure/claim which will refuse stale
-    if (reopened.code !== "deps_unmet" && reopened.code !== "not_found") {
+    // dependency_not_ready / conflict: fall through to ensure/claim which will refuse stale
+    if (
+      reopened.code !== "dependency_not_ready" &&
+      reopened.code !== "not_found"
+    ) {
       return reopened;
     }
   }

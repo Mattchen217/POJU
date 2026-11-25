@@ -605,42 +605,13 @@ export async function markFinalizationDelivering(
   if (!cur.value) {
     return { ok: false, code: "not_found", detail: "no seal to deliver" };
   }
-  const st = cur.value.status;
-  if (st === "delivering" || st === "delivered") {
-    return { ok: true, value: cur.value };
-  }
-  if (st !== "sealed" && st !== "claimed" && st !== "delivery_failed") {
-    return {
-      ok: false,
-      code: "conflict",
-      detail: `cannot start delivery from status=${st}`,
-    };
-  }
-  const epoch = generation_epoch ?? cur.value.generation_epoch;
-  // delivery_failed → finalizing before resume (Claim ↔ Generation closed loop).
-  const gen = await readGeneration(report_id, generation_id);
-  if (!gen.ok) return gen;
-  if (gen.value?.status === "delivery_failed") {
-    const restored = await transitionGenerationStatus({
-      report_id,
-      generation_id,
-      generation_epoch: epoch,
-      to: "finalizing",
-    });
-    if (!restored.ok) return restored;
-  }
-  const next: FinalizationClaim = {
-    ...cur.value,
-    status: "delivering",
-    delivering_at: new Date().toISOString(),
-  };
-  const saved = await casSet(
-    finalizationClaimKey(report_id, generation_id),
-    JSON.stringify(cur.value),
-    next,
-  );
-  if (!saved.ok) return saved;
-  return { ok: true, value: next };
+  const { transitionDeliveryAtomic } = await import("./delivery-transition");
+  return transitionDeliveryAtomic({
+    report_id,
+    generation_id,
+    generation_epoch: generation_epoch ?? cur.value.generation_epoch,
+    to: "delivering",
+  });
 }
 
 export async function markFinalizationDelivered(
@@ -648,50 +619,13 @@ export async function markFinalizationDelivered(
   generation_id: string,
   generation_epoch: number,
 ): Promise<Batch3Result<FinalizationClaim>> {
-  const cur = await readFinalizationClaim(report_id, generation_id);
-  if (!cur.ok) return cur;
-  if (!cur.value) {
-    return { ok: false, code: "not_found", detail: "no seal" };
-  }
-  if (cur.value.status === "delivered") {
-    return { ok: true, value: cur.value };
-  }
-  if (
-    cur.value.status !== "delivering" &&
-    cur.value.status !== "sealed" &&
-    cur.value.status !== "claimed"
-  ) {
-    return {
-      ok: false,
-      code: "conflict",
-      detail: `cannot mark delivered from ${cur.value.status}`,
-    };
-  }
-  const next: FinalizationClaim = {
-    ...cur.value,
-    status: "delivered",
-    delivered_at: new Date().toISOString(),
-  };
-  const saved = await casSet(
-    finalizationClaimKey(report_id, generation_id),
-    JSON.stringify(cur.value),
-    next,
-  );
-  if (!saved.ok) return saved;
-  const genDone = await transitionGenerationStatus({
+  const { transitionDeliveryAtomic } = await import("./delivery-transition");
+  return transitionDeliveryAtomic({
     report_id,
     generation_id,
     generation_epoch,
-    to: "completed",
+    to: "delivered",
   });
-  if (!genDone.ok) {
-    return {
-      ok: false,
-      code: genDone.code,
-      detail: `claim delivered but generation transition failed: ${genDone.detail}`,
-    };
-  }
-  return { ok: true, value: next };
 }
 
 export async function markFinalizationDeliveryFailed(
@@ -700,42 +634,12 @@ export async function markFinalizationDeliveryFailed(
   generation_epoch: number,
   detail: string,
 ): Promise<Batch3Result<FinalizationClaim>> {
-  const cur = await readFinalizationClaim(report_id, generation_id);
-  if (!cur.ok) return cur;
-  if (!cur.value) {
-    return { ok: false, code: "not_found", detail: "no seal" };
-  }
-  if (cur.value.status === "delivered") {
-    return {
-      ok: false,
-      code: "conflict",
-      detail: "already delivered",
-    };
-  }
-  const next: FinalizationClaim = {
-    ...cur.value,
-    status: "delivery_failed",
-    delivery_failed_at: new Date().toISOString(),
-    delivery_detail: detail,
-  };
-  const saved = await casSet(
-    finalizationClaimKey(report_id, generation_id),
-    JSON.stringify(cur.value),
-    next,
-  );
-  if (!saved.ok) return saved;
-  const genFail = await transitionGenerationStatus({
+  const { transitionDeliveryAtomic } = await import("./delivery-transition");
+  return transitionDeliveryAtomic({
     report_id,
     generation_id,
     generation_epoch,
     to: "delivery_failed",
+    detail,
   });
-  if (!genFail.ok) {
-    return {
-      ok: false,
-      code: genFail.code,
-      detail: `claim delivery_failed but generation transition failed: ${genFail.detail}`,
-    };
-  }
-  return { ok: true, value: next };
 }

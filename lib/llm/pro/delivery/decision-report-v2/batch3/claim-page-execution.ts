@@ -97,6 +97,14 @@ if active.generation_id ~= expectGenId or tonumber(active.generation_epoch) ~= e
   return -1
 end
 
+local tcur = redis.call("GET", taskKvKey)
+if tcur == false or tcur == nil then return -2 end
+local tok, task = pcall(cjson.decode, tcur)
+if not tok or not task then return -2 end
+-- completed before fence gate so post-commit reclaim maps to already_completed
+if task.status == "completed" then return -4 end
+if task.status == "stale" or task.status == "superseded" then return -3 end
+
 local fcur = redis.call("GET", fenceKey)
 if fcur == false or fcur == nil then return -8 end
 local fok, fence = pcall(cjson.decode, fcur)
@@ -109,13 +117,6 @@ if tonumber(fence.generation_epoch) ~= expectEpoch then return -1 end
 if fence.status == "claimed" and fence.task_key ~= nil and fence.task_key ~= expectTaskKey then
   return -15
 end
-
-local tcur = redis.call("GET", taskKvKey)
-if tcur == false or tcur == nil then return -2 end
-local tok, task = pcall(cjson.decode, tcur)
-if not tok or not task then return -2 end
-if task.status == "completed" then return -4 end
-if task.status == "stale" or task.status == "superseded" then return -3 end
 
 local lease_is_expired = __batch3_lease_expired(task, __now_ms)
 if task.status == "running" and task.attempt_id and not lease_is_expired then
@@ -154,6 +155,15 @@ redis.call("SET", taskKvKey, cjson.encode(task), "EX", ttl)
 return 1
 `;
 
+let beforePageClaimAtomicHook: (() => Promise<void>) | null = null;
+
+/** Test-only: run after identity resolution, immediately before Memory/Redis atomic claim. */
+export function setBeforePageClaimAtomicHookForTests(
+  hook: (() => Promise<void>) | null,
+): void {
+  beforePageClaimAtomicHook = hook;
+}
+
 export async function claimPageExecution(input: {
   report_id: string;
   generation_id: string;
@@ -164,6 +174,12 @@ export async function claimPageExecution(input: {
   upstream_output_fingerprints: ReportUpstreamOutputFingerprints;
   worker_id: string;
   lease_ms?: number;
+  /** When set (e.g. claimTask compat), identity versions come from the queued Task. */
+  page_contract_version?: string;
+  prompt_version?: string;
+  validator_version?: string;
+  /** Optional caller-expected task_key; mismatch → task_conflict (fail-closed). */
+  expect_task_key?: string;
 }): Promise<
   Batch3Result<{
     task: TaskRecord;
@@ -183,16 +199,78 @@ export async function claimPageExecution(input: {
   trackBatch3Key(cKey);
   trackBatch3Key(aKey);
 
+  // Finalization lock is authoritative even when fence is committed —
+  // prefer finalization_locked over stale_page for sealed generations.
+  const claimPre = await kvGet(cKey);
+  if (!claimPre.ok) return claimPre;
+  {
+    const lock = inspectFinalizationLock(claimPre.value);
+    if (lock.kind === "locked") {
+      return {
+        ok: false,
+        code: "finalization_locked",
+        detail: "claim refused: finalization locks page content",
+      };
+    }
+    if (lock.kind === "unusable") {
+      return { ok: false, code: "conflict", detail: lock.reason };
+    }
+  }
+
   const fenceRead = await kvGet<PageFence>(fKey);
   if (!fenceRead.ok) return fenceRead;
   if (!fenceRead.value) {
     return { ok: false, code: "not_found", detail: "fence missing — ensure first" };
   }
-  if (fenceRead.value.status === "stale") {
+
+  const validity_rev = fenceRead.value.validity_rev;
+  const def = reportPageDefinition(input.page_id);
+  const page_contract_version =
+    input.page_contract_version ?? def.production_version;
+  const prompt_version = input.prompt_version ?? def.prompt_version;
+  const validator_version = input.validator_version ?? def.validator_version;
+  const task_key = computeTaskKey({
+    report_id: input.report_id,
+    generation_id: input.generation_id,
+    generation_epoch: input.generation_epoch,
+    page_id: input.page_id,
+    validity_rev,
+    input_fingerprint: input.input_fingerprint,
+    upstream_output_fingerprints: input.upstream_output_fingerprints,
+    page_contract_version,
+    prompt_version,
+    validator_version,
+    task_type: input.task_type,
+  });
+  if (input.expect_task_key && input.expect_task_key !== task_key) {
+    return {
+      ok: false,
+      code: "task_conflict",
+      detail: `computed task_key mismatch vs expect_task_key (rev=${validity_rev})`,
+    };
+  }
+  const tKey = taskKeyPath(input.report_id, input.generation_id, task_key);
+  trackBatch3Key(tKey);
+
+  // Ensure task record exists (CAS create if absent). Completed tasks stay —
+  // claim must observe already_completed rather than recreating.
+  const existingTask = await kvGet<TaskRecord>(tKey);
+  if (!existingTask.ok) return existingTask;
+  if (existingTask.value?.status === "completed") {
+    return {
+      ok: false,
+      code: "already_completed",
+      detail: "task completed",
+    };
+  }
+  if (
+    fenceRead.value.status === "stale" ||
+    fenceRead.value.status === "committed"
+  ) {
     return {
       ok: false,
       code: "stale_page",
-      detail: `page ${input.page_id} fence stale rev=${fenceRead.value.validity_rev}`,
+      detail: `page ${input.page_id} fence ${fenceRead.value.status} rev=${fenceRead.value.validity_rev}`,
     };
   }
   if (
@@ -205,28 +283,6 @@ export async function claimPageExecution(input: {
       detail: `fence status=${fenceRead.value.status} — need open/claimed for claim`,
     };
   }
-
-  const validity_rev = fenceRead.value.validity_rev;
-  const def = reportPageDefinition(input.page_id);
-  const task_key = computeTaskKey({
-    report_id: input.report_id,
-    generation_id: input.generation_id,
-    generation_epoch: input.generation_epoch,
-    page_id: input.page_id,
-    validity_rev,
-    input_fingerprint: input.input_fingerprint,
-    upstream_output_fingerprints: input.upstream_output_fingerprints,
-    page_contract_version: def.production_version,
-    prompt_version: def.prompt_version,
-    validator_version: def.validator_version,
-    task_type: input.task_type,
-  });
-  const tKey = taskKeyPath(input.report_id, input.generation_id, task_key);
-  trackBatch3Key(tKey);
-
-  // Ensure task record exists (CAS create if absent).
-  const existingTask = await kvGet<TaskRecord>(tKey);
-  if (!existingTask.ok) return existingTask;
   if (!existingTask.value) {
     const now = batch3NowIso();
     const queued: TaskRecord = {
@@ -244,9 +300,9 @@ export async function claimPageExecution(input: {
       validity_rev,
       input_fingerprint: input.input_fingerprint,
       upstream_output_fingerprints: input.upstream_output_fingerprints,
-      page_contract_version: def.production_version,
-      prompt_version: def.prompt_version,
-      validator_version: def.validator_version,
+      page_contract_version,
+      prompt_version,
+      validator_version,
       created_at: now,
       updated_at: now,
     };
@@ -259,6 +315,10 @@ export async function claimPageExecution(input: {
   const nowMs = batch3NowMs();
   const nowIso = batch3NowIso();
   const attempt_id = randomUUID();
+
+  if (beforePageClaimAtomicHook) {
+    await beforePageClaimAtomicHook();
+  }
 
   if (isMemoryAtomicAvailable()) {
     const ran = runMemoryAtomic((ops) => {
@@ -288,6 +348,29 @@ export async function claimPageExecution(input: {
           ok: false as const,
           code: "stale_generation" as const,
           detail: "active mismatch at page claim",
+        };
+      }
+
+      const task = ops.getJson(tKey) as TaskRecord | null;
+      if (!task) {
+        return {
+          ok: false as const,
+          code: "not_found" as const,
+          detail: "task missing",
+        };
+      }
+      if (task.status === "completed") {
+        return {
+          ok: false as const,
+          code: "already_completed" as const,
+          detail: "task completed",
+        };
+      }
+      if (task.status === "stale" || task.status === "superseded") {
+        return {
+          ok: false as const,
+          code: "stale_attempt" as const,
+          detail: `task ${task.status}`,
         };
       }
 
@@ -329,29 +412,6 @@ export async function claimPageExecution(input: {
           ok: false as const,
           code: "task_conflict" as const,
           detail: `fence bound to task_key=${fence.task_key}`,
-        };
-      }
-
-      const task = ops.getJson(tKey) as TaskRecord | null;
-      if (!task) {
-        return {
-          ok: false as const,
-          code: "not_found" as const,
-          detail: "task missing",
-        };
-      }
-      if (task.status === "completed") {
-        return {
-          ok: false as const,
-          code: "already_completed" as const,
-          detail: "task completed",
-        };
-      }
-      if (task.status === "stale" || task.status === "superseded") {
-        return {
-          ok: false as const,
-          code: "stale_attempt" as const,
-          detail: `task ${task.status}`,
         };
       }
 
@@ -496,3 +556,5 @@ export async function claimPageExecution(input: {
     detail: `claimPageExecution lua=${code}`,
   };
 }
+
+export const claimPageExecutionAtomic = claimPageExecution;

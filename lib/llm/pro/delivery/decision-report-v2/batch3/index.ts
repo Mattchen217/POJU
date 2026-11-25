@@ -34,7 +34,25 @@ export {
   readPageFence,
   REOPEN_LUA,
   mapReopenLuaCode,
+  reopenStaleFenceIfReady,
+  reopenStaleFenceAtomic,
 } from "./page-fence";
+export {
+  applyCascadeTargetAtomic,
+  APPLY_CASCADE_TARGET_LUA,
+} from "./apply-cascade-target";
+export {
+  transitionDeliveryAtomic,
+  DELIVERY_TRANSITION_LUA,
+} from "./delivery-transition";
+export {
+  claimPageExecutionAtomic,
+  setBeforePageClaimAtomicHookForTests,
+} from "./claim-page-execution";
+export {
+  buildFrozenCascadeTargets,
+  planCascadePageIds,
+} from "./cascade-operation";
 export {
   invalidatePageAuthority,
   invalidatePageAuthorityForCascade,

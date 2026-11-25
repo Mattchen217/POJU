@@ -781,11 +781,14 @@ export async function continueCascadeOperation(input: {
   }
 
   let op = loaded.value;
+  const targetCompleted = (t: (typeof op.targets)[number]) =>
+    t.status === "completed" || t.done === true;
+
   if (op.status === "completed") {
     return {
       ok: true,
       value: {
-        invalidated: op.targets.filter((t) => t.done).map((t) => t.page_id),
+        invalidated: op.targets.filter(targetCompleted).map((t) => t.page_id),
         operation_id: op.operation_id,
         cascade_status: "completed",
       },
@@ -797,35 +800,16 @@ export async function continueCascadeOperation(input: {
     return { ok: false, code: "not_found", detail: "job missing for cascade" };
   }
 
+  const { applyCascadeTargetAtomic } = await import("./apply-cascade-target");
   const invalidated: ReportPageId[] = [];
-  const prevJson = JSON.stringify(op);
 
-  for (let i = 0; i < op.targets.length; i++) {
-    const target = op.targets[i]!;
-    if (target.done) {
+  for (const target of op.targets) {
+    if (targetCompleted(target)) {
       invalidated.push(target.page_id);
       continue;
     }
 
-    const satisfied = await isCascadeTargetSatisfied({
-      report_id: input.report_id,
-      generation_id: input.generation_id,
-      target,
-    });
-    if (!satisfied.ok) return satisfied;
-    if (satisfied.value) {
-      op = {
-        ...op,
-        targets: op.targets.map((t, idx) =>
-          idx === i ? { ...t, done: true } : t,
-        ),
-        updated_at: new Date().toISOString(),
-      };
-      invalidated.push(target.page_id);
-      continue;
-    }
-
-    const auth = await invalidatePageAuthorityForCascade({
+    const applied = await applyCascadeTargetAtomic({
       report_id: input.report_id,
       generation_id: input.generation_id,
       generation_epoch: op.generation_epoch,
@@ -835,22 +819,27 @@ export async function continueCascadeOperation(input: {
       target_rev: target.target_rev,
       operation_id: op.operation_id,
     });
-    if (!auth.ok) {
+    if (!applied.ok) {
+      const prevJson = JSON.stringify(op);
       op = {
         ...op,
         status: "failed_recoverable",
-        failure_detail: `${auth.code}:${auth.detail}`,
+        failure_detail: `${applied.code}:${applied.detail}`,
         updated_at: new Date().toISOString(),
       };
       await saveCascadeOperation(op, prevJson);
-      if (auth.code === "revision_conflict") {
+      if (applied.code === "revision_conflict") {
         return {
           ok: false,
           code: "cascade_incomplete",
           detail: op.failure_detail ?? "cascade target rev mismatch",
         };
       }
-      return auth;
+      return applied;
+    }
+
+    if (applied.value.operation) {
+      op = applied.value.operation;
     }
 
     updatePageState(job, target.page_id, {
@@ -859,28 +848,16 @@ export async function continueCascadeOperation(input: {
       applicability_status: target.page_id === "07" ? null : undefined,
     });
     delete job.page_outputs[target.page_id];
-    bindPageValidityRev(job, target.page_id, auth.value.validity_rev, null);
-
-    op = {
-      ...op,
-      targets: op.targets.map((t, idx) =>
-        idx === i ? { ...t, done: true } : t,
-      ),
-      updated_at: new Date().toISOString(),
-    };
+    bindPageValidityRev(
+      job,
+      target.page_id,
+      applied.value.validity_rev >= 0
+        ? applied.value.validity_rev
+        : target.target_rev,
+      null,
+    );
     invalidated.push(target.page_id);
   }
-
-  const allDone = op.targets.every((t) => t.done);
-  op = {
-    ...op,
-    status: allDone ? "completed" : "running",
-    updated_at: new Date().toISOString(),
-    failure_detail: allDone ? null : op.failure_detail,
-  };
-
-  const savedOp = await saveCascadeOperation(op, prevJson);
-  if (!savedOp.ok) return savedOp;
 
   const saved = await saveJob(job);
   if (!saved.ok) {

@@ -48,6 +48,16 @@ function taskKeyPath(
   return `report-batch3:${report_id.trim()}:${generation_id.trim()}:task:${task_key}`;
 }
 
+/** Missing lease fields ≡ expired (fail-closed). */
+function leaseExpired(task: TaskRecord, nowMs: number): boolean {
+  const hasMs = typeof task.lease_expires_ms === "number";
+  const hasAt = Boolean(task.lease_expires_at);
+  if (!hasMs && !hasAt) return true;
+  if (hasMs && (task.lease_expires_ms as number) <= nowMs) return true;
+  if (hasAt && Date.parse(task.lease_expires_at as string) <= nowMs) return true;
+  return false;
+}
+
 function provKey(
   report_id: string,
   generation_id: string,
@@ -100,14 +110,9 @@ if task.status == "stale" or task.status == "superseded" then return -3 end
 if task.status ~= "running" and task.status ~= "repair_pending" then return -5 end
 if tonumber(task.validity_rev) ~= expectRev then return -6 end
 if task.input_fingerprint ~= expectInputFp then return -7 end
+-- Strict lease: missing/corrupt/expired lease on running task → refuse (fail-closed).
 if task.status == "running" or task.status == "repair_pending" then
-  if __batch3_lease_expired(task, __now_ms) then
-    local exp_ms = task.lease_expires_ms
-    local has_ms = exp_ms ~= nil and type(exp_ms) == "number"
-    local exp_at = task.lease_expires_at
-    local has_at = exp_at ~= nil and exp_at ~= cjson.null
-    if has_ms or has_at then return -14 end
-  end
+  if __batch3_lease_expired(task, __now_ms) then return -14 end
 end
 
 local fcur = redis.call("GET", fenceKey)
@@ -301,19 +306,15 @@ function commitAuthorityMemory(input: {
       };
     }
     const nowCommit = batch3NowMs();
-    const hasMs = typeof task.lease_expires_ms === "number";
-    const hasAt = Boolean(task.lease_expires_at);
-    const leaseExpiredAtCommit =
-      (hasMs && (task.lease_expires_ms as number) <= nowCommit) ||
-      (hasAt && Date.parse(task.lease_expires_at as string) <= nowCommit);
+    // Strict: missing lease fields ≡ expired (fail-closed).
     if (
       (task.status === "running" || task.status === "repair_pending") &&
-      leaseExpiredAtCommit
+      leaseExpired(task, nowCommit)
     ) {
       return {
         ok: false as const,
         code: "lease_expired" as const,
-        detail: "task lease expired at commit",
+        detail: "task lease missing or expired at commit",
       };
     }
     if (task.validity_rev !== input.validity_rev) {

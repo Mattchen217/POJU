@@ -99,6 +99,7 @@ export async function buildFrozenCascadeTargets(input: {
       page_id,
       expected_old_rev,
       target_rev: expected_old_rev + 1,
+      status: "pending",
       done: false,
     });
   }

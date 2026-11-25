@@ -150,6 +150,8 @@ export type CascadePageTarget = {
   page_id: ReportPageId;
   expected_old_rev: number;
   target_rev: number;
+  /** Prefer status; done kept for read-compat (true ≡ completed). */
+  status: "pending" | "completed";
   done: boolean;
 };
 
@@ -193,6 +195,7 @@ export type Batch3FailCode =
   | "generation_inactive"
   | "invalid_state"
   | "cascade_incomplete"
+  | "dependency_not_ready"
   | "limit_reached"
   | "job_missing";
 
