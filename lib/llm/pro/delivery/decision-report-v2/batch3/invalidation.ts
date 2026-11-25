@@ -152,6 +152,104 @@ end
 return nextRev
 `;
 
+/**
+ * Lua: KEYS[1]=claim, KEYS[2]=fence, KEYS[3]=prov
+ * ARGV[1..7] same as INVALIDATE_LUA; ARGV[8]=expectedOldRev, ARGV[9]=targetRev
+ *
+ * Returns: targetRev on success; -20 revision_conflict when fence rev ≠ expectedOldRev
+ */
+export const CASCADE_INVALIDATE_LUA = `
+local claimKey = KEYS[1]
+local fenceKey = KEYS[2]
+local provKey = KEYS[3]
+local reportId = ARGV[1]
+local genId = ARGV[2]
+local epoch = tonumber(ARGV[3])
+local pageId = ARGV[4]
+local reason = ARGV[5]
+local nowIso = ARGV[6]
+local ttl = tonumber(ARGV[7])
+local expectedOldRev = tonumber(ARGV[8])
+local targetRev = tonumber(ARGV[9])
+if not epoch or not ttl or type(reportId) ~= "string" or type(genId) ~= "string"
+  or expectedOldRev == nil or targetRev == nil then
+  return -12
+end
+
+local claimCur = redis.call("GET", claimKey)
+${FINALIZATION_LOCK_LUA_SNIPPET}
+if __fin_lock == -10 then return -10 end
+if __fin_lock == -13 then return -13 end
+
+local fcur = redis.call("GET", fenceKey)
+local curRev = 0
+local curTask = nil
+if fcur ~= false and fcur ~= nil then
+  local fok, fence = pcall(cjson.decode, fcur)
+  if not fok or not fence then return -11 end
+  curRev = tonumber(fence.validity_rev) or 0
+  curTask = fence.task_key
+end
+if curRev ~= expectedOldRev then
+  return -20
+end
+
+local nextRev = targetRev
+
+local nextFence = {
+  report_id = reportId,
+  generation_id = genId,
+  generation_epoch = epoch,
+  page_id = pageId,
+  validity_rev = nextRev,
+  status = "stale",
+  attempt_id = cjson.null,
+  task_key = cjson.null,
+  input_fingerprint = cjson.null,
+  upstream_output_fingerprints = cjson.null,
+  output_fingerprint = cjson.null,
+  updated_at = nowIso
+}
+redis.call("SET", fenceKey, cjson.encode(nextFence), "EX", ttl)
+
+local boundTask = nil
+if curTask ~= nil and curTask ~= cjson.null and type(curTask) == "string" then
+  boundTask = curTask
+end
+
+local pcur = redis.call("GET", provKey)
+if pcur ~= false and pcur ~= nil then
+  local pok, prov = pcall(cjson.decode, pcur)
+  if pok and prov then
+    prov.stale = true
+    prov.stale_reason = reason
+    prov.validity_rev = nextRev
+    redis.call("SET", provKey, cjson.encode(prov), "EX", ttl)
+    if prov.task_key and type(prov.task_key) == "string" then
+      boundTask = prov.task_key
+    end
+  end
+end
+
+if boundTask then
+  local taskKey = "report-batch3:" .. reportId .. ":" .. genId .. ":task:" .. boundTask
+  local tcur = redis.call("GET", taskKey)
+  if tcur ~= false and tcur ~= nil then
+    local tok, task = pcall(cjson.decode, tcur)
+    if tok and task and task.status ~= "superseded" then
+      task.status = "stale"
+      task.lease_expires_at = cjson.null
+      task.updated_at = nowIso
+      task.failure_detail = reason
+      task.validity_rev = nextRev
+      redis.call("SET", taskKey, cjson.encode(task), "EX", ttl)
+    end
+  end
+end
+
+return nextRev
+`;
+
 export function mapInvalidateLuaCode(
   code: number,
 ): Batch3Result<{ validity_rev: number }> {
@@ -185,6 +283,13 @@ export function mapInvalidateLuaCode(
       code: "conflict",
       detail:
         "invalidation refused: finalization claim present but unusable (fail-closed)",
+    };
+  }
+  if (code === -20) {
+    return {
+      ok: false,
+      code: "revision_conflict",
+      detail: "cascade invalidation: fence validity_rev ≠ expected_old_rev",
     };
   }
   return {
@@ -359,6 +464,181 @@ export async function invalidatePageAuthority(input: {
       ok: false,
       code: "conflict",
       detail: `invalidation non-numeric lua=${String(evaled.value)}`,
+    };
+  }
+  return mapInvalidateLuaCode(code);
+}
+
+function staleCascadeTaskInOps(
+  ops: Parameters<Parameters<typeof runMemoryAtomic>[0]>[0],
+  input: {
+    report_id: string;
+    generation_id: string;
+    reason: string;
+    nextRev: number;
+    now: string;
+  },
+  task_key: string | null | undefined,
+): void {
+  if (!task_key) return;
+  const tKey = taskKeyPath(input.report_id, input.generation_id, task_key);
+  trackBatch3Key(tKey);
+  const task = ops.getJson(tKey) as TaskRecord | null;
+  if (task && task.status !== "superseded") {
+    ops.setJson(tKey, {
+      ...task,
+      status: "stale",
+      lease_expires_at: null,
+      updated_at: input.now,
+      failure_detail: input.reason,
+      validity_rev: input.nextRev,
+    });
+  }
+}
+
+/**
+ * Cascade invalidation — atomically binds expected_old_rev → target_rev (no GET→bump gap).
+ */
+export async function invalidatePageAuthorityForCascade(input: {
+  report_id: string;
+  generation_id: string;
+  generation_epoch: number;
+  page_id: ReportPageId;
+  reason: string;
+  expected_old_rev: number;
+  target_rev: number;
+  operation_id: string;
+}): Promise<Batch3Result<{ validity_rev: number }>> {
+  const fKey = pageFenceKey(input.report_id, input.generation_id, input.page_id);
+  const pKey = provKey(input.report_id, input.generation_id, input.page_id);
+  const cKey = finalizationClaimKey(input.report_id, input.generation_id);
+  trackBatch3Key(fKey);
+  trackBatch3Key(pKey);
+  trackBatch3Key(cKey);
+
+  if (beforeInvalidateAtomicHook) {
+    await beforeInvalidateAtomicHook();
+  }
+
+  if (isMemoryAtomicAvailable()) {
+    const ran = runMemoryAtomic((ops) => {
+      const claimRaw = ops.getJson(cKey);
+      const lock = inspectFinalizationLock(claimRaw);
+      if (lock.kind === "locked") {
+        return {
+          ok: false as const,
+          code: "finalization_locked" as const,
+          detail:
+            "invalidation refused: finalization locks page content",
+        };
+      }
+      if (lock.kind === "unusable") {
+        return {
+          ok: false as const,
+          code: "conflict" as const,
+          detail: `invalidation refused: ${lock.reason}`,
+        };
+      }
+
+      const now = new Date().toISOString();
+      const cur = ops.getJson(fKey) as PageFence | null;
+      const curRev = cur?.validity_rev ?? 0;
+      if (curRev !== input.expected_old_rev) {
+        return {
+          ok: false as const,
+          code: "revision_conflict" as const,
+          detail: `fence rev=${curRev} expected_old=${input.expected_old_rev}`,
+        };
+      }
+
+      const nextRev = input.target_rev;
+      const fence: PageFence = {
+        report_id: input.report_id.trim(),
+        generation_id: input.generation_id.trim(),
+        generation_epoch: input.generation_epoch,
+        page_id: input.page_id,
+        validity_rev: nextRev,
+        status: "stale",
+        attempt_id: null,
+        task_key: null,
+        input_fingerprint: null,
+        upstream_output_fingerprints: null,
+        output_fingerprint: null,
+        updated_at: now,
+      };
+      ops.setJson(fKey, fence);
+
+      const prov = ops.getJson(pKey) as PageProvenance | null;
+      if (prov) {
+        ops.setJson(pKey, {
+          ...prov,
+          stale: true,
+          stale_reason: input.reason,
+          validity_rev: nextRev,
+        });
+        staleCascadeTaskInOps(
+          ops,
+          {
+            report_id: input.report_id,
+            generation_id: input.generation_id,
+            reason: input.reason,
+            nextRev,
+            now,
+          },
+          prov.task_key,
+        );
+      } else if (cur?.task_key) {
+        staleCascadeTaskInOps(
+          ops,
+          {
+            report_id: input.report_id,
+            generation_id: input.generation_id,
+            reason: input.reason,
+            nextRev,
+            now,
+          },
+          cur.task_key,
+        );
+      }
+
+      return { ok: true as const, validity_rev: nextRev };
+    });
+    if (!ran.ok) return ran;
+    if (!ran.value.ok) {
+      return { ok: false, code: ran.value.code, detail: ran.value.detail };
+    }
+    return { ok: true, value: { validity_rev: ran.value.validity_rev } };
+  }
+
+  const now = new Date().toISOString();
+  const evaled = await evalTxn(
+    CASCADE_INVALIDATE_LUA,
+    [cKey, fKey, pKey],
+    [
+      input.report_id.trim(),
+      input.generation_id.trim(),
+      String(input.generation_epoch),
+      input.page_id,
+      input.reason,
+      now,
+      String(ttlSeconds()),
+      String(input.expected_old_rev),
+      String(input.target_rev),
+    ],
+  );
+  if (!evaled.ok) {
+    return {
+      ok: false,
+      code: evaled.code,
+      detail: `cascade invalidation lua failed: ${evaled.detail}`,
+    };
+  }
+  const code = Number(evaled.value);
+  if (!Number.isFinite(code)) {
+    return {
+      ok: false,
+      code: "conflict",
+      detail: `cascade invalidation non-numeric lua=${String(evaled.value)}`,
     };
   }
   return mapInvalidateLuaCode(code);
@@ -545,34 +825,15 @@ export async function continueCascadeOperation(input: {
       continue;
     }
 
-    // Only bump when fence is still at expected_old_rev (or absent at 0).
-    const curFence = await kvGet<PageFence>(
-      pageFenceKey(input.report_id, input.generation_id, target.page_id),
-    );
-    if (!curFence.ok) return curFence;
-    const curRev = curFence.value?.validity_rev ?? 0;
-    if (curRev !== target.expected_old_rev) {
-      op = {
-        ...op,
-        status: "failed_recoverable",
-        failure_detail: `page ${target.page_id} rev=${curRev} expected_old=${target.expected_old_rev}`,
-        updated_at: new Date().toISOString(),
-      };
-      const failed = await saveCascadeOperation(op, prevJson);
-      if (!failed.ok) return failed;
-      return {
-        ok: false,
-        code: "cascade_incomplete",
-        detail: op.failure_detail ?? "cascade target rev mismatch",
-      };
-    }
-
-    const auth = await invalidatePageAuthority({
+    const auth = await invalidatePageAuthorityForCascade({
       report_id: input.report_id,
       generation_id: input.generation_id,
       generation_epoch: op.generation_epoch,
       page_id: target.page_id,
       reason: `${op.reason} (cascade ${op.operation_id} from ${op.source_page_id})`,
+      expected_old_rev: target.expected_old_rev,
+      target_rev: target.target_rev,
+      operation_id: op.operation_id,
     });
     if (!auth.ok) {
       op = {
@@ -582,22 +843,14 @@ export async function continueCascadeOperation(input: {
         updated_at: new Date().toISOString(),
       };
       await saveCascadeOperation(op, prevJson);
+      if (auth.code === "revision_conflict") {
+        return {
+          ok: false,
+          code: "cascade_incomplete",
+          detail: op.failure_detail ?? "cascade target rev mismatch",
+        };
+      }
       return auth;
-    }
-
-    if (auth.value.validity_rev !== target.target_rev) {
-      op = {
-        ...op,
-        status: "failed_recoverable",
-        failure_detail: `page ${target.page_id} bumped to ${auth.value.validity_rev} want ${target.target_rev}`,
-        updated_at: new Date().toISOString(),
-      };
-      await saveCascadeOperation(op, prevJson);
-      return {
-        ok: false,
-        code: "cascade_incomplete",
-        detail: op.failure_detail ?? "target_rev mismatch after invalidate",
-      };
     }
 
     updatePageState(job, target.page_id, {

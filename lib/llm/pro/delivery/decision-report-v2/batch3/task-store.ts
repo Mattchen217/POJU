@@ -5,7 +5,21 @@
 import { randomUUID } from "node:crypto";
 
 import type { ReportPageId, ReportUpstreamOutputFingerprints } from "../orchestration/types";
-import { casSet, isBatch3SharedStoreAvailable, kvGet, kvUnavailable } from "./kv-cas";
+import {
+  REDIS_LEASE_EXPIRED_LUA_SNIPPET,
+  REDIS_TIME_LUA_SNIPPET,
+  batch3NowIso,
+  batch3NowMs,
+} from "./clock";
+import {
+  casSet,
+  evalTxn,
+  isBatch3SharedStoreAvailable,
+  isMemoryAtomicAvailable,
+  kvGet,
+  kvUnavailable,
+  ttlSeconds,
+} from "./kv-cas";
 import type { Batch3Result, TaskRecord, TaskStatus, TaskType } from "./types";
 import { DEFAULT_TASK_LEASE_MS } from "./types";
 
@@ -18,9 +32,41 @@ function taskKeyPath(
 }
 
 function leaseExpired(task: TaskRecord, nowMs: number): boolean {
-  if (!task.lease_expires_at) return true;
-  return Date.parse(task.lease_expires_at) <= nowMs;
+  const hasMs = typeof task.lease_expires_ms === "number";
+  const hasAt = Boolean(task.lease_expires_at);
+  if (!hasMs && !hasAt) return true;
+  if (hasMs && (task.lease_expires_ms as number) <= nowMs) return true;
+  if (hasAt && Date.parse(task.lease_expires_at as string) <= nowMs) return true;
+  return false;
 }
+
+/** Redis renew: authoritative lease via TIME (not client nowMs). */
+const RENEW_LEASE_LUA = `
+${REDIS_TIME_LUA_SNIPPET}
+${REDIS_LEASE_EXPIRED_LUA_SNIPPET}
+local taskKey = KEYS[1]
+local expectAttempt = ARGV[1]
+local leaseMs = tonumber(ARGV[2])
+local ttl = tonumber(ARGV[3])
+local displayNowIso = ARGV[4]
+
+local tcur = redis.call("GET", taskKey)
+if tcur == false or tcur == nil then return -2 end
+local tok, task = pcall(cjson.decode, tcur)
+if not tok or not task then return -2 end
+if task.attempt_id ~= expectAttempt then return -3 end
+if task.status ~= "running" then return -5 end
+if __batch3_lease_expired(task, __now_ms) then
+  return -14
+end
+
+local lease_expires_ms = __now_ms + leaseMs
+task.lease_expires_ms = lease_expires_ms
+task.lease_expires_at = tostring(lease_expires_ms)
+task.updated_at = displayNowIso
+redis.call("SET", taskKey, cjson.encode(task), "EX", ttl)
+return 1
+`;
 
 export async function readTask(
   report_id: string,
@@ -97,6 +143,8 @@ export async function claimTask(input: {
   const key = taskKeyPath(input.report_id, input.generation_id, input.task_key);
   const leaseMs = input.lease_ms ?? DEFAULT_TASK_LEASE_MS;
 
+  const { pageFenceKey } = await import("./page-fence");
+
   for (let i = 0; i < 6; i += 1) {
     const cur = await kvGet<TaskRecord>(key);
     if (!cur.ok) return cur;
@@ -118,11 +166,11 @@ export async function claimTask(input: {
       // allow new attempt from failed
     }
 
-    const now = Date.now();
+    const nowMs = batch3NowMs();
     if (
       task.status === "running" &&
       task.attempt_id &&
-      !leaseExpired(task, now)
+      !leaseExpired(task, nowMs)
     ) {
       return {
         ok: false,
@@ -131,14 +179,26 @@ export async function claimTask(input: {
       };
     }
 
+    const fKey = pageFenceKey(input.report_id, input.generation_id, task.page_id);
+    const fence = await kvGet<import("./types").PageFence>(fKey);
+    if (fence.ok && fence.value?.task_key && fence.value.task_key !== input.task_key) {
+      return {
+        ok: false,
+        code: "task_conflict",
+        detail: `fence bound to task_key=${fence.value.task_key}`,
+      };
+    }
+
     const attempt_id = randomUUID();
+    const lease_expires_ms = nowMs + leaseMs;
     const next: TaskRecord = {
       ...task,
       status: "running",
       attempt_id,
       worker_id: input.worker_id,
-      lease_expires_at: new Date(now + leaseMs).toISOString(),
-      updated_at: new Date().toISOString(),
+      lease_expires_at: new Date(lease_expires_ms).toISOString(),
+      lease_expires_ms,
+      updated_at: batch3NowIso(),
       failure_detail: null,
       validity_rev:
         typeof input.validity_rev === "number"
@@ -151,32 +211,28 @@ export async function claimTask(input: {
       return saved;
     }
 
-    // Bind Fence → claimed with same attempt (compat path for tests / legacy callers).
-    // Production Workers should prefer claimPageExecution (atomic Task+Fence).
-    // Also rebind on lease reclaim when fence was already claimed by expired attempt.
-    const { pageFenceKey } = await import("./page-fence");
-    const fKey = pageFenceKey(input.report_id, input.generation_id, task.page_id);
-    const fence = await kvGet<import("./types").PageFence>(fKey);
-    if (
-      fence.ok &&
-      fence.value &&
-      (fence.value.status === "open" || fence.value.status === "claimed")
-    ) {
-      const rev =
-        typeof input.validity_rev === "number"
-          ? input.validity_rev
-          : fence.value.validity_rev;
-      if (fence.value.validity_rev === rev) {
-        const nextFence: import("./types").PageFence = {
-          ...fence.value,
-          status: "claimed",
-          attempt_id,
-          task_key: input.task_key,
-          input_fingerprint: task.input_fingerprint,
-          upstream_output_fingerprints: task.upstream_output_fingerprints,
-          updated_at: next.updated_at,
-        };
-        await casSet(fKey, JSON.stringify(fence.value), nextFence);
+    if (fence.ok && fence.value) {
+      if (
+        fence.value.status === "open" ||
+        (fence.value.status === "claimed" &&
+          (!fence.value.task_key || fence.value.task_key === input.task_key))
+      ) {
+        const rev =
+          typeof input.validity_rev === "number"
+            ? input.validity_rev
+            : fence.value.validity_rev;
+        if (fence.value.validity_rev === rev) {
+          const nextFence: import("./types").PageFence = {
+            ...fence.value,
+            status: "claimed",
+            attempt_id,
+            task_key: input.task_key,
+            input_fingerprint: task.input_fingerprint,
+            upstream_output_fingerprints: task.upstream_output_fingerprints,
+            updated_at: next.updated_at,
+          };
+          await casSet(fKey, JSON.stringify(fence.value), nextFence);
+        }
       }
     }
 
@@ -193,41 +249,91 @@ export async function renewLease(input: {
   lease_ms?: number;
 }): Promise<Batch3Result<TaskRecord>> {
   const key = taskKeyPath(input.report_id, input.generation_id, input.task_key);
-  const cur = await kvGet<TaskRecord>(key);
-  if (!cur.ok) return cur;
-  if (!cur.value) return { ok: false, code: "not_found", detail: "task missing" };
-  if (cur.value.attempt_id !== input.attempt_id) {
-    return { ok: false, code: "stale_attempt", detail: "attempt_id mismatch on renew" };
+  const leaseMs = input.lease_ms ?? DEFAULT_TASK_LEASE_MS;
+
+  if (!isMemoryAtomicAvailable()) {
+    const evaled = await evalTxn(
+      RENEW_LEASE_LUA,
+      [key],
+      [
+        input.attempt_id,
+        String(leaseMs),
+        String(ttlSeconds()),
+        batch3NowIso(),
+      ],
+    );
+    if (!evaled.ok) return evaled;
+    const code = Number(evaled.value);
+    if (code === 1) {
+      const after = await kvGet<TaskRecord>(key);
+      if (!after.ok) return after;
+      if (!after.value) {
+        return { ok: false, code: "conflict", detail: "task missing after renew lua" };
+      }
+      return { ok: true, value: after.value };
+    }
+    if (code === -2) {
+      return { ok: false, code: "not_found", detail: "task missing" };
+    }
+    if (code === -3) {
+      return { ok: false, code: "stale_attempt", detail: "attempt_id mismatch on renew" };
+    }
+    if (code === -5) {
+      return {
+        ok: false,
+        code: "conflict",
+        detail: "cannot renew lease when task not running",
+      };
+    }
+    if (code === -14) {
+      return {
+        ok: false,
+        code: "lease_expired",
+        detail: "cannot renew an already-expired lease",
+      };
+    }
+    return { ok: false, code: "conflict", detail: `renewLease lua=${code}` };
   }
-  if (cur.value.status !== "running") {
-    return {
-      ok: false,
-      code: "conflict",
-      detail: `cannot renew lease in status=${cur.value.status}`,
+
+  for (let i = 0; i < 6; i += 1) {
+    const cur = await kvGet<TaskRecord>(key);
+    if (!cur.ok) return cur;
+    if (!cur.value) {
+      return { ok: false, code: "not_found", detail: "task missing" };
+    }
+    if (cur.value.attempt_id !== input.attempt_id) {
+      return { ok: false, code: "stale_attempt", detail: "attempt_id mismatch on renew" };
+    }
+    if (cur.value.status !== "running") {
+      return {
+        ok: false,
+        code: "conflict",
+        detail: `cannot renew lease in status=${cur.value.status}`,
+      };
+    }
+    const nowMs = batch3NowMs();
+    if (leaseExpired(cur.value, nowMs)) {
+      return {
+        ok: false,
+        code: "lease_expired",
+        detail: "cannot renew an already-expired lease",
+      };
+    }
+    const lease_expires_ms = nowMs + leaseMs;
+    const next: TaskRecord = {
+      ...cur.value,
+      lease_expires_at: new Date(lease_expires_ms).toISOString(),
+      lease_expires_ms,
+      updated_at: batch3NowIso(),
     };
+    const saved = await casSet(key, JSON.stringify(cur.value), next);
+    if (!saved.ok) {
+      if (saved.code === "conflict") continue;
+      return saved;
+    }
+    return { ok: true, value: next };
   }
-  const { batch3NowMs } = await import("./clock");
-  const nowMs = batch3NowMs();
-  if (
-    cur.value.lease_expires_at &&
-    Date.parse(cur.value.lease_expires_at) <= nowMs
-  ) {
-    return {
-      ok: false,
-      code: "lease_expired",
-      detail: "cannot renew an already-expired lease",
-    };
-  }
-  const next: TaskRecord = {
-    ...cur.value,
-    lease_expires_at: new Date(
-      nowMs + (input.lease_ms ?? DEFAULT_TASK_LEASE_MS),
-    ).toISOString(),
-    updated_at: new Date(nowMs).toISOString(),
-  };
-  const saved = await casSet(key, JSON.stringify(cur.value), next);
-  if (!saved.ok) return saved;
-  return { ok: true, value: next };
+  return { ok: false, code: "conflict", detail: "renewLease CAS exhausted" };
 }
 
 async function transitionOwned(input: {

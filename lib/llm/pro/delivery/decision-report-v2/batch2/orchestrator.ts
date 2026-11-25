@@ -182,21 +182,68 @@ export async function runReportBatch2OrchestratorTick(input: {
   refreshJobStatus(job);
 
   // Persist Intent BEFORE saveJob(queued) so crash after queued cannot orphan.
+  // Intent ID binds real TaskKey (incl. validity_rev) — never reuse across revs.
   const intents = [];
   if (pendingSend.length && typeof job.generation_epoch === "number") {
     const { enqueueDispatchIntent, markIntentFailed, markIntentSent } =
       await import("../batch3/dispatch-intent");
+    const { computeTaskKey } = await import("../batch3/task-identity");
+    const { ensurePageFence } = await import("../batch3/page-fence");
+    const { reportPageDefinition } = await import("../orchestration");
     for (const payload of pendingSend) {
+      const page_id =
+        "page_id" in payload.data ? payload.data.page_id : null;
+      const input_fingerprint =
+        "input_fingerprint" in payload.data
+          ? String(payload.data.input_fingerprint ?? "")
+          : null;
+      let task_key: string | null = null;
+      if (page_id) {
+        const fence = await ensurePageFence({
+          report_id: job.report_id,
+          generation_id: job.generation_id,
+          generation_epoch: job.generation_epoch,
+          page_id,
+        });
+        if (!fence.ok) {
+          return { ok: false, code: fence.code, detail: fence.detail };
+        }
+        const def = reportPageDefinition(page_id);
+        const upstream =
+          "upstream_output_fingerprints" in payload.data
+            ? (payload.data.upstream_output_fingerprints as Record<
+                string,
+                string
+              >) ?? {}
+            : {};
+        const task_type =
+          payload.name.includes("repair")
+            ? ("repair" as const)
+            : payload.name.includes("applicability")
+              ? ("applicability" as const)
+              : ("generate" as const);
+        task_key = computeTaskKey({
+          report_id: job.report_id,
+          generation_id: job.generation_id,
+          generation_epoch: job.generation_epoch,
+          page_id,
+          validity_rev: fence.value.validity_rev,
+          input_fingerprint: input_fingerprint ?? "",
+          upstream_output_fingerprints: upstream,
+          page_contract_version: def.production_version,
+          prompt_version: def.prompt_version,
+          validator_version: def.validator_version,
+          task_type,
+        });
+      }
       const intent = await enqueueDispatchIntent({
         report_id: job.report_id,
         generation_id: job.generation_id,
         generation_epoch: job.generation_epoch,
         event_name: payload.name,
-        page_id: "page_id" in payload.data ? payload.data.page_id : null,
-        input_fingerprint:
-          "input_fingerprint" in payload.data
-            ? String(payload.data.input_fingerprint ?? "")
-            : null,
+        page_id,
+        task_key,
+        input_fingerprint,
         payload: { ...payload.data },
       });
       if (!intent.ok) {

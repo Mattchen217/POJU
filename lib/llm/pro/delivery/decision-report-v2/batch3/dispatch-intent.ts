@@ -203,6 +203,13 @@ async function setIntentStatus(
 export async function markIntentSent(
   intent: DispatchIntent,
 ): Promise<Batch3Result<DispatchIntent>> {
+  // completed/claimed must not regress to sent on duplicate delivery.
+  if (intent.status === "completed" || intent.status === "claimed") {
+    return { ok: true, value: intent };
+  }
+  if (intent.status === "sent") {
+    return { ok: true, value: intent };
+  }
   return setIntentStatus(intent, "sent", {
     sent_at: new Date().toISOString(),
     last_error: null,

@@ -17,6 +17,10 @@ import {
 import { REPORT_BATCH2_EVENTS } from "@/lib/llm/pro/delivery/decision-report-v2/batch2/events";
 import { claimPageExecution } from "@/lib/llm/pro/delivery/decision-report-v2/batch3/claim-page-execution";
 import {
+  buildFrozenCascadeTargets,
+  planCascadePageIds,
+} from "@/lib/llm/pro/delivery/decision-report-v2/batch3/cascade-operation";
+import {
   activateGeneration,
   allocateGeneration,
   claimFinalization,
@@ -26,6 +30,7 @@ import {
   ensurePageFence,
   invalidateFromPage,
   invalidatePageAuthority,
+  invalidatePageAuthorityForCascade,
   isRedisEvalAvailable,
   markFinalizationDelivered,
   markFinalizationDelivering,
@@ -33,8 +38,10 @@ import {
   markIntentSent,
   readAuthorityPageOutput,
   readFinalizationClaim,
+  readGeneration,
   readPageFence,
   resetBatch3KeysForTests,
+  saveCascadeOperation,
   setBeforeClaimAtomicHookForTests,
   setBeforeInvalidateAtomicHookForTests,
   type FinalizationPageBinding,
@@ -407,7 +414,54 @@ async function main(): Promise<void> {
     console.log("2 ok — Claim×Claim");
   }
 
-  // --- 3. Lease expiry × Commit ---
+  // --- 2b. Generate × Repair (task_conflict) ---
+  {
+    await cleanup();
+    const { report_id, gen } = await boot("gen_x_repair");
+    const page_id: ReportPageId = "01";
+    await ensurePageFence({
+      report_id,
+      generation_id: gen.generation_id,
+      generation_epoch: gen.generation_epoch,
+      page_id,
+    });
+    const genClaim = await claimPageExecution({
+      report_id,
+      generation_id: gen.generation_id,
+      generation_epoch: gen.generation_epoch,
+      page_id,
+      task_type: "generate",
+      input_fingerprint: "fp_gen",
+      upstream_output_fingerprints: {},
+      worker_id: "w_gen",
+      lease_ms: 60_000,
+    });
+    assert.ok(genClaim.ok);
+    if (!genClaim.ok) throw new Error("genClaim");
+    const owner = (await readPageFence(report_id, gen.generation_id, page_id))
+      .value!.task_key;
+    const repair = await claimPageExecution({
+      report_id,
+      generation_id: gen.generation_id,
+      generation_epoch: gen.generation_epoch,
+      page_id,
+      task_type: "repair",
+      input_fingerprint: "fp_repair",
+      upstream_output_fingerprints: {},
+      worker_id: "w_repair",
+    });
+    assert.equal(repair.ok, false);
+    assert.equal(repair.ok ? "" : repair.code, "task_conflict");
+    const fenceAfter = await readPageFence(
+      report_id,
+      gen.generation_id,
+      page_id,
+    );
+    assert.equal(fenceAfter.value?.task_key, owner);
+    console.log("2b ok — Generate×Repair task_conflict");
+  }
+
+  // --- 3. Lease expiry × Commit (Redis TIME) ---
   {
     await cleanup();
     const { report_id, gen } = await boot("lease_commit");
@@ -744,6 +798,147 @@ async function main(): Promise<void> {
     assert.ok(done.ok);
     assert.equal(done.value.status, "delivered");
     console.log("9 ok — Finalization Delivery interrupt + Recovery");
+  }
+
+  // --- 10. Finalization × running cascade ---
+  {
+    await cleanup();
+    const { report_id, gen } = await boot("fin_x_cascade");
+    const bindings = await buildMinimalBindings(
+      report_id,
+      gen.generation_id,
+      gen.generation_epoch,
+    );
+    const planned = await planCascadePageIds({
+      report_id,
+      generation_id: gen.generation_id,
+      source_page_id: "01",
+      shouldIncludeOptional: async () => ({ ok: true, value: false }),
+    });
+    assert.ok(planned.ok);
+    if (!planned.ok) throw new Error("plan");
+    const frozen = await buildFrozenCascadeTargets({
+      report_id,
+      generation_id: gen.generation_id,
+      page_ids: planned.value.slice(0, 1),
+    });
+    assert.ok(frozen.ok);
+    if (!frozen.ok) throw new Error("frozen");
+    const now = new Date().toISOString();
+    assert.ok(
+      (
+        await saveCascadeOperation(
+          {
+            operation_id: randomUUID(),
+            report_id,
+            generation_id: gen.generation_id,
+            generation_epoch: gen.generation_epoch,
+            source_page_id: "01",
+            reason: "redis_cascade_running",
+            targets: frozen.value.map((t) => ({ ...t, done: false })),
+            status: "running",
+            created_at: now,
+            updated_at: now,
+          },
+          null,
+        )
+      ).ok,
+    );
+    const blocked = await claimFinalization({
+      report_id,
+      generation_id: gen.generation_id,
+      generation_epoch: gen.generation_epoch,
+      claim_id: randomUUID(),
+      pages: bindings,
+    });
+    assert.equal(blocked.ok ? "" : blocked.code, "cascade_incomplete");
+    console.log("10 ok — Finalization×Cascade");
+  }
+
+  // --- 11. Cascade revision conflict (same expected_old) ---
+  {
+    await cleanup();
+    const { report_id, gen } = await boot("cascade_rev_race");
+    await claimCommit01({
+      report_id,
+      generation_id: gen.generation_id,
+      generation_epoch: gen.generation_epoch,
+    });
+    const fence = await readPageFence(report_id, gen.generation_id, "01");
+    const expected_old = fence.value!.validity_rev;
+    const target = expected_old + 1;
+    const [r1, r2] = await Promise.all([
+      invalidatePageAuthorityForCascade({
+        report_id,
+        generation_id: gen.generation_id,
+        generation_epoch: gen.generation_epoch,
+        page_id: "01",
+        reason: "redis_cr_1",
+        expected_old_rev: expected_old,
+        target_rev: target,
+        operation_id: randomUUID(),
+      }),
+      invalidatePageAuthorityForCascade({
+        report_id,
+        generation_id: gen.generation_id,
+        generation_epoch: gen.generation_epoch,
+        page_id: "01",
+        reason: "redis_cr_2",
+        expected_old_rev: expected_old,
+        target_rev: target,
+        operation_id: randomUUID(),
+      }),
+    ]);
+    const wins = [r1, r2].filter((r) => r.ok).length;
+    assert.equal(wins, 1, JSON.stringify({ r1, r2 }));
+    const loser = r1.ok ? r2 : r1;
+    assert.equal(loser.ok ? "" : loser.code, "revision_conflict");
+    const after = await readPageFence(report_id, gen.generation_id, "01");
+    assert.equal(after.value?.validity_rev, target);
+    console.log("11 ok — Cascade revision conflict");
+  }
+
+  // --- 12. Delivery failed resume restores generation finalizing ---
+  {
+    await cleanup();
+    const { report_id, gen } = await boot("delivery_gen_resume");
+    const bindings = await buildMinimalBindings(
+      report_id,
+      gen.generation_id,
+      gen.generation_epoch,
+    );
+    assert.ok(
+      (
+        await claimFinalization({
+          report_id,
+          generation_id: gen.generation_id,
+          generation_epoch: gen.generation_epoch,
+          claim_id: randomUUID(),
+          pages: bindings,
+        })
+      ).ok,
+    );
+    await markFinalizationDelivering(report_id, gen.generation_id);
+    await markFinalizationDeliveryFailed(
+      report_id,
+      gen.generation_id,
+      gen.generation_epoch,
+      "redis_transport",
+    );
+    assert.equal(
+      (await readGeneration(report_id, gen.generation_id)).value?.status,
+      "delivery_failed",
+    );
+    await markFinalizationDelivering(
+      report_id,
+      gen.generation_id,
+      gen.generation_epoch,
+    );
+    assert.equal(
+      (await readGeneration(report_id, gen.generation_id)).value?.status,
+      "finalizing",
+    );
+    console.log("12 ok — delivery_failed → finalizing resume");
   }
 
   await cleanup();

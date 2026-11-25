@@ -5,7 +5,11 @@
  */
 
 import type { ReportPageId, ReportPageRuntimeState } from "../orchestration/types";
-import { batch3NowMs } from "./clock";
+import {
+  batch3NowMs,
+  REDIS_LEASE_EXPIRED_LUA_SNIPPET,
+  REDIS_TIME_LUA_SNIPPET,
+} from "./clock";
 import {
   finalizationClaimKey,
   inspectFinalizationLock,
@@ -53,6 +57,8 @@ function provKey(
 }
 
 const FENCED_COMMIT_LUA = `
+${REDIS_TIME_LUA_SNIPPET}
+${REDIS_LEASE_EXPIRED_LUA_SNIPPET}
 local activeKey = KEYS[1]
 local taskKey = KEYS[2]
 local fenceKey = KEYS[3]
@@ -65,12 +71,11 @@ local expectAttempt = ARGV[3]
 local expectRev = tonumber(ARGV[4])
 local expectInputFp = ARGV[5]
 local expectTaskKey = ARGV[6]
-local nowMs = tonumber(ARGV[7])
-local nextTaskJson = ARGV[8]
-local nextFenceJson = ARGV[9]
-local nextProvJson = ARGV[10]
-local nextAuthOutJson = ARGV[11]
-local ttl = tonumber(ARGV[12])
+local nextTaskJson = ARGV[7]
+local nextFenceJson = ARGV[8]
+local nextProvJson = ARGV[9]
+local nextAuthOutJson = ARGV[10]
+local ttl = tonumber(ARGV[11])
 
 local claimCur = redis.call("GET", claimKey)
 ${FINALIZATION_LOCK_LUA_SNIPPET}
@@ -95,10 +100,14 @@ if task.status == "stale" or task.status == "superseded" then return -3 end
 if task.status ~= "running" and task.status ~= "repair_pending" then return -5 end
 if tonumber(task.validity_rev) ~= expectRev then return -6 end
 if task.input_fingerprint ~= expectInputFp then return -7 end
-if task.lease_expires_at and task.lease_expires_at ~= cjson.null then
-  -- Compare via ARGV nowMs vs pre-parsed lease epoch ms in ARGV[13]
-  local leaseExpMs = tonumber(ARGV[13])
-  if leaseExpMs and nowMs >= leaseExpMs then return -14 end
+if task.status == "running" or task.status == "repair_pending" then
+  if __batch3_lease_expired(task, __now_ms) then
+    local exp_ms = task.lease_expires_ms
+    local has_ms = exp_ms ~= nil and type(exp_ms) == "number"
+    local exp_at = task.lease_expires_at
+    local has_at = exp_at ~= nil and exp_at ~= cjson.null
+    if has_ms or has_at then return -14 end
+  end
 end
 
 local fcur = redis.call("GET", fenceKey)
@@ -291,9 +300,15 @@ function commitAuthorityMemory(input: {
         detail: `cannot commit from status=${task.status}`,
       };
     }
+    const nowCommit = batch3NowMs();
+    const hasMs = typeof task.lease_expires_ms === "number";
+    const hasAt = Boolean(task.lease_expires_at);
+    const leaseExpiredAtCommit =
+      (hasMs && (task.lease_expires_ms as number) <= nowCommit) ||
+      (hasAt && Date.parse(task.lease_expires_at as string) <= nowCommit);
     if (
-      task.lease_expires_at &&
-      Date.parse(task.lease_expires_at) <= batch3NowMs()
+      (task.status === "running" || task.status === "repair_pending") &&
+      leaseExpiredAtCommit
     ) {
       return {
         ok: false as const,
@@ -376,6 +391,7 @@ function commitAuthorityMemory(input: {
       ...task,
       status: "completed",
       lease_expires_at: null,
+      lease_expires_ms: null,
       completed_at: now,
       updated_at: now,
     };
@@ -456,6 +472,7 @@ async function commitAuthorityRedis(input: {
     ...task.value,
     status: "completed",
     lease_expires_at: null,
+    lease_expires_ms: null,
     completed_at: now,
     updated_at: now,
   };
@@ -468,10 +485,6 @@ async function commitAuthorityRedis(input: {
   const cKey = finalizationClaimKey(input.report_id, input.generation_id);
   trackBatch3Key(oKey);
   trackBatch3Key(cKey);
-  const leaseExpMs = task.value.lease_expires_at
-    ? Date.parse(task.value.lease_expires_at)
-    : 0;
-
   const evaled = await evalTxn(
     FENCED_COMMIT_LUA,
     [aKey, tKey, fKey, pKey, oKey, cKey],
@@ -482,13 +495,11 @@ async function commitAuthorityRedis(input: {
       String(input.validity_rev),
       input.provenanceBase.input_fingerprint,
       input.task_key,
-      String(batch3NowMs()),
       JSON.stringify(nextTask),
       JSON.stringify(nextFence),
       JSON.stringify(provenance),
       JSON.stringify(authority_output),
       String(ttlSeconds()),
-      String(leaseExpMs),
     ],
   );
   if (!evaled.ok) return evaled;

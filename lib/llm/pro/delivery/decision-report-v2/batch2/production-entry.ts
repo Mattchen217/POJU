@@ -461,7 +461,7 @@ export async function mergeReportBatch2IntoV3Lab(
     };
   }
 
-  await markFinalizationDelivering(report_id, generation_id);
+  await markFinalizationDelivering(report_id, generation_id, epoch);
 
   // Deliver only sealed outputs from the successful claim (immutable bindings).
   try {

@@ -59,6 +59,8 @@ export type TaskRecord = {
   status: TaskStatus;
   attempt_id: string | null;
   lease_expires_at: string | null;
+  /** Authoritative lease boundary for Redis Lua (ms since epoch). */
+  lease_expires_ms?: number | null;
   worker_id: string | null;
   /** Page fence validity_rev bound at claim — commit must match. */
   validity_rev: number;
@@ -185,6 +187,11 @@ export type Batch3FailCode =
   | "finalization_locked"
   | "delivery_in_progress"
   | "lease_expired"
+  | "task_conflict"
+  | "revision_conflict"
+  | "cascade_blocked"
+  | "generation_inactive"
+  | "invalid_state"
   | "cascade_incomplete"
   | "limit_reached"
   | "job_missing";

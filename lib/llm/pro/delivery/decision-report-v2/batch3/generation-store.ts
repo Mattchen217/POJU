@@ -19,6 +19,7 @@ import {
   finalizationClaimKey,
   inspectFinalizationLock,
   mayActivateNextGeneration,
+  FINALIZATION_LOCK_LUA_SNIPPET,
 } from "./finalization-lock";
 import {
   GENERATION_TERMINAL,
@@ -82,21 +83,12 @@ if cur ~= false and cur ~= nil then
     if tonumber(live.generation_epoch) >= newEpoch then
       return -1
     end
-    -- Shared Finalization lock on the CURRENT active generation.
+    -- Shared Finalization lock on the CURRENT active generation (same snippet).
     local claimKey = "report-batch3:" .. reportId .. ":" .. live.generation_id .. ":finalization"
     local claimCur = redis.call("GET", claimKey)
-    if claimCur ~= false and claimCur ~= nil then
-      local cok, claim = pcall(cjson.decode, claimCur)
-      if not cok or type(claim) ~= "table" then return -13 end
-      local st = claim.status
-      if st == "sealed" or st == "delivering" or st == "delivery_failed" or st == "claimed" then
-        return -10
-      end
-      if st ~= "delivered" and st ~= nil and st ~= cjson.null then
-        if type(st) ~= "string" or st == "" then return -13 end
-        if st ~= "delivered" then return -13 end
-      end
-    end
+${FINALIZATION_LOCK_LUA_SNIPPET}
+    if __fin_lock == -10 then return -10 end
+    if __fin_lock == -13 then return -13 end
   end
 end
 

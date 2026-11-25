@@ -13,7 +13,11 @@ import {
   finalizationClaimKey,
   type FinalizationDeliveryStatus,
 } from "./finalization-lock";
-import { generationStoreKeys, transitionGenerationStatus } from "./generation-store";
+import {
+  generationStoreKeys,
+  readGeneration,
+  transitionGenerationStatus,
+} from "./generation-store";
 import {
   evalTxn,
   isMemoryAtomicAvailable,
@@ -147,23 +151,28 @@ export function setBeforeClaimAtomicHookForTests(
 }
 
 /**
- * Lua: KEYS[1]=active, KEYS[2]=claim, KEYS[3..]=fence keys in page order.
+ * Lua: KEYS[1]=active, KEYS[2]=claim, KEYS[3]=cascadeActive, KEYS[4]=gen,
+ *      KEYS[5..]=fence keys in page order.
  * ARGV[1]=expectReportId, ARGV[2]=expectGenId, ARGV[3]=expectEpoch,
  * ARGV[4]=claimJson, ARGV[5]=ttl, ARGV[6]=pageCount, ARGV[7]=claimId,
- * then per page: page_id, validity_rev, attempt_id, output_fingerprint, task_key
+ * ARGV[8]=nowIso,
+ * then per page: page_id, validity_rev, attempt_id, output_fingerprint, task_key, input_fingerprint
  *
  * Returns:
- *  1 created
+ *  1 created (+ gen → finalizing)
  *  2 idempotent (same seal / matching bindings)
  *  -1 stale_generation
  *  -2 fence missing
  *  -3 stale_page
- *  -4 existing claim different bindings / claim_id mismatch rules
- *  -5 existing claim present but unusable (fail-closed, no overwrite)
+ *  -4 existing claim different bindings
+ *  -5 existing claim present but unusable
+ *  -6 cascade_blocked
  */
 export const FINALIZE_LUA = `
 local activeKey = KEYS[1]
 local claimKey = KEYS[2]
+local cascadeActiveKey = KEYS[3]
+local genKey = KEYS[4]
 local expectReportId = ARGV[1]
 local expectGenId = ARGV[2]
 local expectEpoch = tonumber(ARGV[3])
@@ -171,6 +180,7 @@ local claimJson = ARGV[4]
 local ttl = tonumber(ARGV[5])
 local pageCount = tonumber(ARGV[6])
 local claimId = ARGV[7]
+local nowIso = ARGV[8]
 
 if not expectEpoch or not ttl or not pageCount or type(expectReportId) ~= "string"
   or type(expectGenId) ~= "string" or type(claimId) ~= "string" then
@@ -185,11 +195,37 @@ if active.generation_id ~= expectGenId or tonumber(active.generation_epoch) ~= e
   return -1
 end
 
+-- Cascade gate inside Lua (no external pre-check race).
+local cascIdCur = redis.call("GET", cascadeActiveKey)
+if cascIdCur ~= false and cascIdCur ~= nil then
+  local cascId = cascIdCur
+  if type(cascIdCur) == "string" then
+    local cok, decoded = pcall(cjson.decode, cascIdCur)
+    if cok and type(decoded) == "string" then cascId = decoded end
+    if cok and type(decoded) ~= "string" and type(decoded) ~= "table" then cascId = cascIdCur end
+  end
+  -- strip JSON quotes if stored as JSON string
+  if type(cascId) == "string" then
+    local q = string.match(cascId, '^"(.*)"$')
+    if q then cascId = q end
+  end
+  if type(cascId) == "string" and #cascId > 0 then
+    local opKey = "report-batch3:" .. expectReportId .. ":" .. expectGenId .. ":cascade:" .. cascId
+    local opCur = redis.call("GET", opKey)
+    if opCur ~= false and opCur ~= nil then
+      local ook, op = pcall(cjson.decode, opCur)
+      if not ook or type(op) ~= "table" then return -6 end
+      if op.status == "running" or op.status == "failed_recoverable" then
+        return -6
+      end
+    end
+  end
+end
+
 -- Always verify fences against requested bindings (idempotent path included).
--- Per page ARGV: page_id, validity_rev, attempt_id, output_fingerprint, task_key, input_fingerprint
 for i = 1, pageCount do
-  local fenceKey = KEYS[2 + i]
-  local base = 7 + (i - 1) * 6
+  local fenceKey = KEYS[4 + i]
+  local base = 8 + (i - 1) * 6
   local expectPageId = ARGV[base + 1]
   local expectRev = tonumber(ARGV[base + 2])
   local expectAttempt = ARGV[base + 3]
@@ -234,7 +270,7 @@ if existing ~= false and existing ~= nil then
   if same and #prev.pages == pageCount then
     for i = 1, pageCount do
       local p = prev.pages[i]
-      local base = 7 + (i - 1) * 6
+      local base = 8 + (i - 1) * 6
       local expectPageId = ARGV[base + 1]
       local expectRev = tonumber(ARGV[base + 2])
       local expectAttempt = ARGV[base + 3]
@@ -257,6 +293,15 @@ if existing ~= false and existing ~= nil then
   return -4
 end
 
+-- Create seal + gen finalizing atomically
+local gcur = redis.call("GET", genKey)
+if gcur == false or gcur == nil then return -1 end
+local gok, grec = pcall(cjson.decode, gcur)
+if not gok or type(grec) ~= "table" then return -1 end
+if grec.status ~= "active" then return -1 end
+grec.status = "finalizing"
+grec.updated_at = nowIso
+redis.call("SET", genKey, cjson.encode(grec), "EX", ttl)
 redis.call("SET", claimKey, claimJson, "EX", ttl)
 return 1
 `;
@@ -300,6 +345,13 @@ export function mapFinalizeCode(
       code: "conflict",
       detail:
         "finalization refused: existing claim unusable (fail-closed, no overwrite)",
+    };
+  }
+  if (code === -6) {
+    return {
+      ok: false,
+      code: "cascade_blocked",
+      detail: "finalization refused: cascade running or failed_recoverable",
     };
   }
   return {
@@ -470,12 +522,13 @@ export async function claimFinalization(input: {
     return { ok: true, value: ran.value.claim };
   }
 
-  const { assertNoBlockingCascade } = await import("./cascade-operation");
-  const cascadeOk = await assertNoBlockingCascade({
-    report_id: input.report_id,
-    generation_id: input.generation_id,
-  });
-  if (!cascadeOk.ok) return cascadeOk;
+  const cascAKey = cascadeActiveKey(input.report_id, input.generation_id);
+  const gKey = generationStoreKeys.genKey(
+    input.report_id,
+    input.generation_id,
+  );
+  trackBatch3Key(cascAKey);
+  trackBatch3Key(gKey);
 
   const fenceKeys = input.pages.map((p) =>
     pageFenceKey(input.report_id, input.generation_id, p.page_id),
@@ -488,6 +541,7 @@ export async function claimFinalization(input: {
     String(ttlSeconds()),
     String(input.pages.length),
     input.claim_id,
+    claim.claimed_at,
   ];
   for (const p of input.pages) {
     args.push(
@@ -502,7 +556,7 @@ export async function claimFinalization(input: {
 
   const evaled = await evalTxn(
     FINALIZE_LUA,
-    [aKey, cKey, ...fenceKeys],
+    [aKey, cKey, cascAKey, gKey, ...fenceKeys],
     args,
   );
   if (!evaled.ok) return evaled;
@@ -544,6 +598,7 @@ export function claimIncludesPage(
 export async function markFinalizationDelivering(
   report_id: string,
   generation_id: string,
+  generation_epoch?: number,
 ): Promise<Batch3Result<FinalizationClaim>> {
   const cur = await readFinalizationClaim(report_id, generation_id);
   if (!cur.ok) return cur;
@@ -560,6 +615,19 @@ export async function markFinalizationDelivering(
       code: "conflict",
       detail: `cannot start delivery from status=${st}`,
     };
+  }
+  const epoch = generation_epoch ?? cur.value.generation_epoch;
+  // delivery_failed → finalizing before resume (Claim ↔ Generation closed loop).
+  const gen = await readGeneration(report_id, generation_id);
+  if (!gen.ok) return gen;
+  if (gen.value?.status === "delivery_failed") {
+    const restored = await transitionGenerationStatus({
+      report_id,
+      generation_id,
+      generation_epoch: epoch,
+      to: "finalizing",
+    });
+    if (!restored.ok) return restored;
   }
   const next: FinalizationClaim = {
     ...cur.value,
@@ -610,12 +678,19 @@ export async function markFinalizationDelivered(
     next,
   );
   if (!saved.ok) return saved;
-  await transitionGenerationStatus({
+  const genDone = await transitionGenerationStatus({
     report_id,
     generation_id,
     generation_epoch,
     to: "completed",
   });
+  if (!genDone.ok) {
+    return {
+      ok: false,
+      code: genDone.code,
+      detail: `claim delivered but generation transition failed: ${genDone.detail}`,
+    };
+  }
   return { ok: true, value: next };
 }
 
@@ -649,11 +724,18 @@ export async function markFinalizationDeliveryFailed(
     next,
   );
   if (!saved.ok) return saved;
-  await transitionGenerationStatus({
+  const genFail = await transitionGenerationStatus({
     report_id,
     generation_id,
     generation_epoch,
     to: "delivery_failed",
   });
+  if (!genFail.ok) {
+    return {
+      ok: false,
+      code: genFail.code,
+      detail: `claim delivery_failed but generation transition failed: ${genFail.detail}`,
+    };
+  }
   return { ok: true, value: next };
 }

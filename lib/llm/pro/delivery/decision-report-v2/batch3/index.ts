@@ -29,14 +29,21 @@ export * from "./clock";
 export { writePageProvenance, readPageProvenance } from "./provenance";
 export { listPendingIntents, markIntentFailed, markIntentSent } from "./dispatch-intent";
 export { readActiveGeneration, assertGenerationActive } from "./generation-store";
-export { ensurePageFence, readPageFence } from "./page-fence";
+export {
+  ensurePageFence,
+  readPageFence,
+  REOPEN_LUA,
+  mapReopenLuaCode,
+} from "./page-fence";
 export {
   invalidatePageAuthority,
+  invalidatePageAuthorityForCascade,
   invalidateFromPage,
   continueCascadeOperation,
   setBeforeInvalidateAtomicHookForTests,
   mapInvalidateLuaCode,
   INVALIDATE_LUA,
+  CASCADE_INVALIDATE_LUA,
 } from "./invalidation";
 export {
   assertNoBlockingCascade,
