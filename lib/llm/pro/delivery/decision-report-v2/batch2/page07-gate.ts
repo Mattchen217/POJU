@@ -10,7 +10,6 @@ import {
   appendInvocationLog,
   loadJob,
   saveJob,
-  setPageOutput,
   updatePageState,
 } from "./job-store";
 import type {
@@ -27,10 +26,10 @@ export async function runReportPage07ApplicabilityGate(input: {
   if (!loaded.ok) {
     return { status: "failed", code: loaded.code, detail: loaded.detail };
   }
-  const job = loaded.value;
-  if (!job) {
+  if (!loaded.value) {
     return { status: "failed", code: "job_not_found", detail: "batch2 job missing" };
   }
+  const job = loaded.value;
 
   const page_id = "07";
   const state = job.page_states.find((s) => s.page_id === page_id);
@@ -48,8 +47,16 @@ export async function runReportPage07ApplicabilityGate(input: {
   }
 
   // Batch3 fencing before gate mutation (no LLM).
-  let batch3Attempt: { task_key: string; attempt_id: string } | null = null;
+  let batch3Attempt: {
+    task_key: string;
+    attempt_id: string;
+    validity_rev: number;
+  } | null = null;
   const epoch = input.event.generation_epoch ?? job.generation_epoch;
+  const input_fingerprint = hashCanonicalPayload({
+    gate: "page07",
+    upstream: input.event.upstream_output_fingerprints,
+  });
   if (typeof epoch === "number") {
     const { assertGenerationActive } = await import("../batch3/generation-store");
     const fence = await assertGenerationActive({
@@ -67,10 +74,7 @@ export async function runReportPage07ApplicabilityGate(input: {
       generation_epoch: epoch,
       page_id,
       task_type: "applicability",
-      input_fingerprint: hashCanonicalPayload({
-        gate: "page07",
-        upstream: input.event.upstream_output_fingerprints,
-      }),
+      input_fingerprint,
       upstream_output_fingerprints: input.event.upstream_output_fingerprints,
       worker_id: input.worker_id ?? "report-page-applicability",
     });
@@ -83,18 +87,121 @@ export async function runReportPage07ApplicabilityGate(input: {
     batch3Attempt = {
       task_key: claimed.value.task_key,
       attempt_id: claimed.value.attempt_id,
+      validity_rev: claimed.value.validity_rev,
     };
   }
 
-  async function completeApplicabilityTask(): Promise<void> {
-    if (!batch3Attempt || typeof epoch !== "number") return;
-    const { completeTask } = await import("../batch3/task-store");
-    await completeTask({
+  /**
+   * applicable → release Fence for subsequent generate Claim (different task_key).
+   * Must not leave Fence claimed under the applicability task_key.
+   */
+  async function handoffForGenerate(): Promise<
+    { ok: true } | { ok: false; code: string; detail: string }
+  > {
+    if (!batch3Attempt || typeof epoch !== "number") return { ok: true };
+    const { releaseApplicabilityClaimForGenerate } = await import(
+      "../batch3/claim-page-execution"
+    );
+    const released = await releaseApplicabilityClaimForGenerate({
       report_id: input.event.report_id,
       generation_id: input.event.generation_id,
+      generation_epoch: epoch,
+      page_id,
       task_key: batch3Attempt.task_key,
       attempt_id: batch3Attempt.attempt_id,
     });
+    if (!released.ok) {
+      return { ok: false, code: released.code, detail: released.detail };
+    }
+    return { ok: true };
+  }
+
+  /**
+   * Terminal status pages must Authority-Commit like any formal page result.
+   * commitPageResult writes Fence/Provenance/Authority + PageBlob under the claim.
+   */
+  async function authorityCommitTerminal(inputCommit: {
+    page: unknown;
+    output_fp: string;
+    outcome: "skipped_not_applicable" | "insufficient_information";
+    applicability_status: "not_applicable" | "insufficient_information";
+  }): Promise<{ ok: true } | { ok: false; code: string; detail: string }> {
+    if (!batch3Attempt || typeof epoch !== "number") {
+      // Legacy path without Batch3 generation_epoch — keep Batch2-only write.
+      const { setPageOutput } = await import("./job-store");
+      setPageOutput(job, page_id, inputCommit.page, inputCommit.output_fp);
+      updatePageState(job, page_id, {
+        applicability_status: inputCommit.applicability_status,
+        outcome: inputCommit.outcome,
+        output_fingerprint: inputCommit.output_fp,
+        input_fingerprint,
+      });
+      const saved = await saveJob(job);
+      if (!saved.ok) {
+        return { ok: false, code: saved.code, detail: saved.detail };
+      }
+      return { ok: true };
+    }
+
+    const { commitPageResult } = await import("../batch3/fenced-commit");
+    const { reportPageDefinition } = await import("../orchestration");
+    const def = reportPageDefinition(page_id);
+    const committed = await commitPageResult({
+      report_id: input.event.report_id,
+      generation_id: input.event.generation_id,
+      generation_epoch: epoch,
+      page_id,
+      attempt_id: batch3Attempt.attempt_id,
+      task_key: batch3Attempt.task_key,
+      output: inputCommit.page,
+      output_fingerprint: inputCommit.output_fp,
+      state_patch: {
+        outcome: inputCommit.outcome,
+        applicability_status: inputCommit.applicability_status,
+        input_fingerprint,
+        output_fingerprint: inputCommit.output_fp,
+      },
+      provenance: {
+        report_id: input.event.report_id,
+        generation_id: input.event.generation_id,
+        generation_epoch: epoch,
+        page_id,
+        input_fingerprint,
+        upstream_output_fingerprints: input.event.upstream_output_fingerprints,
+        page_contract_version: def.production_version,
+        prompt_version: def.prompt_version,
+        validator_version: def.validator_version,
+        output_fingerprint: inputCommit.output_fp,
+        attempt_id: batch3Attempt.attempt_id,
+        task_key: batch3Attempt.task_key,
+        validity_rev: batch3Attempt.validity_rev,
+      },
+    });
+    if (!committed.ok) {
+      return { ok: false, code: committed.code, detail: committed.detail };
+    }
+
+    // Sync in-memory view only — blob already written by commitPageResult.
+    // Do NOT updatePageState/setPageOutput here: that would dirty the page and
+    // cause saveJob to rewrite the blob with a stale expected rev.
+    job.page_outputs[page_id] = inputCommit.page;
+    const idx = job.page_states.findIndex((s) => s.page_id === page_id);
+    if (idx >= 0) {
+      job.page_states[idx] = {
+        ...job.page_states[idx],
+        page_id,
+        applicability_status: inputCommit.applicability_status,
+        outcome: inputCommit.outcome,
+        output_fingerprint: inputCommit.output_fp,
+        input_fingerprint,
+      };
+    }
+    // Persist invocation log / meta only.
+    const saved = await saveJob(job);
+    if (!saved.ok) {
+      return { ok: false, code: saved.code, detail: saved.detail };
+    }
+    return { ok: true };
   }
 
   const started_at = new Date().toISOString();
@@ -119,7 +226,10 @@ export async function runReportPage07ApplicabilityGate(input: {
     if (!saved.ok) {
       return { status: "failed", code: saved.code, detail: saved.detail };
     }
-    await completeApplicabilityTask();
+    const handed = await handoffForGenerate();
+    if (!handed.ok) {
+      return { status: "failed", code: handed.code, detail: handed.detail };
+    }
     return { status: "applicable", applicability_status: "applicable" };
   }
 
@@ -156,17 +266,15 @@ export async function runReportPage07ApplicabilityGate(input: {
       }
     }
     const output_fp = hashCanonicalPayload(page);
-    setPageOutput(job, page_id, page, output_fp);
-    updatePageState(job, page_id, {
-      applicability_status: "not_applicable",
+    const committed = await authorityCommitTerminal({
+      page,
+      output_fp,
       outcome: "skipped_not_applicable",
-      output_fingerprint: output_fp,
+      applicability_status: "not_applicable",
     });
-    const saved = await saveJob(job);
-    if (!saved.ok) {
-      return { status: "failed", code: saved.code, detail: saved.detail };
+    if (!committed.ok) {
+      return { status: "failed", code: committed.code, detail: committed.detail };
     }
-    await completeApplicabilityTask();
     return {
       status: "not_applicable",
       applicability_status: "not_applicable",
@@ -174,7 +282,7 @@ export async function runReportPage07ApplicabilityGate(input: {
     };
   }
 
-  // Persist a status page + fingerprint so Page08 upstream fingerprint gate can proceed.
+  // insufficient_information — same Authority Commit rule as not_applicable.
   {
     const built = buildFace07ProductionContext({
       report_id: job.inputs.report_id,
@@ -208,21 +316,19 @@ export async function runReportPage07ApplicabilityGate(input: {
       }
     }
     const output_fp = hashCanonicalPayload(page);
-    setPageOutput(job, page_id, page, output_fp);
-    updatePageState(job, page_id, {
+    const committed = await authorityCommitTerminal({
+      page,
+      output_fp,
+      outcome: "insufficient_information",
+      applicability_status: "insufficient_information",
+    });
+    if (!committed.ok) {
+      return { status: "failed", code: committed.code, detail: committed.detail };
+    }
+    return {
+      status: "insufficient_information",
       applicability_status: "insufficient_information",
       outcome: "insufficient_information",
-      output_fingerprint: output_fp,
-    });
+    };
   }
-  const saved = await saveJob(job);
-  if (!saved.ok) {
-    return { status: "failed", code: saved.code, detail: saved.detail };
-  }
-  await completeApplicabilityTask();
-  return {
-    status: "insufficient_information",
-    applicability_status: "insufficient_information",
-    outcome: "insufficient_information",
-  };
 }

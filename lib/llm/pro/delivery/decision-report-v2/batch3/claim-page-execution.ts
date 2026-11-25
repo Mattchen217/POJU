@@ -25,6 +25,7 @@ import { generationStoreKeys } from "./generation-store";
 import {
   evalTxn,
   isMemoryAtomicAvailable,
+  isRedisEvalAvailable,
   kvGet,
   runMemoryAtomic,
   trackBatch3Key,
@@ -558,3 +559,300 @@ export async function claimPageExecution(input: {
 }
 
 export const claimPageExecutionAtomic = claimPageExecution;
+
+/**
+ * Unit A handoff: finish an applicability Claim without committing page content,
+ * and release the Page Fence so a subsequent generate Claim (different task_key)
+ * can acquire the same page under the same Generation / validity_rev.
+ *
+ * Atomic: Task → completed + Fence claimed → open (attempt/task cleared).
+ * Does not bump validity_rev and does not write Authority Output.
+ */
+const RELEASE_APPLICABILITY_HANDOFF_LUA = `
+${REDIS_TIME_LUA_SNIPPET}
+local activeKey = KEYS[1]
+local claimKey = KEYS[2]
+local fenceKey = KEYS[3]
+local taskKvKey = KEYS[4]
+local expectGenId = ARGV[1]
+local expectEpoch = tonumber(ARGV[2])
+local expectTaskKey = ARGV[3]
+local expectAttempt = ARGV[4]
+local nowIso = ARGV[5]
+local ttl = tonumber(ARGV[6])
+
+local claimCur = redis.call("GET", claimKey)
+${FINALIZATION_LOCK_LUA_SNIPPET}
+if __fin_lock == -10 then return -10 end
+if __fin_lock == -13 then return -13 end
+
+local cur = redis.call("GET", activeKey)
+if cur == false or cur == nil then return -1 end
+local ok, active = pcall(cjson.decode, cur)
+if not ok or not active then return -1 end
+if active.generation_id ~= expectGenId or tonumber(active.generation_epoch) ~= expectEpoch then
+  return -1
+end
+
+local tcur = redis.call("GET", taskKvKey)
+if tcur == false or tcur == nil then return -2 end
+local tok, task = pcall(cjson.decode, tcur)
+if not tok or not task then return -2 end
+if task.attempt_id ~= expectAttempt then return -3 end
+if task.status == "completed" then
+  -- Idempotent handoff: ensure fence is open for generate.
+else
+  if task.status ~= "running" then return -5 end
+  task.status = "completed"
+  task.lease_expires_at = cjson.null
+  task.lease_expires_ms = cjson.null
+  task.completed_at = nowIso
+  task.updated_at = nowIso
+  redis.call("SET", taskKvKey, cjson.encode(task), "EX", ttl)
+end
+
+local fcur = redis.call("GET", fenceKey)
+if fcur == false or fcur == nil then return -8 end
+local fok, fence = pcall(cjson.decode, fcur)
+if not fok or not fence then return -8 end
+if fence.status == "open" then return 1 end
+if fence.status == "committed" or fence.status == "stale" then return -8 end
+if fence.status ~= "claimed" then return -8 end
+if fence.task_key ~= expectTaskKey then return -15 end
+if fence.attempt_id ~= expectAttempt then return -3 end
+
+fence.status = "open"
+fence.attempt_id = cjson.null
+fence.task_key = cjson.null
+fence.input_fingerprint = cjson.null
+fence.upstream_output_fingerprints = cjson.null
+fence.output_fingerprint = cjson.null
+fence.updated_at = nowIso
+redis.call("SET", fenceKey, cjson.encode(fence), "EX", ttl)
+return 1
+`;
+
+export async function releaseApplicabilityClaimForGenerate(input: {
+  report_id: string;
+  generation_id: string;
+  generation_epoch: number;
+  page_id: ReportPageId;
+  task_key: string;
+  attempt_id: string;
+}): Promise<Batch3Result<PageFence>> {
+  const fKey = pageFenceKey(
+    input.report_id,
+    input.generation_id,
+    input.page_id,
+  );
+  const cKey = finalizationClaimKey(input.report_id, input.generation_id);
+  const aKey = generationStoreKeys.activeKey(input.report_id);
+  const tKey = taskKeyPath(
+    input.report_id,
+    input.generation_id,
+    input.task_key,
+  );
+  trackBatch3Key(fKey);
+  trackBatch3Key(cKey);
+  trackBatch3Key(aKey);
+  trackBatch3Key(tKey);
+  const nowIso = batch3NowIso();
+
+  if (isMemoryAtomicAvailable()) {
+    const ran = runMemoryAtomic((ops) => {
+      const lock = inspectFinalizationLock(ops.getJson(cKey));
+      if (lock.kind === "locked") {
+        return {
+          ok: false as const,
+          code: "finalization_locked" as const,
+          detail: "handoff refused: finalization locks page content",
+        };
+      }
+      if (lock.kind === "unusable") {
+        return {
+          ok: false as const,
+          code: "conflict" as const,
+          detail: lock.reason,
+        };
+      }
+
+      const active = ops.getJson(aKey) as ActiveGenerationPointer | null;
+      if (
+        !active ||
+        active.generation_id !== input.generation_id.trim() ||
+        active.generation_epoch !== input.generation_epoch
+      ) {
+        return {
+          ok: false as const,
+          code: "stale_generation" as const,
+          detail: "handoff refused: active generation mismatch",
+        };
+      }
+
+      const task = ops.getJson(tKey) as TaskRecord | null;
+      if (!task) {
+        return {
+          ok: false as const,
+          code: "not_found" as const,
+          detail: "applicability task missing",
+        };
+      }
+      if (task.attempt_id !== input.attempt_id) {
+        return {
+          ok: false as const,
+          code: "stale_attempt" as const,
+          detail: "applicability attempt mismatch",
+        };
+      }
+
+      const fence = ops.getJson(fKey) as PageFence | null;
+      if (!fence) {
+        return {
+          ok: false as const,
+          code: "stale_page" as const,
+          detail: "fence missing for handoff",
+        };
+      }
+
+      if (task.status !== "completed") {
+        if (task.status !== "running") {
+          return {
+            ok: false as const,
+            code: "invalid_state" as const,
+            detail: `cannot handoff task status=${task.status}`,
+          };
+        }
+        ops.setJson(tKey, {
+          ...task,
+          status: "completed" as const,
+          lease_expires_at: null,
+          lease_expires_ms: null,
+          completed_at: nowIso,
+          updated_at: nowIso,
+        });
+      }
+
+      if (fence.status === "open") {
+        return { ok: true as const, fence };
+      }
+      if (fence.status === "committed" || fence.status === "stale") {
+        return {
+          ok: false as const,
+          code: "stale_page" as const,
+          detail: `cannot handoff fence status=${fence.status}`,
+        };
+      }
+      if (fence.status !== "claimed") {
+        return {
+          ok: false as const,
+          code: "stale_page" as const,
+          detail: `cannot handoff fence status=${fence.status}`,
+        };
+      }
+      if (fence.task_key !== input.task_key) {
+        return {
+          ok: false as const,
+          code: "task_conflict" as const,
+          detail: `fence bound to ${fence.task_key}`,
+        };
+      }
+      if (fence.attempt_id !== input.attempt_id) {
+        return {
+          ok: false as const,
+          code: "stale_attempt" as const,
+          detail: "fence attempt mismatch on handoff",
+        };
+      }
+
+      const nextFence: PageFence = {
+        ...fence,
+        status: "open",
+        attempt_id: null,
+        task_key: null,
+        input_fingerprint: null,
+        upstream_output_fingerprints: null,
+        output_fingerprint: null,
+        updated_at: nowIso,
+      };
+      ops.setJson(fKey, nextFence);
+      return { ok: true as const, fence: nextFence };
+    });
+    if (!ran.ok) return ran;
+    if (!ran.value.ok) {
+      return { ok: false, code: ran.value.code, detail: ran.value.detail };
+    }
+    return { ok: true, value: ran.value.fence };
+  }
+
+  if (!isRedisEvalAvailable()) {
+    return {
+      ok: false,
+      code: "kv_unavailable",
+      detail: "neither MemoryAtomic nor Redis eval available for handoff",
+    };
+  }
+
+  const evaled = await evalTxn(
+    RELEASE_APPLICABILITY_HANDOFF_LUA,
+    [aKey, cKey, fKey, tKey],
+    [
+      input.generation_id.trim(),
+      String(input.generation_epoch),
+      input.task_key,
+      input.attempt_id,
+      nowIso,
+      String(ttlSeconds()),
+    ],
+  );
+  if (!evaled.ok) return evaled;
+  const code = Number(evaled.value);
+  if (code === 1) {
+    const fenceAfter = await kvGet<PageFence>(fKey);
+    if (!fenceAfter.ok) return fenceAfter;
+    if (!fenceAfter.value) {
+      return { ok: false, code: "conflict", detail: "fence missing after handoff" };
+    }
+    return { ok: true, value: fenceAfter.value };
+  }
+  if (code === -10) {
+    return {
+      ok: false,
+      code: "finalization_locked",
+      detail: "handoff refused: finalization locked",
+    };
+  }
+  if (code === -13) {
+    return { ok: false, code: "conflict", detail: "handoff: claim unusable" };
+  }
+  if (code === -1) {
+    return { ok: false, code: "stale_generation", detail: "active mismatch" };
+  }
+  if (code === -2) {
+    return { ok: false, code: "not_found", detail: "task missing" };
+  }
+  if (code === -3) {
+    return { ok: false, code: "stale_attempt", detail: "attempt mismatch" };
+  }
+  if (code === -5) {
+    return {
+      ok: false,
+      code: "invalid_state",
+      detail: "task not running for handoff",
+    };
+  }
+  if (code === -8) {
+    return { ok: false, code: "stale_page", detail: "fence not handoffable" };
+  }
+  if (code === -15) {
+    return {
+      ok: false,
+      code: "task_conflict",
+      detail: "fence task_key mismatch",
+    };
+  }
+  return {
+    ok: false,
+    code: "conflict",
+    detail: `releaseApplicabilityClaimForGenerate lua=${code}`,
+  };
+}

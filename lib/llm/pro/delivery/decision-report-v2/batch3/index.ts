@@ -47,6 +47,7 @@ export {
 } from "./delivery-transition";
 export {
   claimPageExecutionAtomic,
+  releaseApplicabilityClaimForGenerate,
   setBeforePageClaimAtomicHookForTests,
 } from "./claim-page-execution";
 export {
