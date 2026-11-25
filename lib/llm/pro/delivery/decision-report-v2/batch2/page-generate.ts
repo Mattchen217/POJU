@@ -310,9 +310,24 @@ export async function runReportPageGenerateOnce(input: {
 
   const parsed = parsePageJson(page_id, rawText);
   if (parsed == null) {
-    const repairQueued = await queueRepair(job, page_id, prep, rawText, fp.result.fingerprint, [
-      { code: "json_parse_failed", detail: "strict parse failed" },
-    ]);
+    const repairQueued = await queueRepair(
+      job,
+      page_id,
+      prep,
+      rawText,
+      fp.result.fingerprint,
+      [{ code: "json_parse_failed", detail: "strict parse failed" }],
+      batch3Attempt && typeof epoch === "number"
+        ? {
+            report_id: input.event.report_id,
+            generation_id: input.event.generation_id,
+            generation_epoch: epoch,
+            page_id,
+            task_key: batch3Attempt.task_key,
+            attempt_id: batch3Attempt.attempt_id,
+          }
+        : null,
+    );
     if (repairQueued) return repairQueued;
     return { status: "needs_repair" };
   }
@@ -326,6 +341,16 @@ export async function runReportPageGenerateOnce(input: {
       rawText,
       fp.result.fingerprint,
       validated.issues,
+      batch3Attempt && typeof epoch === "number"
+        ? {
+            report_id: input.event.report_id,
+            generation_id: input.event.generation_id,
+            generation_epoch: epoch,
+            page_id,
+            task_key: batch3Attempt.task_key,
+            attempt_id: batch3Attempt.attempt_id,
+          }
+        : null,
     );
     if (repairQueued) return repairQueued;
     return { status: "needs_repair" };
@@ -391,7 +416,30 @@ async function queueRepair(
   previous_raw: string,
   input_fingerprint: string,
   issues: unknown[],
+  batch3Handoff: {
+    report_id: string;
+    generation_id: string;
+    generation_epoch: number;
+    page_id: ReportPageId;
+    task_key: string;
+    attempt_id: string;
+  } | null,
 ): Promise<ReportBatch2WorkerResult | null> {
+  // Unit B: release Generate Fence before Repair Claim (different task_key).
+  if (batch3Handoff) {
+    const { releasePageClaimForHandoff } = await import(
+      "../batch3/claim-page-execution"
+    );
+    const released = await releasePageClaimForHandoff(batch3Handoff);
+    if (!released.ok) {
+      return {
+        status: "failed",
+        code: released.code,
+        detail: released.detail,
+      };
+    }
+  }
+
   setRepairPending(job, page_id, {
     page_id,
     system: prep.system,

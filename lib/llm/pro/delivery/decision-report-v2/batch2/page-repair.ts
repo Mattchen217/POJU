@@ -60,10 +60,10 @@ export async function runReportPageRepairOnce(input: {
   if (!loaded.ok) {
     return { status: "failed", code: loaded.code, detail: loaded.detail };
   }
-  const job = loaded.value;
-  if (!job) {
+  if (!loaded.value) {
     return { status: "failed", code: "job_not_found", detail: "batch2 job missing" };
   }
+  const job = loaded.value;
 
   const page_id = input.event.page_id;
   const pending = job.repair_pending[page_id];
@@ -150,6 +150,35 @@ export async function runReportPageRepairOnce(input: {
   let model_call_id: string | null = null;
   let rawText = "";
 
+  async function failRepair(
+    code: string,
+    detail: string,
+  ): Promise<ReportBatch2WorkerResult> {
+    // Unit B: do not leave Repair Fence permanently claimed.
+    if (batch3Attempt && typeof epoch === "number") {
+      const { failAndReleasePageClaim } = await import(
+        "../batch3/claim-page-execution"
+      );
+      await failAndReleasePageClaim({
+        report_id: input.event.report_id,
+        generation_id: input.event.generation_id,
+        generation_epoch: epoch,
+        page_id,
+        task_key: batch3Attempt.task_key,
+        attempt_id: batch3Attempt.attempt_id,
+        detail: `${code}: ${detail}`,
+      });
+    }
+    updatePageState(job, page_id, { outcome: "failed" });
+    clearRepairPending(job, page_id);
+    job.status = "failed";
+    const saved = await saveJob(job);
+    if (!saved.ok) {
+      return { status: "failed", code: saved.code, detail: saved.detail };
+    }
+    return { status: "failed", code, detail };
+  }
+
   try {
     const model = await invoke({
       page_id,
@@ -170,18 +199,10 @@ export async function runReportPageRepairOnce(input: {
       started_at,
       ended_at: new Date().toISOString(),
     });
-    updatePageState(job, page_id, { outcome: "failed" });
-    clearRepairPending(job, page_id);
-    job.status = "failed";
-    const saved = await saveJob(job);
-    if (!saved.ok) {
-      return { status: "failed", code: saved.code, detail: saved.detail };
-    }
-    return {
-      status: "failed",
-      code: "model_invoke_error",
-      detail: err instanceof Error ? err.message : String(err),
-    };
+    return failRepair(
+      "model_invoke_error",
+      err instanceof Error ? err.message : String(err),
+    );
   }
 
   appendInvocationLog(job, {
@@ -197,39 +218,23 @@ export async function runReportPageRepairOnce(input: {
   clearRepairPending(job, page_id);
 
   if (scareRedlineSnippet(rawText)) {
-    updatePageState(job, page_id, { outcome: "failed" });
-    job.status = "failed";
-    const saved = await saveJob(job);
-    if (!saved.ok) {
-      return { status: "failed", code: saved.code, detail: saved.detail };
-    }
-    return { status: "failed", code: "scare_redline", detail: "repair output failed compliance" };
+    return failRepair(
+      "scare_redline",
+      "repair output failed compliance",
+    );
   }
 
   const parsed = parseRepairJson(page_id, rawText);
   if (parsed == null) {
-    updatePageState(job, page_id, { outcome: "failed" });
-    job.status = "failed";
-    const saved = await saveJob(job);
-    if (!saved.ok) {
-      return { status: "failed", code: saved.code, detail: saved.detail };
-    }
-    return { status: "failed", code: "repair_json_parse_failed", detail: "repair JSON invalid" };
+    return failRepair("repair_json_parse_failed", "repair JSON invalid");
   }
 
   const validated = validateRepairOutput(page_id, parsed, prep.ctx, job.locale);
   if (!validated.ok) {
-    updatePageState(job, page_id, { outcome: "failed" });
-    job.status = "failed";
-    const saved = await saveJob(job);
-    if (!saved.ok) {
-      return { status: "failed", code: saved.code, detail: saved.detail };
-    }
-    return {
-      status: "failed",
-      code: "repair_validation_failed",
-      detail: validated.reason ?? "validation failed after repair",
-    };
+    return failRepair(
+      "repair_validation_failed",
+      validated.reason ?? "validation failed after repair",
+    );
   }
 
   const output_fp = hashCanonicalPayload(validated.page);
@@ -267,7 +272,7 @@ export async function runReportPageRepairOnce(input: {
       },
     });
     if (!committed.ok) {
-      return { status: "failed", code: committed.code, detail: committed.detail };
+      return failRepair(committed.code, committed.detail);
     }
     // Job already mutated for invocation log / repair_pending clear — persist non-page fields.
     const savedMeta = await saveJob(job);

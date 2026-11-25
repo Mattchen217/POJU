@@ -48,6 +48,8 @@ export {
 export {
   claimPageExecutionAtomic,
   releaseApplicabilityClaimForGenerate,
+  releasePageClaimForHandoff,
+  failAndReleasePageClaim,
   setBeforePageClaimAtomicHookForTests,
 } from "./claim-page-execution";
 export {

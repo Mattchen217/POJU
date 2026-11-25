@@ -568,7 +568,7 @@ export const claimPageExecutionAtomic = claimPageExecution;
  * Atomic: Task → completed + Fence claimed → open (attempt/task cleared).
  * Does not bump validity_rev and does not write Authority Output.
  */
-const RELEASE_APPLICABILITY_HANDOFF_LUA = `
+const RELEASE_PAGE_CLAIM_LUA = `
 ${REDIS_TIME_LUA_SNIPPET}
 local activeKey = KEYS[1]
 local claimKey = KEYS[2]
@@ -580,6 +580,9 @@ local expectTaskKey = ARGV[3]
 local expectAttempt = ARGV[4]
 local nowIso = ARGV[5]
 local ttl = tonumber(ARGV[6])
+local terminal = ARGV[7]
+local failDetail = ARGV[8]
+if terminal ~= "completed" and terminal ~= "failed" then return -12 end
 
 -- Validate ALL authority state before any SET (no partial writes on failure).
 local claimCur = redis.call("GET", claimKey)
@@ -600,23 +603,38 @@ if tcur == false or tcur == nil then return -2 end
 local tok, task = pcall(cjson.decode, tcur)
 if not tok or not task then return -2 end
 if task.attempt_id ~= expectAttempt then return -3 end
-if task.status ~= "completed" and task.status ~= "running" then return -5 end
+-- completed terminal allows already-completed task (idempotent handoff).
+-- failed terminal allows running or already-failed.
+if terminal == "completed" then
+  if task.status ~= "completed" and task.status ~= "running" then return -5 end
+else
+  if task.status ~= "failed" and task.status ~= "running" then return -5 end
+end
 
 local fcur = redis.call("GET", fenceKey)
 if fcur == false or fcur == nil then return -8 end
 local fok, fence = pcall(cjson.decode, fcur)
 if not fok or not fence then return -8 end
 
--- Idempotent: fence already open → optionally complete task, no fence rewrite.
-if fence.status == "open" then
+local function apply_task_terminal()
   if task.status == "running" then
-    task.status = "completed"
+    task.status = terminal
     task.lease_expires_at = cjson.null
     task.lease_expires_ms = cjson.null
-    task.completed_at = nowIso
     task.updated_at = nowIso
+    if terminal == "completed" then
+      task.completed_at = nowIso
+    end
+    if terminal == "failed" and failDetail and failDetail ~= "" then
+      task.failure_detail = failDetail
+    end
     redis.call("SET", taskKvKey, cjson.encode(task), "EX", ttl)
   end
+end
+
+-- Idempotent: fence already open → optionally terminalize task, no fence rewrite.
+if fence.status == "open" then
+  apply_task_terminal()
   return 1
 end
 
@@ -626,14 +644,7 @@ if fence.task_key ~= expectTaskKey then return -15 end
 if fence.attempt_id ~= expectAttempt then return -3 end
 
 -- All checks passed — write Task + Fence together.
-if task.status == "running" then
-  task.status = "completed"
-  task.lease_expires_at = cjson.null
-  task.lease_expires_ms = cjson.null
-  task.completed_at = nowIso
-  task.updated_at = nowIso
-  redis.call("SET", taskKvKey, cjson.encode(task), "EX", ttl)
-end
+apply_task_terminal()
 
 fence.status = "open"
 fence.attempt_id = cjson.null
@@ -646,6 +657,24 @@ redis.call("SET", fenceKey, cjson.encode(fence), "EX", ttl)
 return 1
 `;
 
+/**
+ * Generic page-claim handoff: end the owning Attempt and open the Fence so a
+ * different task_key (e.g. repair) can Claim. Used by:
+ * - Page07 applicability → generate
+ * - Generate → repair (Unit B)
+ */
+export async function releasePageClaimForHandoff(input: {
+  report_id: string;
+  generation_id: string;
+  generation_epoch: number;
+  page_id: ReportPageId;
+  task_key: string;
+  attempt_id: string;
+}): Promise<Batch3Result<PageFence>> {
+  return releasePageClaimTerminal({ ...input, terminal: "completed" });
+}
+
+/** @deprecated name kept for Unit A call sites — same as releasePageClaimForHandoff */
 export async function releaseApplicabilityClaimForGenerate(input: {
   report_id: string;
   generation_id: string;
@@ -653,6 +682,39 @@ export async function releaseApplicabilityClaimForGenerate(input: {
   page_id: ReportPageId;
   task_key: string;
   attempt_id: string;
+}): Promise<Batch3Result<PageFence>> {
+  return releasePageClaimForHandoff(input);
+}
+
+/**
+ * End a claimed Attempt as failed and open the Fence (no Authority Commit).
+ * Used when Repair (or similar) fails after Claim so the page is not stuck.
+ */
+export async function failAndReleasePageClaim(input: {
+  report_id: string;
+  generation_id: string;
+  generation_epoch: number;
+  page_id: ReportPageId;
+  task_key: string;
+  attempt_id: string;
+  detail: string;
+}): Promise<Batch3Result<PageFence>> {
+  return releasePageClaimTerminal({
+    ...input,
+    terminal: "failed",
+    failure_detail: input.detail,
+  });
+}
+
+async function releasePageClaimTerminal(input: {
+  report_id: string;
+  generation_id: string;
+  generation_epoch: number;
+  page_id: ReportPageId;
+  task_key: string;
+  attempt_id: string;
+  terminal: "completed" | "failed";
+  failure_detail?: string;
 }): Promise<Batch3Result<PageFence>> {
   const fKey = pageFenceKey(
     input.report_id,
@@ -709,21 +771,29 @@ export async function releaseApplicabilityClaimForGenerate(input: {
         return {
           ok: false as const,
           code: "not_found" as const,
-          detail: "applicability task missing",
+          detail: "task missing for claim release",
         };
       }
       if (task.attempt_id !== input.attempt_id) {
         return {
           ok: false as const,
           code: "stale_attempt" as const,
-          detail: "applicability attempt mismatch",
+          detail: "attempt mismatch on claim release",
         };
       }
-      if (task.status !== "completed" && task.status !== "running") {
+      if (input.terminal === "completed") {
+        if (task.status !== "completed" && task.status !== "running") {
+          return {
+            ok: false as const,
+            code: "invalid_state" as const,
+            detail: `cannot handoff task status=${task.status}`,
+          };
+        }
+      } else if (task.status !== "failed" && task.status !== "running") {
         return {
           ok: false as const,
           code: "invalid_state" as const,
-          detail: `cannot handoff task status=${task.status}`,
+          detail: `cannot fail-release task status=${task.status}`,
         };
       }
 
@@ -736,17 +806,25 @@ export async function releaseApplicabilityClaimForGenerate(input: {
         };
       }
 
+      const applyTaskTerminal = () => {
+        if (task.status !== "running") return;
+        ops.setJson(tKey, {
+          ...task,
+          status: input.terminal,
+          lease_expires_at: null,
+          lease_expires_ms: null,
+          completed_at:
+            input.terminal === "completed" ? nowIso : task.completed_at,
+          failure_detail:
+            input.terminal === "failed"
+              ? (input.failure_detail ?? task.failure_detail ?? null)
+              : task.failure_detail,
+          updated_at: nowIso,
+        });
+      };
+
       if (fence.status === "open") {
-        if (task.status === "running") {
-          ops.setJson(tKey, {
-            ...task,
-            status: "completed" as const,
-            lease_expires_at: null,
-            lease_expires_ms: null,
-            completed_at: nowIso,
-            updated_at: nowIso,
-          });
-        }
+        applyTaskTerminal();
         return { ok: true as const, fence };
       }
       if (fence.status === "committed" || fence.status === "stale") {
@@ -778,16 +856,7 @@ export async function releaseApplicabilityClaimForGenerate(input: {
         };
       }
 
-      if (task.status === "running") {
-        ops.setJson(tKey, {
-          ...task,
-          status: "completed" as const,
-          lease_expires_at: null,
-          lease_expires_ms: null,
-          completed_at: nowIso,
-          updated_at: nowIso,
-        });
-      }
+      applyTaskTerminal();
       const nextFence: PageFence = {
         ...fence,
         status: "open",
@@ -817,7 +886,7 @@ export async function releaseApplicabilityClaimForGenerate(input: {
   }
 
   const evaled = await evalTxn(
-    RELEASE_APPLICABILITY_HANDOFF_LUA,
+    RELEASE_PAGE_CLAIM_LUA,
     [aKey, cKey, fKey, tKey],
     [
       input.generation_id.trim(),
@@ -826,6 +895,8 @@ export async function releaseApplicabilityClaimForGenerate(input: {
       input.attempt_id,
       nowIso,
       String(ttlSeconds()),
+      input.terminal,
+      input.failure_detail ?? "",
     ],
   );
   if (!evaled.ok) return evaled;
