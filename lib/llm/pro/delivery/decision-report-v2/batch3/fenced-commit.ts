@@ -5,6 +5,12 @@
  */
 
 import type { ReportPageId, ReportPageRuntimeState } from "../orchestration/types";
+import { batch3NowMs } from "./clock";
+import {
+  finalizationClaimKey,
+  inspectFinalizationLock,
+  FINALIZATION_LOCK_LUA_SNIPPET,
+} from "./finalization-lock";
 import {
   evalTxn,
   isMemoryAtomicAvailable,
@@ -52,16 +58,24 @@ local taskKey = KEYS[2]
 local fenceKey = KEYS[3]
 local provKey = KEYS[4]
 local authOutKey = KEYS[5]
+local claimKey = KEYS[6]
 local expectGenId = ARGV[1]
 local expectEpoch = tonumber(ARGV[2])
 local expectAttempt = ARGV[3]
 local expectRev = tonumber(ARGV[4])
 local expectInputFp = ARGV[5]
-local nextTaskJson = ARGV[6]
-local nextFenceJson = ARGV[7]
-local nextProvJson = ARGV[8]
-local nextAuthOutJson = ARGV[9]
-local ttl = tonumber(ARGV[10])
+local expectTaskKey = ARGV[6]
+local nowMs = tonumber(ARGV[7])
+local nextTaskJson = ARGV[8]
+local nextFenceJson = ARGV[9]
+local nextProvJson = ARGV[10]
+local nextAuthOutJson = ARGV[11]
+local ttl = tonumber(ARGV[12])
+
+local claimCur = redis.call("GET", claimKey)
+${FINALIZATION_LOCK_LUA_SNIPPET}
+if __fin_lock == -10 then return -10 end
+if __fin_lock == -13 then return -13 end
 
 local cur = redis.call("GET", activeKey)
 if cur == false or cur == nil then return -1 end
@@ -81,12 +95,19 @@ if task.status == "stale" or task.status == "superseded" then return -3 end
 if task.status ~= "running" and task.status ~= "repair_pending" then return -5 end
 if tonumber(task.validity_rev) ~= expectRev then return -6 end
 if task.input_fingerprint ~= expectInputFp then return -7 end
+if task.lease_expires_at and task.lease_expires_at ~= cjson.null then
+  -- Compare via ARGV nowMs vs pre-parsed lease epoch ms in ARGV[13]
+  local leaseExpMs = tonumber(ARGV[13])
+  if leaseExpMs and nowMs >= leaseExpMs then return -14 end
+end
 
 local fcur = redis.call("GET", fenceKey)
 if fcur == false or fcur == nil then return -8 end
 local fok, fence = pcall(cjson.decode, fcur)
 if not fok or not fence then return -8 end
-if fence.status == "stale" then return -6 end
+if fence.status ~= "claimed" then return -6 end
+if fence.attempt_id ~= expectAttempt then return -3 end
+if fence.task_key ~= expectTaskKey then return -3 end
 if tonumber(fence.validity_rev) ~= expectRev then return -6 end
 if tonumber(fence.generation_epoch) ~= expectEpoch then return -1 end
 
@@ -144,14 +165,23 @@ function mapLuaCode(code: number): CommitAuthResult {
     return { ok: false, code: "stale_generation", detail: "active mismatch (lua)" };
   }
   if (code === -2) return { ok: false, code: "not_found", detail: "task missing (lua)" };
-  if (code === -3) return { ok: false, code: "stale_attempt", detail: "attempt/status (lua)" };
+  if (code === -3) return { ok: false, code: "stale_attempt", detail: "attempt/fence ownership (lua)" };
   if (code === -4) {
     return { ok: false, code: "already_completed", detail: "task completed (lua)" };
   }
   if (code === -5) return { ok: false, code: "conflict", detail: "bad task status (lua)" };
-  if (code === -6) return { ok: false, code: "stale_page", detail: "validity_rev/stale (lua)" };
+  if (code === -6) return { ok: false, code: "stale_page", detail: "fence not claimed / rev (lua)" };
   if (code === -7) return { ok: false, code: "input_mismatch", detail: "input fp (lua)" };
   if (code === -8) return { ok: false, code: "not_found", detail: "fence missing (lua)" };
+  if (code === -10) {
+    return { ok: false, code: "finalization_locked", detail: "finalization locks commit (lua)" };
+  }
+  if (code === -13) {
+    return { ok: false, code: "conflict", detail: "finalization claim unusable (lua)" };
+  }
+  if (code === -14) {
+    return { ok: false, code: "lease_expired", detail: "task lease expired (lua)" };
+  }
   return { ok: false, code: "conflict", detail: `lua code=${code}` };
 }
 
@@ -176,11 +206,13 @@ function commitAuthorityMemory(input: {
   const fKey = pageFenceKey(input.report_id, input.generation_id, input.page_id);
   const pKey = provKey(input.report_id, input.generation_id, input.page_id);
   const oKey = authOutputKey(input.report_id, input.generation_id, input.page_id);
+  const cKey = finalizationClaimKey(input.report_id, input.generation_id);
   trackBatch3Key(aKey);
   trackBatch3Key(tKey);
   trackBatch3Key(fKey);
   trackBatch3Key(pKey);
   trackBatch3Key(oKey);
+  trackBatch3Key(cKey);
 
   const provenance = buildProvenance(input, input.provenanceBase);
   const authority_output: AuthorityPageOutput = {
@@ -198,6 +230,22 @@ function commitAuthorityMemory(input: {
   };
 
   const ran = runMemoryAtomic((ops) => {
+    const lock = inspectFinalizationLock(ops.getJson(cKey));
+    if (lock.kind === "locked") {
+      return {
+        ok: false as const,
+        code: "finalization_locked" as const,
+        detail: "finalization locks commit",
+      };
+    }
+    if (lock.kind === "unusable") {
+      return {
+        ok: false as const,
+        code: "conflict" as const,
+        detail: lock.reason,
+      };
+    }
+
     const active = ops.getJson(aKey) as ActiveGenerationPointer | null;
     if (
       !active ||
@@ -243,6 +291,16 @@ function commitAuthorityMemory(input: {
         detail: `cannot commit from status=${task.status}`,
       };
     }
+    if (
+      task.lease_expires_at &&
+      Date.parse(task.lease_expires_at) <= batch3NowMs()
+    ) {
+      return {
+        ok: false as const,
+        code: "lease_expired" as const,
+        detail: "task lease expired at commit",
+      };
+    }
     if (task.validity_rev !== input.validity_rev) {
       return {
         ok: false as const,
@@ -274,8 +332,19 @@ function commitAuthorityMemory(input: {
     if (!fence) {
       return { ok: false as const, code: "not_found" as const, detail: "page fence missing" };
     }
-    if (fence.status === "stale") {
-      return { ok: false as const, code: "stale_page" as const, detail: "fence stale" };
+    if (fence.status !== "claimed") {
+      return {
+        ok: false as const,
+        code: "stale_page" as const,
+        detail: `fence status=${fence.status} — need claimed`,
+      };
+    }
+    if (fence.attempt_id !== input.attempt_id || fence.task_key !== input.task_key) {
+      return {
+        ok: false as const,
+        code: "stale_attempt" as const,
+        detail: "fence ownership mismatch",
+      };
     }
     if (fence.validity_rev !== input.validity_rev) {
       return {
@@ -396,22 +465,30 @@ async function commitAuthorityRedis(input: {
   const fKey = pageFenceKey(input.report_id, input.generation_id, input.page_id);
   const pKey = provKey(input.report_id, input.generation_id, input.page_id);
   const oKey = authOutputKey(input.report_id, input.generation_id, input.page_id);
+  const cKey = finalizationClaimKey(input.report_id, input.generation_id);
   trackBatch3Key(oKey);
+  trackBatch3Key(cKey);
+  const leaseExpMs = task.value.lease_expires_at
+    ? Date.parse(task.value.lease_expires_at)
+    : 0;
 
   const evaled = await evalTxn(
     FENCED_COMMIT_LUA,
-    [aKey, tKey, fKey, pKey, oKey],
+    [aKey, tKey, fKey, pKey, oKey, cKey],
     [
       input.generation_id.trim(),
       String(input.generation_epoch),
       input.attempt_id,
       String(input.validity_rev),
       input.provenanceBase.input_fingerprint,
+      input.task_key,
+      String(batch3NowMs()),
       JSON.stringify(nextTask),
       JSON.stringify(nextFence),
       JSON.stringify(provenance),
       JSON.stringify(authority_output),
       String(ttlSeconds()),
+      String(leaseExpMs),
     ],
   );
   if (!evaled.ok) return evaled;

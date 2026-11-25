@@ -441,7 +441,13 @@ export async function mergeReportBatch2IntoV3Lab(
   }
 
   const { randomUUID } = await import("node:crypto");
-  const claimed = await claimFinalization({
+  const {
+    claimFinalization: claimFin,
+    markFinalizationDelivering,
+    markFinalizationDelivered,
+    markFinalizationDeliveryFailed,
+  } = await import("../batch3/finalization");
+  const claimed = await claimFin({
     report_id,
     generation_id,
     generation_epoch: epoch,
@@ -455,38 +461,71 @@ export async function mergeReportBatch2IntoV3Lab(
     };
   }
 
+  await markFinalizationDelivering(report_id, generation_id);
+
   // Deliver only sealed outputs from the successful claim (immutable bindings).
-  const reportPageSet = new Set<string>(REPORT_PAGE_IDS);
-  for (const key of FACE_DELIVERY_PAGE_KEYS) {
-    if (!reportPageSet.has(key)) continue; // glossary 03 derived
-    const binding = claimed.value.pages.find((p) => p.page_id === key);
-    if (!binding) {
-      return { ok: false, reason: `merge_claim_missing_page:${key}` };
+  try {
+    const reportPageSet = new Set<string>(REPORT_PAGE_IDS);
+    for (const key of FACE_DELIVERY_PAGE_KEYS) {
+      if (!reportPageSet.has(key)) continue; // glossary 03 derived
+      const binding = claimed.value.pages.find((p) => p.page_id === key);
+      if (!binding) {
+        await markFinalizationDeliveryFailed(
+          report_id,
+          generation_id,
+          epoch,
+          `merge_claim_missing_page:${key}`,
+        );
+        return { ok: false, reason: `merge_claim_missing_page:${key}` };
+      }
+      const out = binding.sealed_output;
+      if (out == null) {
+        await markFinalizationDeliveryFailed(
+          report_id,
+          generation_id,
+          epoch,
+          `merge_claim_empty_output:${key}`,
+        );
+        return { ok: false, reason: `merge_claim_empty_output:${key}` };
+      }
+      const byPage = lab.artifacts.by_page ?? {};
+      byPage[key] = { ...byPage[key], page_schema: out };
+      lab.artifacts.by_page = byPage;
+      const bodyKey = `${key}.content.body`;
+      const step = lab.steps[bodyKey];
+      if (step) {
+        lab.steps[bodyKey] = { ...step, status: "approved" };
+      }
     }
-    const out = binding.sealed_output;
-    if (out == null) {
-      return { ok: false, reason: `merge_claim_empty_output:${key}` };
-    }
-    const byPage = lab.artifacts.by_page ?? {};
-    byPage[key] = { ...byPage[key], page_schema: out };
-    lab.artifacts.by_page = byPage;
-    const bodyKey = `${key}.content.body`;
-    const step = lab.steps[bodyKey];
-    if (step) {
-      lab.steps[bodyKey] = { ...step, status: "approved" };
-    }
-  }
 
-  const assemble = lab.steps["book.assemble"];
-  if (assemble) {
-    lab.steps["book.assemble"] = { ...assemble, status: "approved" };
-  }
-  lab.updated_at = Date.now();
-  await saveDeliveryLab(lab);
+    const assemble = lab.steps["book.assemble"];
+    if (assemble) {
+      lab.steps["book.assemble"] = { ...assemble, status: "approved" };
+    }
+    lab.updated_at = Date.now();
+    await saveDeliveryLab(lab);
 
-  const saved = await persistProductionV3Book(job_id, lab, input.locale);
-  if (!saved.ok) return { ok: false, reason: saved.reason };
-  return { ok: true };
+    const saved = await persistProductionV3Book(job_id, lab, input.locale);
+    if (!saved.ok) {
+      await markFinalizationDeliveryFailed(
+        report_id,
+        generation_id,
+        epoch,
+        saved.reason,
+      );
+      return { ok: false, reason: saved.reason };
+    }
+    await markFinalizationDelivered(report_id, generation_id, epoch);
+    return { ok: true };
+  } catch (err) {
+    await markFinalizationDeliveryFailed(
+      report_id,
+      generation_id,
+      epoch,
+      err instanceof Error ? err.message : String(err),
+    );
+    throw err;
+  }
 }
 
 export async function pollFinalDeliveryReportBatch2(

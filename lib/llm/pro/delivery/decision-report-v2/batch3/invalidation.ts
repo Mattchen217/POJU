@@ -12,13 +12,15 @@ import {
   saveJob,
   updatePageState,
 } from "../batch2/job-store";
-import {
-  REPORT_PAGE_IDS,
-  REPORT_PAGE_REGISTRY,
-} from "../orchestration";
+import { REPORT_PAGE_IDS } from "../orchestration";
 import type { ReportPageId } from "../orchestration/types";
 import { inspectFinalizationClaimValue } from "./claim-inspect";
-import { finalizationClaimKey, type FinalizationClaim } from "./finalization";
+import {
+  finalizationClaimKey,
+  FINALIZATION_LOCK_LUA_SNIPPET,
+  inspectFinalizationLock,
+} from "./finalization-lock";
+import type { FinalizationClaim } from "./finalization";
 import { assertGenerationActive } from "./generation-store";
 import {
   evalTxn,
@@ -30,27 +32,14 @@ import {
 } from "./kv-cas";
 import { pageFenceKey } from "./page-fence";
 import { readPageProvenance } from "./provenance";
-import type { Batch3Result, PageFence, PageProvenance, TaskRecord } from "./types";
-
-function requiredDependentsOf(page_id: ReportPageId): ReportPageId[] {
-  const out: ReportPageId[] = [];
-  for (const def of REPORT_PAGE_REGISTRY) {
-    if ((def.required_upstream as readonly string[]).includes(page_id)) {
-      out.push(def.page_id);
-    }
-  }
-  return out;
-}
-
-function optionalDependentsOf(page_id: ReportPageId): ReportPageId[] {
-  const out: ReportPageId[] = [];
-  for (const def of REPORT_PAGE_REGISTRY) {
-    if ((def.optional_upstream as readonly string[]).includes(page_id)) {
-      out.push(def.page_id);
-    }
-  }
-  return out;
-}
+import type {
+  Batch3Result,
+  CascadeOperation,
+  PageFence,
+  PageProvenance,
+  TaskRecord,
+} from "./types";
+import { randomUUID } from "node:crypto";
 
 function provKey(
   report_id: string,
@@ -105,18 +94,9 @@ if not epoch or not ttl or type(reportId) ~= "string" or type(genId) ~= "string"
 end
 
 local claimCur = redis.call("GET", claimKey)
-if claimCur ~= false and claimCur ~= nil then
-  local cok, claim = pcall(cjson.decode, claimCur)
-  if not cok or type(claim) ~= "table" then
-    return -13
-  end
-  local status = claim.status
-  if status == "claimed" then
-    return -10
-  end
-  -- Present but not a usable claimed seal → fail closed (never treat as absent).
-  return -13
-end
+${FINALIZATION_LOCK_LUA_SNIPPET}
+if __fin_lock == -10 then return -10 end
+if __fin_lock == -13 then return -13 end
 
 local fcur = redis.call("GET", fenceKey)
 local curRev = 0
@@ -137,7 +117,7 @@ local nextFence = {
   validity_rev = nextRev,
   status = "stale",
   attempt_id = cjson.null,
-  task_key = curTask,
+  task_key = cjson.null,
   input_fingerprint = cjson.null,
   upstream_output_fingerprints = cjson.null,
   output_fingerprint = cjson.null,
@@ -248,20 +228,20 @@ export async function invalidatePageAuthority(input: {
   if (isMemoryAtomicAvailable()) {
     const ran = runMemoryAtomic((ops) => {
       const claimRaw = ops.getJson(cKey);
-      const inspect = inspectFinalizationClaimValue(claimRaw);
-      if (inspect.kind === "claimed") {
+      const lock = inspectFinalizationLock(claimRaw);
+      if (lock.kind === "locked") {
         return {
           ok: false as const,
           code: "finalization_locked" as const,
           detail:
-            "invalidation refused: finalization claim sealed for generation",
+            "invalidation refused: finalization locks page content",
         };
       }
-      if (inspect.kind === "unusable") {
+      if (lock.kind === "unusable") {
         return {
           ok: false as const,
           code: "conflict" as const,
-          detail: `invalidation refused: ${inspect.reason}`,
+          detail: `invalidation refused: ${lock.reason}`,
         };
       }
 
@@ -276,7 +256,7 @@ export async function invalidatePageAuthority(input: {
         validity_rev: nextRev,
         status: "stale",
         attempt_id: null,
-        task_key: cur?.task_key ?? null,
+        task_key: null,
         input_fingerprint: null,
         upstream_output_fingerprints: null,
         output_fingerprint: null,
@@ -385,9 +365,10 @@ export async function invalidatePageAuthority(input: {
 }
 
 /**
- * Mark source page + DAG dependents as stale.
+ * Mark source page + DAG dependents as stale via a frozen CascadeOperation.
  * Optional consumers (Page02←01) invalidate only when provenance consumed that upstream.
  * If a finalization claim is sealed or unusable, refuse before any fence bump.
+ * Recovery continues mid-cascade via continueCascadeOperation (targets not recomputed).
  */
 export async function invalidateFromPage(input: {
   report_id: string;
@@ -395,15 +376,15 @@ export async function invalidateFromPage(input: {
   generation_epoch: number;
   source_page_id: ReportPageId;
   reason: string;
-}): Promise<Batch3Result<{ invalidated: ReportPageId[] }>> {
-  const fence = await assertGenerationActive({
-    report_id: input.report_id,
-    generation_id: input.generation_id,
-    generation_epoch: input.generation_epoch,
-  });
-  if (!fence.ok) return fence;
-
-  // Fast fail: sealed/unusable claim blocks the entire cascade (no partial bumps).
+}): Promise<
+  Batch3Result<{
+    invalidated: ReportPageId[];
+    operation_id: string;
+    cascade_status: CascadeOperation["status"];
+  }>
+> {
+  // Fast fail finalization lock BEFORE active check — after seal, gen may be
+  // `finalizing` and must still report finalization_locked (not stale_generation).
   const claim = await kvGet<FinalizationClaim | unknown>(
     finalizationClaimKey(input.report_id, input.generation_id),
   );
@@ -421,54 +402,232 @@ export async function invalidateFromPage(input: {
     return refuseUnusableClaim(inspect.reason);
   }
 
-  const job = await getJob(input.report_id, input.generation_id);
-  if (!job) {
-    return { ok: false, code: "not_found", detail: "job missing for invalidation" };
-  }
+  const fence = await assertGenerationActive({
+    report_id: input.report_id,
+    generation_id: input.generation_id,
+    generation_epoch: input.generation_epoch,
+  });
+  if (!fence.ok) return fence;
 
-  const visited = new Set<ReportPageId>();
-  const queue: ReportPageId[] = [input.source_page_id];
+  const {
+    planCascadePageIds,
+    buildFrozenCascadeTargets,
+    saveCascadeOperation,
+  } = await import("./cascade-operation");
 
-  while (queue.length) {
-    const page_id = queue.shift()!;
-    if (visited.has(page_id)) continue;
-    visited.add(page_id);
-
-    const auth = await invalidatePageAuthority({
-      report_id: input.report_id,
-      generation_id: input.generation_id,
-      generation_epoch: input.generation_epoch,
-      page_id,
-      reason: `${input.reason} (from ${input.source_page_id})`,
-    });
-    if (!auth.ok) return auth;
-
-    updatePageState(job, page_id, {
-      outcome: "pending",
-      output_fingerprint: undefined,
-      applicability_status: page_id === "07" ? null : undefined,
-    });
-    delete job.page_outputs[page_id];
-    bindPageValidityRev(job, page_id, auth.value.validity_rev, null);
-
-    for (const dep of requiredDependentsOf(page_id)) {
-      if (!visited.has(dep)) queue.push(dep);
-    }
-
-    for (const dep of optionalDependentsOf(page_id)) {
-      if (visited.has(dep)) continue;
+  const planned = await planCascadePageIds({
+    report_id: input.report_id,
+    generation_id: input.generation_id,
+    source_page_id: input.source_page_id,
+    shouldIncludeOptional: async (dep, upstream) => {
       const prov = await readPageProvenance(
         input.report_id,
         input.generation_id,
         dep,
       );
       if (!prov.ok) return prov;
-      const consumed = prov.value?.upstream_output_fingerprints?.[page_id];
-      if (consumed) {
-        queue.push(dep);
-      }
-    }
+      return {
+        ok: true,
+        value: !!prov.value?.upstream_output_fingerprints?.[upstream],
+      };
+    },
+  });
+  if (!planned.ok) return planned;
+
+  const targets = await buildFrozenCascadeTargets({
+    report_id: input.report_id,
+    generation_id: input.generation_id,
+    page_ids: planned.value,
+  });
+  if (!targets.ok) return targets;
+
+  const now = new Date().toISOString();
+  const operation_id = randomUUID();
+  let op: CascadeOperation = {
+    operation_id,
+    report_id: input.report_id.trim(),
+    generation_id: input.generation_id.trim(),
+    generation_epoch: input.generation_epoch,
+    source_page_id: input.source_page_id,
+    reason: input.reason,
+    targets: targets.value,
+    status: "running",
+    created_at: now,
+    updated_at: now,
+  };
+  const created = await saveCascadeOperation(op, null);
+  if (!created.ok) return created;
+
+  return continueCascadeOperation({
+    report_id: input.report_id,
+    generation_id: input.generation_id,
+    operation_id,
+  });
+}
+
+/**
+ * Continue a frozen CascadeOperation — never recomputes target set.
+ * Idempotent per target via expected_old_rev → target_rev.
+ */
+export async function continueCascadeOperation(input: {
+  report_id: string;
+  generation_id: string;
+  operation_id: string;
+}): Promise<
+  Batch3Result<{
+    invalidated: ReportPageId[];
+    operation_id: string;
+    cascade_status: CascadeOperation["status"];
+  }>
+> {
+  const {
+    readCascadeOperation,
+    saveCascadeOperation,
+    isCascadeTargetSatisfied,
+  } = await import("./cascade-operation");
+
+  const loaded = await readCascadeOperation(
+    input.report_id,
+    input.generation_id,
+    input.operation_id,
+  );
+  if (!loaded.ok) return loaded;
+  if (!loaded.value) {
+    return {
+      ok: false,
+      code: "not_found",
+      detail: `cascade ${input.operation_id} missing`,
+    };
   }
+
+  let op = loaded.value;
+  if (op.status === "completed") {
+    return {
+      ok: true,
+      value: {
+        invalidated: op.targets.filter((t) => t.done).map((t) => t.page_id),
+        operation_id: op.operation_id,
+        cascade_status: "completed",
+      },
+    };
+  }
+
+  const job = await getJob(input.report_id, input.generation_id);
+  if (!job) {
+    return { ok: false, code: "not_found", detail: "job missing for cascade" };
+  }
+
+  const invalidated: ReportPageId[] = [];
+  const prevJson = JSON.stringify(op);
+
+  for (let i = 0; i < op.targets.length; i++) {
+    const target = op.targets[i]!;
+    if (target.done) {
+      invalidated.push(target.page_id);
+      continue;
+    }
+
+    const satisfied = await isCascadeTargetSatisfied({
+      report_id: input.report_id,
+      generation_id: input.generation_id,
+      target,
+    });
+    if (!satisfied.ok) return satisfied;
+    if (satisfied.value) {
+      op = {
+        ...op,
+        targets: op.targets.map((t, idx) =>
+          idx === i ? { ...t, done: true } : t,
+        ),
+        updated_at: new Date().toISOString(),
+      };
+      invalidated.push(target.page_id);
+      continue;
+    }
+
+    // Only bump when fence is still at expected_old_rev (or absent at 0).
+    const curFence = await kvGet<PageFence>(
+      pageFenceKey(input.report_id, input.generation_id, target.page_id),
+    );
+    if (!curFence.ok) return curFence;
+    const curRev = curFence.value?.validity_rev ?? 0;
+    if (curRev !== target.expected_old_rev) {
+      op = {
+        ...op,
+        status: "failed_recoverable",
+        failure_detail: `page ${target.page_id} rev=${curRev} expected_old=${target.expected_old_rev}`,
+        updated_at: new Date().toISOString(),
+      };
+      const failed = await saveCascadeOperation(op, prevJson);
+      if (!failed.ok) return failed;
+      return {
+        ok: false,
+        code: "cascade_incomplete",
+        detail: op.failure_detail ?? "cascade target rev mismatch",
+      };
+    }
+
+    const auth = await invalidatePageAuthority({
+      report_id: input.report_id,
+      generation_id: input.generation_id,
+      generation_epoch: op.generation_epoch,
+      page_id: target.page_id,
+      reason: `${op.reason} (cascade ${op.operation_id} from ${op.source_page_id})`,
+    });
+    if (!auth.ok) {
+      op = {
+        ...op,
+        status: "failed_recoverable",
+        failure_detail: `${auth.code}:${auth.detail}`,
+        updated_at: new Date().toISOString(),
+      };
+      await saveCascadeOperation(op, prevJson);
+      return auth;
+    }
+
+    if (auth.value.validity_rev !== target.target_rev) {
+      op = {
+        ...op,
+        status: "failed_recoverable",
+        failure_detail: `page ${target.page_id} bumped to ${auth.value.validity_rev} want ${target.target_rev}`,
+        updated_at: new Date().toISOString(),
+      };
+      await saveCascadeOperation(op, prevJson);
+      return {
+        ok: false,
+        code: "cascade_incomplete",
+        detail: op.failure_detail ?? "target_rev mismatch after invalidate",
+      };
+    }
+
+    updatePageState(job, target.page_id, {
+      outcome: "pending",
+      output_fingerprint: undefined,
+      applicability_status: target.page_id === "07" ? null : undefined,
+    });
+    delete job.page_outputs[target.page_id];
+    bindPageValidityRev(job, target.page_id, auth.value.validity_rev, null);
+
+    op = {
+      ...op,
+      targets: op.targets.map((t, idx) =>
+        idx === i ? { ...t, done: true } : t,
+      ),
+      updated_at: new Date().toISOString(),
+    };
+    invalidated.push(target.page_id);
+  }
+
+  const allDone = op.targets.every((t) => t.done);
+  op = {
+    ...op,
+    status: allDone ? "completed" : "running",
+    updated_at: new Date().toISOString(),
+    failure_detail: allDone ? null : op.failure_detail,
+  };
+
+  const savedOp = await saveCascadeOperation(op, prevJson);
+  if (!savedOp.ok) return savedOp;
 
   const saved = await saveJob(job);
   if (!saved.ok) {
@@ -479,7 +638,14 @@ export async function invalidateFromPage(input: {
     };
   }
 
-  return { ok: true, value: { invalidated: [...visited] } };
+  return {
+    ok: true,
+    value: {
+      invalidated,
+      operation_id: op.operation_id,
+      cascade_status: op.status,
+    },
+  };
 }
 
 export function allReportPageIds(): readonly ReportPageId[] {

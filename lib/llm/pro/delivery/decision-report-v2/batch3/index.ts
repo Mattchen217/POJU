@@ -14,6 +14,16 @@ export * from "./auth-output";
 export * from "./persist-page-blob";
 export * from "./authority-page-read";
 export * from "./finalization";
+export * from "./finalization-lock";
+export {
+  canTransitionGeneration,
+  canTransitionFence,
+  isGenerationTerminal,
+  GENERATION_TERMINAL,
+} from "./generation-transitions";
+export * from "./claim-page-execution";
+export * from "./cascade-operation";
+export * from "./clock";
 
 // Explicit re-exports used by tests / workers
 export { writePageProvenance, readPageProvenance } from "./provenance";
@@ -22,10 +32,18 @@ export { readActiveGeneration, assertGenerationActive } from "./generation-store
 export { ensurePageFence, readPageFence } from "./page-fence";
 export {
   invalidatePageAuthority,
+  invalidateFromPage,
+  continueCascadeOperation,
   setBeforeInvalidateAtomicHookForTests,
   mapInvalidateLuaCode,
   INVALIDATE_LUA,
 } from "./invalidation";
+export {
+  assertNoBlockingCascade,
+  readActiveCascadeOperation,
+  readCascadeOperation,
+  saveCascadeOperation,
+} from "./cascade-operation";
 export { readAuthorityPageOutput } from "./auth-output";
 export {
   persistPageBlobUnderCommittedFence,

@@ -119,6 +119,59 @@ export async function runReportBatch3Recovery(input: {
   const job = loaded.value;
   const locale = input.locale ?? job.locale;
 
+  // 0a) Continue incomplete CascadeOperation (frozen targets — never replan).
+  {
+    const { readActiveCascadeOperation } = await import("./cascade-operation");
+    const { continueCascadeOperation } = await import("./invalidation");
+    const { reopenStaleFenceIfReady } = await import("./page-fence");
+    const activeCascade = await readActiveCascadeOperation(
+      input.report_id,
+      input.generation_id,
+    );
+    if (!activeCascade.ok) return activeCascade;
+    if (
+      activeCascade.value &&
+      (activeCascade.value.status === "running" ||
+        activeCascade.value.status === "failed_recoverable")
+    ) {
+      if (actions.length >= limit) {
+        return {
+          ok: true,
+          value: { recovery_id, actions, stopped_reason: "limit_reached" },
+        };
+      }
+      const cont = await continueCascadeOperation({
+        report_id: input.report_id,
+        generation_id: input.generation_id,
+        operation_id: activeCascade.value.operation_id,
+      });
+      actions.push({
+        kind: cont.ok ? "dispatch_ready" : "skipped_superseded",
+        detail: cont.ok
+          ? `cascade ${activeCascade.value.operation_id} → ${cont.value.cascade_status}`
+          : `cascade continue failed: ${cont.detail}`,
+      });
+    }
+
+    // Reopen stale fences when deps ready (before dispatch).
+    for (const page_id of REPORT_PAGE_IDS) {
+      if (actions.length >= limit) break;
+      const reopened = await reopenStaleFenceIfReady({
+        report_id: input.report_id,
+        generation_id: input.generation_id,
+        generation_epoch: input.generation_epoch,
+        page_id,
+      });
+      if (reopened.ok && reopened.value.status === "open") {
+        actions.push({
+          kind: "dispatch_ready",
+          detail: `reopened stale fence ${page_id} rev=${reopened.value.validity_rev}`,
+          page_id,
+        });
+      }
+    }
+  }
+
   // Raw blobs (pre-authority demotion) — detect physical missing/mismatched persist.
   const rawBlobs = await loadJobRawBlobs(input.report_id, input.generation_id);
   if (!rawBlobs.ok) {
@@ -295,6 +348,65 @@ export async function runReportBatch3Recovery(input: {
     }
     await markIntentSent(intent.value);
     actions.push({ kind: "dispatch_repair", detail: "repair_pending", page_id });
+  }
+
+  // 2b) Orphan queued pages (queued on Job but no Intent) — heal via orchestrator
+  {
+    const { hasActiveDispatchIntent } = await import("./dispatch-intent");
+    let orphanQueued = false;
+    for (const st of job.page_states) {
+      if (st.outcome !== "queued") continue;
+      const has = await hasActiveDispatchIntent({
+        report_id: input.report_id,
+        generation_id: input.generation_id,
+        page_id: st.page_id,
+      });
+      if (!has.ok) return has;
+      if (!has.value) {
+        orphanQueued = true;
+        // Reset to pending so orchestrator can re-dispatch with Intent-first.
+        const { updatePageState } = await import("../batch2/job-store");
+        updatePageState(job, st.page_id, { outcome: "pending" });
+        actions.push({
+          kind: "dispatch_ready",
+          detail: `orphan queued healed → pending for ${st.page_id}`,
+          page_id: st.page_id,
+        });
+      }
+    }
+    if (orphanQueued) {
+      const { saveJob } = await import("../batch2/job-store");
+      const saved = await saveJob(job);
+      if (!saved.ok) {
+        return {
+          ok: false,
+          code: saved.code === "kv_unavailable" ? "kv_unavailable" : "kv_write_failed",
+          detail: saved.detail,
+        };
+      }
+    }
+  }
+
+  // 2c) Delivery resume — sealed / delivering / delivery_failed resume same seal only
+  {
+    const { readFinalizationClaim } = await import("./finalization");
+    const claim = await readFinalizationClaim(
+      input.report_id,
+      input.generation_id,
+    );
+    if (!claim.ok) return claim;
+    if (
+      claim.value &&
+      (claim.value.status === "sealed" ||
+        claim.value.status === "claimed" ||
+        claim.value.status === "delivering" ||
+        claim.value.status === "delivery_failed")
+    ) {
+      actions.push({
+        kind: "dispatch_ready",
+        detail: `finalization delivery resume candidate status=${claim.value.status} claim_id=${claim.value.claim_id}`,
+      });
+    }
   }
 
   // 3) Ready pages not yet completed — re-run orchestrator tick (idempotent dispatch)

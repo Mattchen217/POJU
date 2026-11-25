@@ -156,6 +156,7 @@ async function commitOne(opts: {
     report_id: opts.report_id,
     generation_id: opts.generation_id,
     generation_epoch: opts.generation_epoch,
+    validity_rev: fence.value.validity_rev,
     page_id: opts.page_id,
     input_fingerprint,
     upstream_output_fingerprints: upstream,
@@ -629,7 +630,11 @@ async function main(): Promise<void> {
           report_id,
           gen.generation_id,
         );
-        assert.ok(claim.ok && claim.value?.status === "claimed");
+        assert.ok(
+          claim.ok &&
+            (claim.value?.status === "claimed" ||
+              claim.value?.status === "sealed"),
+        );
       } else if (!claimR.ok && invR.ok) {
         invWins += 1;
         assert.equal(claimR.ok ? "" : claimR.code, "stale_page");
@@ -777,15 +782,18 @@ async function main(): Promise<void> {
   // --- F. Redis Lua source + return-code mapping (not executed on Redis) ---
   {
     assert.match(INVALIDATE_LUA, /return -10/);
-    assert.match(INVALIDATE_LUA, /return -13/);
+    assert.match(INVALIDATE_LUA, /__fin_lock == -13/);
+    assert.match(INVALIDATE_LUA, /FINALIZATION_LOCK|__fin_lock/);
+    // Shared lock snippet: unusable claim → -13; sealed|claimed → -10
     assert.match(
       INVALIDATE_LUA,
-      /if not cok or type\(claim\) ~= "table" then\s*return -13/s,
+      /if not cok or type\(claim\) ~= "table" then\s*__fin_lock = -13/s,
     );
-    assert.match(INVALIDATE_LUA, /status == "claimed"/);
-    // Decode failure must not fall through to fence bump
+    assert.match(INVALIDATE_LUA, /st == "claimed"/);
+    assert.match(INVALIDATE_LUA, /st == "sealed"/);
+    // Lock check must run before fence bump
     assert.ok(
-      INVALIDATE_LUA.indexOf("return -13") <
+      INVALIDATE_LUA.indexOf("__fin_lock") <
         INVALIDATE_LUA.indexOf("local fcur = redis.call"),
     );
 

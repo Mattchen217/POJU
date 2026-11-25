@@ -163,6 +163,7 @@ async function commitOne(opts: {
     report_id: opts.report_id,
     generation_id: opts.generation_id,
     generation_epoch: opts.generation_epoch,
+    validity_rev: fence.value.validity_rev,
     page_id: opts.page_id,
     input_fingerprint,
     upstream_output_fingerprints: upstream,
@@ -539,10 +540,18 @@ async function main(): Promise<void> {
     await durableKv().del(
       `report-batch2:${report_id}:${gen.generation_id}:page:05`,
     );
-    // Clear prior claim so incompleteness is evaluated fresh
+    // Clear prior claim so incompleteness is evaluated fresh; restore gen to active
+    // (prior merge may have sealed then delivery_failed).
     await durableKv().del(
       `report-batch3:${report_id}:${gen.generation_id}:finalization`,
     );
+    {
+      const gKey = `report-batch3:${report_id}:gen:${gen.generation_id}`;
+      const grec = await durableKv().get<{ status?: string }>(gKey);
+      if (grec && typeof grec === "object") {
+        await durableKv().set(gKey, { ...grec, status: "active" });
+      }
+    }
     const r4 = await mergeReportBatch2IntoV3Lab(
       report_id,
       { locale: "en" } as never,
@@ -700,7 +709,10 @@ async function main(): Promise<void> {
       report_id4,
       gen4.generation_id,
     );
-    assert.ok(still.ok && still.value?.status === "claimed");
+    assert.ok(
+      still.ok &&
+        (still.value?.status === "claimed" || still.value?.status === "sealed"),
+    );
 
     // Reverse: Invalidation first → old Finalization bindings refuse.
     await cleanup();
@@ -892,6 +904,7 @@ async function main(): Promise<void> {
       report_id,
       generation_id: gen.generation_id,
       generation_epoch: gen.generation_epoch,
+      validity_rev: 0,
       page_id: "01",
       input_fingerprint: "fp01",
       upstream_output_fingerprints: {},
@@ -985,11 +998,19 @@ async function main(): Promise<void> {
       }),
     );
     const claim = await readFinalizationClaim(report_id, gen.generation_id);
-    assert.ok(claim.ok && claim.value?.status === "claimed");
+    assert.ok(claim.ok && claim.value, JSON.stringify(claim));
+    assert.ok(
+      ["claimed", "sealed", "delivering", "delivery_failed", "delivered"].includes(
+        claim.value!.status,
+      ),
+      `unexpected claim status=${claim.value?.status}`,
+    );
     if (!merged.ok) {
       assert.ok(
-        merged.reason.startsWith("v3_"),
-        `expected post-claim book reason, got ${merged.reason}`,
+        merged.reason.startsWith("v3_") ||
+          merged.reason.startsWith("merge_claim") ||
+          merged.reason.includes("delivery"),
+        `expected post-claim book/delivery reason, got ${merged.reason}`,
       );
     }
     console.log(

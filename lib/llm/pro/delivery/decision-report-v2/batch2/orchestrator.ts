@@ -28,8 +28,9 @@ import {
 } from "./page-prep";
 import type { ReportBatch2JobInputs, ReportBatch2JobRecord } from "./types";
 
+/** Outcomes that mean work is done or in-flight — but NOT bare "queued"
+ * (queued without a durable Intent is an orphan that Recovery must re-dispatch). */
 const DISPATCH_GUARD = new Set([
-  "queued",
   "running",
   "validating",
   "repair_queued",
@@ -100,6 +101,15 @@ export async function runReportBatch2OrchestratorTick(input: {
   for (const page_id of ready.ready_applicability_gates) {
     const st = job.page_states.find((s) => s.page_id === page_id);
     if (st && DISPATCH_GUARD.has(st.outcome)) continue;
+    if (st?.outcome === "queued" && typeof job.generation_epoch === "number") {
+      const { hasActiveDispatchIntent } = await import("../batch3/dispatch-intent");
+      const has = await hasActiveDispatchIntent({
+        report_id: job.report_id,
+        generation_id: job.generation_id,
+        page_id,
+      });
+      if (has.ok && has.value) continue;
+    }
     const payload = buildApplicabilityPayload({
       report_id: job.report_id,
       generation_id: job.generation_id,
@@ -122,6 +132,15 @@ export async function runReportBatch2OrchestratorTick(input: {
   for (const page_id of ready.ready_model_generations) {
     const st = job.page_states.find((s) => s.page_id === page_id);
     if (st && DISPATCH_GUARD.has(st.outcome)) continue;
+    if (st?.outcome === "queued" && typeof job.generation_epoch === "number") {
+      const { hasActiveDispatchIntent } = await import("../batch3/dispatch-intent");
+      const has = await hasActiveDispatchIntent({
+        report_id: job.report_id,
+        generation_id: job.generation_id,
+        page_id,
+      });
+      if (has.ok && has.value) continue;
+    }
 
     const prep = buildPageProductionPrep(job, page_id);
     if (prep.build_fail) {
@@ -161,35 +180,42 @@ export async function runReportBatch2OrchestratorTick(input: {
 
   job.status = "orchestrating";
   refreshJobStatus(job);
+
+  // Persist Intent BEFORE saveJob(queued) so crash after queued cannot orphan.
+  const intents = [];
+  if (pendingSend.length && typeof job.generation_epoch === "number") {
+    const { enqueueDispatchIntent, markIntentFailed, markIntentSent } =
+      await import("../batch3/dispatch-intent");
+    for (const payload of pendingSend) {
+      const intent = await enqueueDispatchIntent({
+        report_id: job.report_id,
+        generation_id: job.generation_id,
+        generation_epoch: job.generation_epoch,
+        event_name: payload.name,
+        page_id: "page_id" in payload.data ? payload.data.page_id : null,
+        input_fingerprint:
+          "input_fingerprint" in payload.data
+            ? String(payload.data.input_fingerprint ?? "")
+            : null,
+        payload: { ...payload.data },
+      });
+      if (!intent.ok) {
+        return { ok: false, code: intent.code, detail: intent.detail };
+      }
+      intents.push(intent.value);
+    }
+  }
+
   const preSend = await saveJob(job);
   if (!preSend.ok) {
     return { ok: false, code: preSend.code, detail: preSend.detail };
   }
 
   if (pendingSend.length) {
-    // Batch3 outbox: persist intent before send when epoch is present.
     if (typeof job.generation_epoch === "number") {
-      const { enqueueDispatchIntent, markIntentFailed, markIntentSent } =
-        await import("../batch3/dispatch-intent");
-      const intents = [];
-      for (const payload of pendingSend) {
-        const intent = await enqueueDispatchIntent({
-          report_id: job.report_id,
-          generation_id: job.generation_id,
-          generation_epoch: job.generation_epoch,
-          event_name: payload.name,
-          page_id: "page_id" in payload.data ? payload.data.page_id : null,
-          input_fingerprint:
-            "input_fingerprint" in payload.data
-              ? String(payload.data.input_fingerprint ?? "")
-              : null,
-          payload: { ...payload.data },
-        });
-        if (!intent.ok) {
-          return { ok: false, code: intent.code, detail: intent.detail };
-        }
-        intents.push(intent.value);
-      }
+      const { markIntentFailed, markIntentSent } = await import(
+        "../batch3/dispatch-intent"
+      );
       const send = await sendReportBatch2Events(pendingSend);
       if (!send.ok) {
         for (const intent of intents) {

@@ -138,6 +138,7 @@ async function claimPage(opts: {
     report_id: opts.report_id,
     generation_id: opts.generation_id,
     generation_epoch: opts.generation_epoch,
+    validity_rev: fence.value.validity_rev,
     page_id: opts.page_id,
     input_fingerprint: opts.input_fingerprint,
     upstream_output_fingerprints: opts.upstream,

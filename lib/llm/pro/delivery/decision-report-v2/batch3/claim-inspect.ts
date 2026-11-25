@@ -1,42 +1,36 @@
 /**
- * Shared Finalization Claim inspection — MemoryKv and Redis Lua must agree:
- * only a confirmed absent key allows invalidation / new claim write;
- * status "claimed" locks; anything else present is fail-closed.
+ * Finalization Claim inspection — delegates to shared finalization-lock.
+ * Legacy "claimed" ≡ sealed (page content locked).
  */
+
+import {
+  inspectFinalizationLock,
+  type FinalizationLockResult,
+} from "./finalization-lock";
 
 export type ClaimInspectResult =
   | { kind: "absent" }
   | { kind: "claimed" }
+  | { kind: "unlocked" }
   | { kind: "unusable"; reason: string };
 
 /**
- * Inspect a raw Claim value loaded from KV (already decoded object/string).
- * null/undefined → absent. Non-object, missing/unknown status → unusable.
+ * Inspect a raw Claim value. "claimed" kind means page-content locked
+ * (sealed | delivering | delivery_failed | legacy claimed).
  */
 export function inspectFinalizationClaimValue(
   raw: unknown,
 ): ClaimInspectResult {
-  if (raw === null || raw === undefined) {
-    return { kind: "absent" };
-  }
-  if (typeof raw !== "object" || Array.isArray(raw)) {
-    return {
-      kind: "unusable",
-      reason: "finalization claim is not a plain object",
-    };
-  }
-  const status = (raw as { status?: unknown }).status;
-  if (status === "claimed") {
-    return { kind: "claimed" };
-  }
-  if (typeof status !== "string" || status.length === 0) {
-    return {
-      kind: "unusable",
-      reason: "finalization claim missing or empty status",
-    };
-  }
-  return {
-    kind: "unusable",
-    reason: `finalization claim unknown status=${status}`,
-  };
+  const r: FinalizationLockResult = inspectFinalizationLock(raw);
+  if (r.kind === "absent") return { kind: "absent" };
+  if (r.kind === "unlocked") return { kind: "unlocked" };
+  if (r.kind === "locked") return { kind: "claimed" };
+  return { kind: "unusable", reason: r.reason };
 }
+
+export {
+  inspectFinalizationLock,
+  isPageContentLockedByFinalization,
+  mayActivateNextGeneration,
+  normalizeFinalizationStatus,
+} from "./finalization-lock";

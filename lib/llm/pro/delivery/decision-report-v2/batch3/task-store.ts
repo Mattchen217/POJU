@@ -42,6 +42,8 @@ export async function ensureQueuedTask(input: {
   page_contract_version: string;
   prompt_version: string;
   validator_version: string;
+  /** Defaults to 0; must match fence validity_rev for TaskKey. */
+  validity_rev?: number;
 }): Promise<Batch3Result<TaskRecord>> {
   if (!isBatch3SharedStoreAvailable()) return kvUnavailable();
   const key = taskKeyPath(input.report_id, input.generation_id, input.task_key);
@@ -61,7 +63,7 @@ export async function ensureQueuedTask(input: {
     attempt_id: null,
     lease_expires_at: null,
     worker_id: null,
-    validity_rev: 0,
+    validity_rev: input.validity_rev ?? 0,
     input_fingerprint: input.input_fingerprint,
     upstream_output_fingerprints: input.upstream_output_fingerprints,
     page_contract_version: input.page_contract_version,
@@ -148,6 +150,36 @@ export async function claimTask(input: {
       if (saved.code === "conflict") continue;
       return saved;
     }
+
+    // Bind Fence → claimed with same attempt (compat path for tests / legacy callers).
+    // Production Workers should prefer claimPageExecution (atomic Task+Fence).
+    // Also rebind on lease reclaim when fence was already claimed by expired attempt.
+    const { pageFenceKey } = await import("./page-fence");
+    const fKey = pageFenceKey(input.report_id, input.generation_id, task.page_id);
+    const fence = await kvGet<import("./types").PageFence>(fKey);
+    if (
+      fence.ok &&
+      fence.value &&
+      (fence.value.status === "open" || fence.value.status === "claimed")
+    ) {
+      const rev =
+        typeof input.validity_rev === "number"
+          ? input.validity_rev
+          : fence.value.validity_rev;
+      if (fence.value.validity_rev === rev) {
+        const nextFence: import("./types").PageFence = {
+          ...fence.value,
+          status: "claimed",
+          attempt_id,
+          task_key: input.task_key,
+          input_fingerprint: task.input_fingerprint,
+          upstream_output_fingerprints: task.upstream_output_fingerprints,
+          updated_at: next.updated_at,
+        };
+        await casSet(fKey, JSON.stringify(fence.value), nextFence);
+      }
+    }
+
     return { ok: true, value: next };
   }
   return { ok: false, code: "conflict", detail: "claimTask CAS exhausted" };
@@ -174,12 +206,24 @@ export async function renewLease(input: {
       detail: `cannot renew lease in status=${cur.value.status}`,
     };
   }
+  const { batch3NowMs } = await import("./clock");
+  const nowMs = batch3NowMs();
+  if (
+    cur.value.lease_expires_at &&
+    Date.parse(cur.value.lease_expires_at) <= nowMs
+  ) {
+    return {
+      ok: false,
+      code: "lease_expired",
+      detail: "cannot renew an already-expired lease",
+    };
+  }
   const next: TaskRecord = {
     ...cur.value,
     lease_expires_at: new Date(
-      Date.now() + (input.lease_ms ?? DEFAULT_TASK_LEASE_MS),
+      nowMs + (input.lease_ms ?? DEFAULT_TASK_LEASE_MS),
     ).toISOString(),
-    updated_at: new Date().toISOString(),
+    updated_at: new Date(nowMs).toISOString(),
   };
   const saved = await casSet(key, JSON.stringify(cur.value), next);
   if (!saved.ok) return saved;

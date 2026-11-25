@@ -15,6 +15,15 @@ import {
   trackBatch3Key,
   evalTxn,
 } from "./kv-cas";
+import {
+  finalizationClaimKey,
+  inspectFinalizationLock,
+  mayActivateNextGeneration,
+} from "./finalization-lock";
+import {
+  GENERATION_TERMINAL,
+  transitionGenerationStatus as checkGenTransition,
+} from "./generation-transitions";
 import type {
   ActiveGenerationPointer,
   Batch3Result,
@@ -38,18 +47,20 @@ function batch2PointerKey(job_id: string): string {
   return `report-batch2-active:${job_id.trim()}`;
 }
 
-const TERMINAL: ReadonlySet<GenerationStatus> = new Set([
-  "completed",
-  "failed",
-  "superseded",
-  "cancelled",
-]);
+const TERMINAL = GENERATION_TERMINAL;
 
+/**
+ * KEYS[1]=active, KEYS[2]=newGen, KEYS[3]=b2,
+ * KEYS[4]=claimPrefixUnused — claim key built inside from live active gen id
+ * ARGV: epoch, newGenId, pointerJson, newGenJson, b2Json, ttl, nowIso, reportId
+ *
+ * Live prev gen key derived INSIDE Lua from current Active Pointer.
+ * Finalization lock on live active gen: sealed|delivering|delivery_failed|claimed → -10
+ */
 const ACTIVATE_LUA = `
 local activeKey = KEYS[1]
 local newGenKey = KEYS[2]
-local prevGenKey = KEYS[3]
-local b2Key = KEYS[4]
+local b2Key = KEYS[3]
 local newEpoch = tonumber(ARGV[1])
 local newGenId = ARGV[2]
 local newPointerJson = ARGV[3]
@@ -57,16 +68,34 @@ local newGenJson = ARGV[4]
 local b2Json = ARGV[5]
 local ttl = tonumber(ARGV[6])
 local nowIso = ARGV[7]
+local reportId = ARGV[8]
 
 local cur = redis.call("GET", activeKey)
+local live = nil
 if cur ~= false and cur ~= nil then
-  local ok, live = pcall(cjson.decode, cur)
-  if ok and live then
+  local ok, decoded = pcall(cjson.decode, cur)
+  if ok and decoded then
+    live = decoded
     if live.generation_id == newGenId and tonumber(live.generation_epoch) == newEpoch then
       return 1
     end
     if tonumber(live.generation_epoch) >= newEpoch then
       return -1
+    end
+    -- Shared Finalization lock on the CURRENT active generation.
+    local claimKey = "report-batch3:" .. reportId .. ":" .. live.generation_id .. ":finalization"
+    local claimCur = redis.call("GET", claimKey)
+    if claimCur ~= false and claimCur ~= nil then
+      local cok, claim = pcall(cjson.decode, claimCur)
+      if not cok or type(claim) ~= "table" then return -13 end
+      local st = claim.status
+      if st == "sealed" or st == "delivering" or st == "delivery_failed" or st == "claimed" then
+        return -10
+      end
+      if st ~= "delivered" and st ~= nil and st ~= cjson.null then
+        if type(st) ~= "string" or st == "" then return -13 end
+        if st ~= "delivered" then return -13 end
+      end
     end
   end
 end
@@ -75,13 +104,13 @@ local gcur = redis.call("GET", newGenKey)
 if gcur == false or gcur == nil then return -3 end
 local gok, grec = pcall(cjson.decode, gcur)
 if not gok or not grec then return -3 end
-if grec.status == "superseded" or grec.status == "completed" or grec.status == "failed" or grec.status == "cancelled" then
+if grec.status == "superseded" or grec.status == "completed" or grec.status == "failed" or grec.status == "cancelled" or grec.status == "finalizing" or grec.status == "delivery_failed" then
   return -2
 end
 
--- Re-read previous generation inside Lua; never overwrite terminal statuses
--- with a pre-built superseded snapshot from before the script ran.
-if prevGenKey ~= "" then
+-- Derive prev gen key from LIVE active pointer inside the script.
+if live and live.generation_id and live.generation_id ~= newGenId then
+  local prevGenKey = "report-batch3:" .. reportId .. ":gen:" .. live.generation_id
   local pcur = redis.call("GET", prevGenKey)
   if pcur ~= false and pcur ~= nil then
     local pok, prev = pcall(cjson.decode, pcur)
@@ -105,7 +134,6 @@ if b2Key ~= "" then
 end
 return 1
 `;
-
 export async function allocateGeneration(input: {
   report_id: string;
   locale: string;
@@ -224,13 +252,35 @@ export async function activateGeneration(input: {
           detail: `active epoch ${live.generation_epoch} >= ${record.generation_epoch}`,
         };
       }
+      // Shared Finalization lock on CURRENT active generation.
+      if (live?.generation_id) {
+        const cKey = finalizationClaimKey(report_id, live.generation_id);
+        trackBatch3Key(cKey);
+        const lock = inspectFinalizationLock(ops.getJson(cKey));
+        if (lock.kind === "locked") {
+          return {
+            code: -10 as const,
+            detail: "prior generation finalization locks activation",
+          };
+        }
+        if (lock.kind === "unusable") {
+          return { code: -13 as const, detail: lock.reason };
+        }
+        if (!mayActivateNextGeneration(ops.getJson(cKey))) {
+          return {
+            code: -10 as const,
+            detail: "prior generation delivery in progress",
+          };
+        }
+      }
+
       const grec = ops.getJson(gKey) as GenerationRecord | null;
       if (!grec) return { code: -3 as const, detail: "generation missing" };
-      if (TERMINAL.has(grec.status)) {
+      if (TERMINAL.has(grec.status) || grec.status === "finalizing" || grec.status === "delivery_failed") {
         return { code: -2 as const, detail: `status=${grec.status}` };
       }
 
-      if (live?.generation_id) {
+      if (live?.generation_id && live.generation_id !== record.generation_id) {
         const prevKey = genKey(report_id, live.generation_id);
         const prev = ops.getJson(prevKey) as GenerationRecord | null;
         if (prev && !TERMINAL.has(prev.status)) {
@@ -272,36 +322,27 @@ export async function activateGeneration(input: {
     if (result.value.code === -3) {
       return { ok: false, code: "not_found", detail: result.value.detail ?? "missing" };
     }
+    if (result.value.code === -10) {
+      return {
+        ok: false,
+        code: "finalization_locked",
+        detail: result.value.detail ?? "delivery in progress",
+      };
+    }
+    if (result.value.code === -13) {
+      return {
+        ok: false,
+        code: "conflict",
+        detail: result.value.detail ?? "unusable finalization claim",
+      };
+    }
     return { ok: true, value: result.value.pointer! };
   }
 
-  // Redis Lua path
-  const live = await kvGet<ActiveGenerationPointer>(aKey);
-  if (!live.ok) return live;
-  if (
-    live.value &&
-    live.value.generation_id === record.generation_id &&
-    live.value.generation_epoch === record.generation_epoch
-  ) {
-    return { ok: true, value: live.value };
-  }
-  if (live.value && live.value.generation_epoch >= record.generation_epoch) {
-    return {
-      ok: false,
-      code: "stale_generation",
-      detail: `active epoch ${live.value.generation_epoch} >= ${record.generation_epoch}`,
-    };
-  }
-
-  let prevKey = "";
-  if (live.value?.generation_id) {
-    prevKey = genKey(report_id, live.value.generation_id);
-    trackBatch3Key(prevKey);
-  }
-
+  // Redis Lua — prev gen derived inside script from live Active Pointer.
   const evaled = await evalTxn(
     ACTIVATE_LUA,
-    [aKey, gKey, prevKey, b2Key],
+    [aKey, gKey, b2Key],
     [
       String(record.generation_epoch),
       record.generation_id,
@@ -310,6 +351,7 @@ export async function activateGeneration(input: {
       JSON.stringify(b2Pointer),
       String(KV_TTL.REPORT_BATCH2_JOB),
       now,
+      report_id,
     ],
   );
   if (!evaled.ok) return evaled;
@@ -323,6 +365,20 @@ export async function activateGeneration(input: {
       ok: false,
       code: "generation_terminal",
       detail: "cannot reactivate terminal generation (lua)",
+    };
+  }
+  if (code === -10) {
+    return {
+      ok: false,
+      code: "finalization_locked",
+      detail: "prior generation finalization locks activation (lua)",
+    };
+  }
+  if (code === -13) {
+    return {
+      ok: false,
+      code: "conflict",
+      detail: "prior finalization claim unusable (lua)",
     };
   }
   return { ok: false, code: "not_found", detail: `activate lua code=${code}` };
@@ -401,11 +457,14 @@ export async function transitionGenerationStatus(input: {
   if (gen.value.generation_epoch !== input.generation_epoch) {
     return { ok: false, code: "stale_generation", detail: "epoch mismatch" };
   }
-  if (TERMINAL.has(gen.value.status) && input.to === "active") {
+  const allowed = checkGenTransition(gen.value.status, input.to);
+  if (!allowed.ok) {
     return {
       ok: false,
-      code: "generation_terminal",
-      detail: `cannot reactivate ${gen.value.status} via ordinary transition`,
+      code: TERMINAL.has(gen.value.status)
+        ? "generation_terminal"
+        : "conflict",
+      detail: allowed.detail,
     };
   }
   const next: GenerationRecord = {

@@ -143,6 +143,7 @@ async function commitOne(opts: {
     report_id: opts.report_id,
     generation_id: opts.generation_id,
     generation_epoch: opts.generation_epoch,
+    validity_rev: fence.value.validity_rev,
     page_id: opts.page_id,
     input_fingerprint,
     upstream_output_fingerprints: upstream,
@@ -317,7 +318,10 @@ async function main(): Promise<void> {
       assert.ok(prov.ok && prov.value && prov.value.stale === false);
     }
     const still = await readFinalizationClaim(report_id, gen.generation_id);
-    assert.ok(still.ok && still.value?.status === "claimed");
+    assert.ok(
+      still.ok &&
+        (still.value?.status === "claimed" || still.value?.status === "sealed"),
+    );
 
     // Idempotent same claim_id
     const again = await claimFinalization({
@@ -510,7 +514,10 @@ async function main(): Promise<void> {
             report_id,
             gen.generation_id,
           );
-          assert.ok(still.ok && still.value?.status === "claimed");
+          assert.ok(
+      still.ok &&
+        (still.value?.status === "claimed" || still.value?.status === "sealed"),
+    );
           const fence = await readPageFence(
             report_id,
             gen.generation_id,
@@ -609,10 +616,17 @@ async function main(): Promise<void> {
       assert.equal(fence.value!.validity_rev, fenceRevs.get(page_id));
     }
 
-    // Pre-claim cascade still works
+    // Pre-claim cascade still works — clear seal and restore gen to active
     await durableKv().del(
       `report-batch3:${report_id}:${gen.generation_id}:finalization`,
     );
+    {
+      const gKey = `report-batch3:${report_id}:gen:${gen.generation_id}`;
+      const grec = await durableKv().get<{ status?: string }>(gKey);
+      if (grec && typeof grec === "object") {
+        await durableKv().set(gKey, { ...grec, status: "active" });
+      }
+    }
     const pre = await invalidateFromPage({
       report_id,
       generation_id: gen.generation_id,

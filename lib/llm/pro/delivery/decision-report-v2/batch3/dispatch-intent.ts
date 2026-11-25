@@ -1,8 +1,10 @@
 /**
  * Durable dispatch outbox — atomic intent+index write; recovery can resend.
+ * Intent lifecycle: pending → sent → claimed → completed (or failed).
+ * sent ≠ Worker executed — only Task Claim grants execution.
  */
 
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 
 import type { ReportPageId } from "../orchestration/types";
 import {
@@ -15,6 +17,26 @@ import {
   trackBatch3Key,
 } from "./kv-cas";
 import type { Batch3Result, DispatchIntent, DispatchIntentStatus } from "./types";
+
+/** Deterministic intent id — duplicate enqueue is idempotent. */
+export function deterministicIntentId(input: {
+  generation_id: string;
+  page_id: string | null;
+  event_name: string;
+  task_key?: string | null;
+  input_fingerprint?: string | null;
+  attempt?: string | null;
+}): string {
+  const raw = [
+    input.generation_id.trim(),
+    input.page_id ?? "",
+    input.event_name,
+    input.task_key ?? "",
+    input.input_fingerprint ?? "",
+    input.attempt ?? "0",
+  ].join("|");
+  return createHash("sha256").update(raw).digest("hex").slice(0, 32);
+}
 
 function intentKey(
   report_id: string,
@@ -45,7 +67,22 @@ export async function enqueueDispatchIntent(input: {
   payload: Record<string, unknown>;
 }): Promise<Batch3Result<DispatchIntent>> {
   if (!isBatch3SharedStoreAvailable()) return kvUnavailable();
-  const intent_id = randomUUID();
+  const intent_id = deterministicIntentId({
+    generation_id: input.generation_id,
+    page_id: input.page_id ?? null,
+    event_name: input.event_name,
+    task_key: input.task_key,
+    input_fingerprint: input.input_fingerprint,
+  });
+  const iKey = intentKey(input.report_id, input.generation_id, intent_id);
+  trackBatch3Key(iKey);
+  const existing = await kvGet<DispatchIntent>(iKey);
+  if (!existing.ok) return existing;
+  if (existing.value) {
+    // Idempotent: return existing intent (pending/sent/claimed/completed/failed).
+    return { ok: true, value: existing.value };
+  }
+
   const intent: DispatchIntent = {
     intent_id,
     report_id: input.report_id.trim(),
@@ -60,11 +97,12 @@ export async function enqueueDispatchIntent(input: {
     status: "pending",
     created_at: new Date().toISOString(),
     sent_at: null,
+    claimed_at: null,
+    completed_at: null,
     acked_at: null,
     last_error: null,
   };
 
-  const iKey = intentKey(input.report_id, input.generation_id, intent_id);
   const oKey = outboxKey(input.report_id, input.generation_id);
   const idxKey = intentIndexKey(input.report_id, input.generation_id);
   trackBatch3Key(idxKey);
@@ -77,11 +115,70 @@ export async function enqueueDispatchIntent(input: {
   });
   if (!saved.ok) return saved;
 
-  // Mirror id into secondary index list (intent body already written).
   const { listPush } = await import("./kv-cas");
   await listPush(idxKey, intent_id);
 
   return { ok: true, value: intent };
+}
+
+export async function markIntentClaimed(
+  intent: DispatchIntent,
+): Promise<Batch3Result<DispatchIntent>> {
+  return setIntentStatus(intent, "claimed", {
+    claimed_at: new Date().toISOString(),
+  });
+}
+
+export async function markIntentCompleted(
+  intent: DispatchIntent,
+): Promise<Batch3Result<DispatchIntent>> {
+  return setIntentStatus(intent, "completed", {
+    completed_at: new Date().toISOString(),
+  });
+}
+
+/** True if page has a live intent that proves dispatch was attempted. */
+export async function hasActiveDispatchIntent(input: {
+  report_id: string;
+  generation_id: string;
+  page_id: ReportPageId;
+}): Promise<Batch3Result<boolean>> {
+  const listed = await listPendingIntents({
+    report_id: input.report_id,
+    generation_id: input.generation_id,
+  });
+  if (!listed.ok) return listed;
+  const hit = listed.value.some(
+    (i) =>
+      i.page_id === input.page_id &&
+      (i.status === "pending" ||
+        i.status === "sent" ||
+        i.status === "claimed" ||
+        i.status === "completed"),
+  );
+  // Also scan index for sent intents that left pending list.
+  if (hit) return { ok: true, value: true };
+  const idx = await listRange<string>(
+    intentIndexKey(input.report_id, input.generation_id),
+  );
+  if (!idx.ok) return idx;
+  for (const id of idx.value) {
+    const row = await kvGet<DispatchIntent>(
+      intentKey(input.report_id, input.generation_id, id),
+    );
+    if (!row.ok) return row;
+    if (
+      row.value &&
+      row.value.page_id === input.page_id &&
+      (row.value.status === "pending" ||
+        row.value.status === "sent" ||
+        row.value.status === "claimed" ||
+        row.value.status === "completed")
+    ) {
+      return { ok: true, value: true };
+    }
+  }
+  return { ok: true, value: false };
 }
 
 async function setIntentStatus(

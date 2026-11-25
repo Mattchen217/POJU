@@ -25,6 +25,8 @@ export function computeTaskKey(input: {
   generation_id: string;
   generation_epoch: number;
   page_id: ReportPageId;
+  /** Required: invalidation creates a new Task identity even with same inputs. */
+  validity_rev: number;
   input_fingerprint: string;
   upstream_output_fingerprints: ReportUpstreamOutputFingerprints;
   page_contract_version: string;
@@ -37,6 +39,7 @@ export function computeTaskKey(input: {
     generation_id: input.generation_id.trim(),
     generation_epoch: input.generation_epoch,
     page_id: input.page_id,
+    validity_rev: input.validity_rev,
     input_fingerprint: input.input_fingerprint.trim(),
     upstream_output_fingerprints: input.upstream_output_fingerprints ?? {},
     page_contract_version: input.page_contract_version,

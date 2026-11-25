@@ -1,16 +1,15 @@
 /**
  * Shared pre-model / post-model guards for Batch2 Workers.
+ * Page claim is atomic Task+Fence via claimPageExecution.
  */
 
-import { reportPageDefinition } from "../orchestration";
 import type {
   ReportPageId,
   ReportUpstreamOutputFingerprints,
 } from "../orchestration/types";
+import { claimPageExecution } from "./claim-page-execution";
 import { assertGenerationActive } from "./generation-store";
-import { ensurePageFence } from "./page-fence";
-import { computeTaskKey } from "./task-identity";
-import { claimTask, ensureQueuedTask } from "./task-store";
+import { ensurePageFence, reopenStaleFenceIfReady } from "./page-fence";
 import type { Batch3Result, TaskRecord, TaskType } from "./types";
 
 export async function fenceAndClaimPageTask(input: {
@@ -37,6 +36,20 @@ export async function fenceAndClaimPageTask(input: {
   });
   if (!fence.ok) return fence;
 
+  // Reopen stale fence when deps ready (idempotent if already open).
+  const reopened = await reopenStaleFenceIfReady({
+    report_id: input.report_id,
+    generation_id: input.generation_id,
+    generation_epoch: input.generation_epoch,
+    page_id: input.page_id,
+  });
+  if (!reopened.ok && reopened.code !== "stale_page") {
+    // deps_unmet / conflict: fall through to ensure/claim which will refuse stale
+    if (reopened.code !== "deps_unmet" && reopened.code !== "not_found") {
+      return reopened;
+    }
+  }
+
   const pageFence = await ensurePageFence({
     report_id: input.report_id,
     generation_id: input.generation_id,
@@ -52,54 +65,14 @@ export async function fenceAndClaimPageTask(input: {
     };
   }
 
-  const def = reportPageDefinition(input.page_id);
-  const task_key = computeTaskKey({
-    report_id: input.report_id,
-    generation_id: input.generation_id,
-    generation_epoch: input.generation_epoch,
-    page_id: input.page_id,
-    input_fingerprint: input.input_fingerprint,
-    upstream_output_fingerprints: input.upstream_output_fingerprints,
-    page_contract_version: def.production_version,
-    prompt_version: def.prompt_version,
-    validator_version: def.validator_version,
-    task_type: input.task_type,
-  });
-
-  const queued = await ensureQueuedTask({
+  return claimPageExecution({
     report_id: input.report_id,
     generation_id: input.generation_id,
     generation_epoch: input.generation_epoch,
     page_id: input.page_id,
     task_type: input.task_type,
-    task_key,
     input_fingerprint: input.input_fingerprint,
     upstream_output_fingerprints: input.upstream_output_fingerprints,
-    page_contract_version: def.production_version,
-    prompt_version: def.prompt_version,
-    validator_version: def.validator_version,
-  });
-  if (!queued.ok) return queued;
-
-  const claimed = await claimTask({
-    report_id: input.report_id,
-    generation_id: input.generation_id,
-    task_key,
     worker_id: input.worker_id,
-    validity_rev: pageFence.value.validity_rev,
   });
-  if (!claimed.ok) return claimed;
-  if (!claimed.value.attempt_id) {
-    return { ok: false, code: "conflict", detail: "claim missing attempt_id" };
-  }
-
-  return {
-    ok: true,
-    value: {
-      task: claimed.value,
-      task_key,
-      attempt_id: claimed.value.attempt_id,
-      validity_rev: claimed.value.validity_rev,
-    },
-  };
 }

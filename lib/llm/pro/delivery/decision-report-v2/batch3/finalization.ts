@@ -5,10 +5,15 @@
  * Corrupt existing claim must not be overwritten (fail-closed).
  */
 
+import { REPORT_PAGE_IDS } from "../orchestration";
 import type { ReportPageId } from "../orchestration/types";
 import type { AuthorityPageClaimIdentity } from "./authority-page-read";
 import { inspectFinalizationClaimValue } from "./claim-inspect";
-import { generationStoreKeys } from "./generation-store";
+import {
+  finalizationClaimKey,
+  type FinalizationDeliveryStatus,
+} from "./finalization-lock";
+import { generationStoreKeys, transitionGenerationStatus } from "./generation-store";
 import {
   evalTxn,
   isMemoryAtomicAvailable,
@@ -16,11 +21,18 @@ import {
   runMemoryAtomic,
   trackBatch3Key,
   ttlSeconds,
+  casSet,
 } from "./kv-cas";
+import {
+  cascadeActiveKey,
+  cascadeOpKey,
+} from "./cascade-operation";
 import { pageFenceKey } from "./page-fence";
 import type {
   ActiveGenerationPointer,
   Batch3Result,
+  CascadeOperation,
+  GenerationRecord,
   PageFence,
 } from "./types";
 
@@ -36,16 +48,15 @@ export type FinalizationClaim = {
   generation_epoch: number;
   claim_id: string;
   claimed_at: string;
-  status: "claimed";
+  status: FinalizationDeliveryStatus;
   pages: FinalizationPageBinding[];
+  delivering_at?: string | null;
+  delivered_at?: string | null;
+  delivery_failed_at?: string | null;
+  delivery_detail?: string | null;
 };
 
-export function finalizationClaimKey(
-  report_id: string,
-  generation_id: string,
-): string {
-  return `report-batch3:${report_id.trim()}:${generation_id.trim()}:finalization`;
-}
+export { finalizationClaimKey };
 
 export function bindingsMatch(
   existing: FinalizationPageBinding[],
@@ -59,9 +70,55 @@ export function bindingsMatch(
       p.validity_rev === q.validity_rev &&
       p.attempt_id === q.attempt_id &&
       p.output_fingerprint === q.output_fingerprint &&
-      p.task_key === q.task_key
+      p.task_key === q.task_key &&
+      p.input_fingerprint === q.input_fingerprint
     );
   });
+}
+
+/** Formal page set must be complete+unique; Page07 may be conditional terminal. */
+export function assertCompleteFormalPageSet(
+  pages: FinalizationPageBinding[],
+): Batch3Result<void> {
+  const ids = pages.map((p) => p.page_id);
+  const set = new Set(ids);
+  if (set.size !== ids.length) {
+    return { ok: false, code: "conflict", detail: "duplicate page in seal set" };
+  }
+  for (const req of REPORT_PAGE_IDS) {
+    if (!set.has(req)) {
+      return {
+        ok: false,
+        code: "conflict",
+        detail: `seal missing formal page ${req}`,
+      };
+    }
+  }
+  if (ids.length !== REPORT_PAGE_IDS.length) {
+    return {
+      ok: false,
+      code: "conflict",
+      detail: "seal page set size mismatch vs REPORT_PAGE_IDS",
+    };
+  }
+  // Page07: allow skipped_not_applicable / insufficient as legal terminals.
+  const p07 = pages.find((p) => p.page_id === "07");
+  if (p07) {
+    const okOutcomes = new Set([
+      "completed",
+      "skipped_not_applicable",
+      "skipped_insufficient_information",
+      "insufficient_information",
+    ]);
+    if (!okOutcomes.has(p07.outcome)) {
+      return {
+        ok: false,
+        code: "conflict",
+        detail: `Page07 illegal seal outcome=${p07.outcome}`,
+      };
+    }
+  }
+  return { ok: true, value: undefined };
 }
 
 function fenceMatchesBinding(
@@ -75,6 +132,7 @@ function fenceMatchesBinding(
     fence.attempt_id === page.attempt_id &&
     fence.output_fingerprint === page.output_fingerprint &&
     fence.task_key === page.task_key &&
+    fence.input_fingerprint === page.input_fingerprint &&
     fence.generation_epoch === generation_epoch
   );
 }
@@ -128,14 +186,16 @@ if active.generation_id ~= expectGenId or tonumber(active.generation_epoch) ~= e
 end
 
 -- Always verify fences against requested bindings (idempotent path included).
+-- Per page ARGV: page_id, validity_rev, attempt_id, output_fingerprint, task_key, input_fingerprint
 for i = 1, pageCount do
   local fenceKey = KEYS[2 + i]
-  local base = 7 + (i - 1) * 5
+  local base = 7 + (i - 1) * 6
   local expectPageId = ARGV[base + 1]
   local expectRev = tonumber(ARGV[base + 2])
   local expectAttempt = ARGV[base + 3]
   local expectFp = ARGV[base + 4]
   local expectTask = ARGV[base + 5]
+  local expectInput = ARGV[base + 6]
   local fcur = redis.call("GET", fenceKey)
   if fcur == false or fcur == nil then return -2 end
   local fok, fence = pcall(cjson.decode, fcur)
@@ -146,6 +206,7 @@ for i = 1, pageCount do
   if fence.attempt_id ~= expectAttempt then return -3 end
   if fence.output_fingerprint ~= expectFp then return -3 end
   if fence.task_key ~= expectTask then return -3 end
+  if fence.input_fingerprint ~= expectInput then return -3 end
   if tonumber(fence.generation_epoch) ~= expectEpoch then return -1 end
 end
 
@@ -155,7 +216,9 @@ if existing ~= false and existing ~= nil then
   if not eok or type(prev) ~= "table" then
     return -5
   end
-  if prev.status ~= "claimed" then
+  local pst = prev.status
+  if pst ~= "claimed" and pst ~= "sealed" and pst ~= "delivering"
+    and pst ~= "delivered" and pst ~= "delivery_failed" then
     return -5
   end
   if type(prev.report_id) ~= "string" or type(prev.generation_id) ~= "string"
@@ -171,15 +234,17 @@ if existing ~= false and existing ~= nil then
   if same and #prev.pages == pageCount then
     for i = 1, pageCount do
       local p = prev.pages[i]
-      local base = 7 + (i - 1) * 5
+      local base = 7 + (i - 1) * 6
       local expectPageId = ARGV[base + 1]
       local expectRev = tonumber(ARGV[base + 2])
       local expectAttempt = ARGV[base + 3]
       local expectFp = ARGV[base + 4]
       local expectTask = ARGV[base + 5]
+      local expectInput = ARGV[base + 6]
       if not p or p.page_id ~= expectPageId
         or tonumber(p.validity_rev) ~= expectRev or p.attempt_id ~= expectAttempt
-        or p.output_fingerprint ~= expectFp or p.task_key ~= expectTask then
+        or p.output_fingerprint ~= expectFp or p.task_key ~= expectTask
+        or p.input_fingerprint ~= expectInput then
         same = false
         break
       end
@@ -188,9 +253,6 @@ if existing ~= false and existing ~= nil then
     same = false
   end
 
-  -- Same claim_id + same bindings → idempotent.
-  -- Different claim_id + same bindings → return existing seal (no second claim).
-  -- Same claim_id + different bindings → conflict (-4).
   if same then return 2 end
   return -4
 end
@@ -267,13 +329,16 @@ export async function claimFinalization(input: {
     };
   }
 
+  const complete = assertCompleteFormalPageSet(input.pages);
+  if (!complete.ok) return complete;
+
   const claim: FinalizationClaim = {
     report_id: input.report_id.trim(),
     generation_id: input.generation_id.trim(),
     generation_epoch: input.generation_epoch,
     claim_id: input.claim_id,
     claimed_at: new Date().toISOString(),
-    status: "claimed",
+    status: "sealed",
     pages: input.pages,
   };
 
@@ -282,12 +347,33 @@ export async function claimFinalization(input: {
   trackBatch3Key(aKey);
   trackBatch3Key(cKey);
 
+  // Barrier hook MUST be immediately before the atomic section (no await between).
   if (beforeClaimAtomicHook) {
     await beforeClaimAtomicHook();
   }
 
   if (isMemoryAtomicAvailable()) {
     const ran = runMemoryAtomic((ops) => {
+      // Cascade gate inside atomic — keeps Claim×Invalidate barrier fair.
+      const cascadeId = ops.getJson(
+        cascadeActiveKey(input.report_id, input.generation_id),
+      ) as string | null;
+      if (cascadeId) {
+        const cop = ops.getJson(
+          cascadeOpKey(input.report_id, input.generation_id, cascadeId),
+        ) as CascadeOperation | null;
+        if (
+          cop &&
+          (cop.status === "running" || cop.status === "failed_recoverable")
+        ) {
+          return {
+            ok: false as const,
+            code: "cascade_incomplete" as const,
+            detail: `finalization refused: cascade ${cop.operation_id} status=${cop.status}`,
+          };
+        }
+      }
+
       const active = ops.getJson(aKey) as ActiveGenerationPointer | null;
       if (
         !active ||
@@ -335,7 +421,7 @@ export async function claimFinalization(input: {
           detail: `existing finalization claim unusable: ${inspect.reason}`,
         };
       }
-      if (inspect.kind === "claimed") {
+      if (inspect.kind === "claimed" || inspect.kind === "unlocked") {
         const existing = existingRaw as FinalizationClaim;
         if (
           existing.report_id === input.report_id.trim() &&
@@ -343,7 +429,6 @@ export async function claimFinalization(input: {
           existing.generation_epoch === input.generation_epoch &&
           bindingsMatch(existing.pages, input.pages)
         ) {
-          // Same or different claim_id with identical bindings → single seal.
           return {
             ok: true as const,
             claim: existing,
@@ -357,6 +442,24 @@ export async function claimFinalization(input: {
         };
       }
 
+      const gKey = generationStoreKeys.genKey(
+        input.report_id,
+        input.generation_id,
+      );
+      trackBatch3Key(gKey);
+      const grec = ops.getJson(gKey) as GenerationRecord | null;
+      if (!grec || grec.status !== "active") {
+        return {
+          ok: false as const,
+          code: "stale_generation" as const,
+          detail: `generation status=${grec?.status ?? "missing"} — need active to seal`,
+        };
+      }
+      ops.setJson(gKey, {
+        ...grec,
+        status: "finalizing",
+        updated_at: claim.claimed_at,
+      });
       ops.setJson(cKey, claim, ttlSeconds());
       return { ok: true as const, claim, mode: "created" as const };
     });
@@ -366,6 +469,13 @@ export async function claimFinalization(input: {
     }
     return { ok: true, value: ran.value.claim };
   }
+
+  const { assertNoBlockingCascade } = await import("./cascade-operation");
+  const cascadeOk = await assertNoBlockingCascade({
+    report_id: input.report_id,
+    generation_id: input.generation_id,
+  });
+  if (!cascadeOk.ok) return cascadeOk;
 
   const fenceKeys = input.pages.map((p) =>
     pageFenceKey(input.report_id, input.generation_id, p.page_id),
@@ -386,6 +496,7 @@ export async function claimFinalization(input: {
       p.attempt_id,
       p.output_fingerprint,
       p.task_key,
+      p.input_fingerprint,
     );
   }
 
@@ -428,4 +539,121 @@ export function claimIncludesPage(
   page_id: ReportPageId,
 ): boolean {
   return claim.pages.some((p) => p.page_id === page_id);
+}
+
+export async function markFinalizationDelivering(
+  report_id: string,
+  generation_id: string,
+): Promise<Batch3Result<FinalizationClaim>> {
+  const cur = await readFinalizationClaim(report_id, generation_id);
+  if (!cur.ok) return cur;
+  if (!cur.value) {
+    return { ok: false, code: "not_found", detail: "no seal to deliver" };
+  }
+  const st = cur.value.status;
+  if (st === "delivering" || st === "delivered") {
+    return { ok: true, value: cur.value };
+  }
+  if (st !== "sealed" && st !== "claimed" && st !== "delivery_failed") {
+    return {
+      ok: false,
+      code: "conflict",
+      detail: `cannot start delivery from status=${st}`,
+    };
+  }
+  const next: FinalizationClaim = {
+    ...cur.value,
+    status: "delivering",
+    delivering_at: new Date().toISOString(),
+  };
+  const saved = await casSet(
+    finalizationClaimKey(report_id, generation_id),
+    JSON.stringify(cur.value),
+    next,
+  );
+  if (!saved.ok) return saved;
+  return { ok: true, value: next };
+}
+
+export async function markFinalizationDelivered(
+  report_id: string,
+  generation_id: string,
+  generation_epoch: number,
+): Promise<Batch3Result<FinalizationClaim>> {
+  const cur = await readFinalizationClaim(report_id, generation_id);
+  if (!cur.ok) return cur;
+  if (!cur.value) {
+    return { ok: false, code: "not_found", detail: "no seal" };
+  }
+  if (cur.value.status === "delivered") {
+    return { ok: true, value: cur.value };
+  }
+  if (
+    cur.value.status !== "delivering" &&
+    cur.value.status !== "sealed" &&
+    cur.value.status !== "claimed"
+  ) {
+    return {
+      ok: false,
+      code: "conflict",
+      detail: `cannot mark delivered from ${cur.value.status}`,
+    };
+  }
+  const next: FinalizationClaim = {
+    ...cur.value,
+    status: "delivered",
+    delivered_at: new Date().toISOString(),
+  };
+  const saved = await casSet(
+    finalizationClaimKey(report_id, generation_id),
+    JSON.stringify(cur.value),
+    next,
+  );
+  if (!saved.ok) return saved;
+  await transitionGenerationStatus({
+    report_id,
+    generation_id,
+    generation_epoch,
+    to: "completed",
+  });
+  return { ok: true, value: next };
+}
+
+export async function markFinalizationDeliveryFailed(
+  report_id: string,
+  generation_id: string,
+  generation_epoch: number,
+  detail: string,
+): Promise<Batch3Result<FinalizationClaim>> {
+  const cur = await readFinalizationClaim(report_id, generation_id);
+  if (!cur.ok) return cur;
+  if (!cur.value) {
+    return { ok: false, code: "not_found", detail: "no seal" };
+  }
+  if (cur.value.status === "delivered") {
+    return {
+      ok: false,
+      code: "conflict",
+      detail: "already delivered",
+    };
+  }
+  const next: FinalizationClaim = {
+    ...cur.value,
+    status: "delivery_failed",
+    delivery_failed_at: new Date().toISOString(),
+    delivery_detail: detail,
+  };
+  const saved = await casSet(
+    finalizationClaimKey(report_id, generation_id),
+    JSON.stringify(cur.value),
+    next,
+  );
+  if (!saved.ok) return saved;
+  await transitionGenerationStatus({
+    report_id,
+    generation_id,
+    generation_epoch,
+    to: "delivery_failed",
+  });
+  return { ok: true, value: next };
 }

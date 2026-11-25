@@ -106,9 +106,16 @@ export async function runReportPageRepairOnce(input: {
     attempt_id: string;
     validity_rev: number;
   } | null = null;
+  let upstream: Record<string, string> = {};
   const epoch = input.event.generation_epoch ?? job.generation_epoch;
   if (typeof epoch === "number") {
     const { fenceAndClaimPageTask } = await import("../batch3/worker-guard");
+    const { buildPageProductionPrep, upstreamFingerprintsForPage } =
+      await import("./page-prep");
+    const prep = buildPageProductionPrep(job, page_id);
+    upstream = prep.build_fail
+      ? {}
+      : upstreamFingerprintsForPage(job, page_id, prep.ctx);
     const claimed = await fenceAndClaimPageTask({
       report_id: input.event.report_id,
       generation_id: input.event.generation_id,
@@ -116,7 +123,7 @@ export async function runReportPageRepairOnce(input: {
       page_id,
       task_type: "repair",
       input_fingerprint: pending.input_fingerprint,
-      upstream_output_fingerprints: {},
+      upstream_output_fingerprints: upstream,
       worker_id: input.worker_id ?? "report-page-repair",
     });
     if (!claimed.ok) {
@@ -249,7 +256,7 @@ export async function runReportPageRepairOnce(input: {
         generation_epoch: epoch,
         page_id,
         input_fingerprint: pending.input_fingerprint,
-        upstream_output_fingerprints: {},
+        upstream_output_fingerprints: upstream,
         page_contract_version: def.production_version,
         prompt_version: def.prompt_version,
         validator_version: def.validator_version,
