@@ -1,21 +1,22 @@
 /**
  * Unified authority-aware page read — single gate for loadJob, orchestrator
  * DAG unlock, and final V3 merge. Does not call loadJob (no cycles).
+ *
+ * R4: full identity cross-checks + Authority Output content re-hash.
  */
 
 import type { PageBlob } from "../batch2/job-store";
 import { hashCanonicalPayload } from "../orchestration";
 import type { ReportPageId, ReportPageRuntimeState } from "../orchestration/types";
-import { readAuthorityPageOutput } from "./auth-output";
+import { readAuthorityPageOutput, type AuthorityPageOutput } from "./auth-output";
 import {
   assertGenerationActive,
   readActiveGeneration,
   readGeneration,
 } from "./generation-store";
-import { readPageFence } from "./page-fence";
+import { fingerprintsMatch, readPageFence } from "./page-fence";
 import { readPageProvenance } from "./provenance";
 import type { Batch3Result, PageFence, PageProvenance } from "./types";
-import type { AuthorityPageOutput } from "./auth-output";
 
 export type AuthorityPageVerdict =
   | "valid"
@@ -45,6 +46,13 @@ export function isAuthorityTerminalOutcome(outcome: string | undefined): boolean
   return !!outcome && TERMINAL_OUTCOMES.has(outcome);
 }
 
+function mismatch(
+  detail: string,
+  extra?: Partial<AuthorityPageReadResult>,
+): AuthorityPageReadResult {
+  return { verdict: "mismatch", detail, ...extra };
+}
+
 /**
  * Validate a page blob (or claim of terminal output) against Batch3 authority.
  * Missing/pending blobs that do not claim a terminal outcome → not_terminal.
@@ -58,18 +66,29 @@ export async function readAuthorityGatedPage(input: {
   blob?: PageBlob | null;
 }): Promise<AuthorityPageReadResult> {
   const blob = input.blob ?? null;
+  const page_id = input.page_id;
+  const report_id = input.report_id.trim();
+  const generation_id = input.generation_id.trim();
+  const generation_epoch = input.generation_epoch;
+
   const claimsTerminal = isAuthorityTerminalOutcome(blob?.state?.outcome);
 
   if (!blob || !claimsTerminal) {
     return {
       verdict: "not_terminal",
       detail: blob
-        ? `page ${input.page_id} outcome=${blob.state.outcome} — no authority required yet`
-        : `page ${input.page_id} blob absent`,
+        ? `page ${page_id} outcome=${blob.state.outcome} — no authority required yet`
+        : `page ${page_id} blob absent`,
     };
   }
 
-  const active = await readActiveGeneration(input.report_id);
+  if (blob.state.page_id !== page_id) {
+    return mismatch(
+      `blob.state.page_id ${blob.state.page_id} != requested ${page_id}`,
+    );
+  }
+
+  const active = await readActiveGeneration(report_id);
   if (!active.ok) {
     return {
       verdict: "unavailable",
@@ -78,19 +97,19 @@ export async function readAuthorityGatedPage(input: {
   }
   if (
     !active.value ||
-    active.value.generation_id !== input.generation_id.trim() ||
-    active.value.generation_epoch !== input.generation_epoch
+    active.value.generation_id !== generation_id ||
+    active.value.generation_epoch !== generation_epoch
   ) {
     return {
       verdict: "stale",
-      detail: `active generation mismatch for page ${input.page_id}`,
+      detail: `active generation mismatch for page ${page_id}`,
     };
   }
 
   const asserted = await assertGenerationActive({
-    report_id: input.report_id,
-    generation_id: input.generation_id,
-    generation_epoch: input.generation_epoch,
+    report_id,
+    generation_id,
+    generation_epoch,
   });
   if (!asserted.ok) {
     if (
@@ -102,14 +121,14 @@ export async function readAuthorityGatedPage(input: {
     return { verdict: "stale", detail: asserted.detail };
   }
 
-  const gen = await readGeneration(input.report_id, input.generation_id);
+  const gen = await readGeneration(report_id, generation_id);
   if (!gen.ok) {
     return { verdict: "unavailable", detail: gen.detail };
   }
   if (!gen.value) {
     return {
       verdict: "missing",
-      detail: `generation record missing for page ${input.page_id}`,
+      detail: `generation record missing for page ${page_id}`,
     };
   }
   if (gen.value.status !== "active") {
@@ -118,18 +137,13 @@ export async function readAuthorityGatedPage(input: {
       detail: `generation status=${gen.value.status}`,
     };
   }
-  if (gen.value.generation_epoch !== input.generation_epoch) {
-    return {
-      verdict: "mismatch",
-      detail: `generation epoch ${gen.value.generation_epoch} != ${input.generation_epoch}`,
-    };
+  if (gen.value.generation_epoch !== generation_epoch) {
+    return mismatch(
+      `generation epoch ${gen.value.generation_epoch} != ${generation_epoch}`,
+    );
   }
 
-  const fenceRes = await readPageFence(
-    input.report_id,
-    input.generation_id,
-    input.page_id,
-  );
+  const fenceRes = await readPageFence(report_id, generation_id, page_id);
   if (!fenceRes.ok) {
     return { verdict: "unavailable", detail: fenceRes.detail };
   }
@@ -137,7 +151,7 @@ export async function readAuthorityGatedPage(input: {
   if (!fence) {
     return {
       verdict: "missing",
-      detail: `page fence missing for ${input.page_id}`,
+      detail: `page fence missing for ${page_id}`,
       fence: null,
     };
   }
@@ -148,40 +162,28 @@ export async function readAuthorityGatedPage(input: {
       fence,
     };
   }
-  if (fence.generation_epoch !== input.generation_epoch) {
-    return {
-      verdict: "mismatch",
-      detail: `fence epoch mismatch`,
-      fence,
-    };
-  }
-  if (fence.generation_id !== input.generation_id.trim()) {
-    return {
-      verdict: "mismatch",
-      detail: `fence generation_id mismatch`,
-      fence,
-    };
+  if (
+    fence.report_id !== report_id ||
+    fence.generation_id !== generation_id ||
+    fence.generation_epoch !== generation_epoch ||
+    fence.page_id !== page_id
+  ) {
+    return mismatch(`fence identity mismatch`, { fence });
   }
   if (typeof fence.validity_rev !== "number") {
-    return {
-      verdict: "mismatch",
-      detail: `fence validity_rev missing`,
-      fence,
-    };
+    return mismatch(`fence validity_rev missing`, { fence });
   }
-  if (!fence.attempt_id || !fence.output_fingerprint) {
-    return {
-      verdict: "mismatch",
-      detail: `fence missing attempt_id or output_fingerprint`,
-      fence,
-    };
+  if (!fence.attempt_id || !fence.output_fingerprint || !fence.task_key) {
+    return mismatch(
+      `fence missing attempt_id/task_key/output_fingerprint`,
+      { fence },
+    );
+  }
+  if (!fence.input_fingerprint) {
+    return mismatch(`fence input_fingerprint missing`, { fence });
   }
 
-  const provRes = await readPageProvenance(
-    input.report_id,
-    input.generation_id,
-    input.page_id,
-  );
+  const provRes = await readPageProvenance(report_id, generation_id, page_id);
   if (!provRes.ok) {
     return { verdict: "unavailable", detail: provRes.detail, fence };
   }
@@ -189,7 +191,7 @@ export async function readAuthorityGatedPage(input: {
   if (!provenance) {
     return {
       verdict: "missing",
-      detail: `provenance missing for ${input.page_id}`,
+      detail: `provenance missing for ${page_id}`,
       fence,
       provenance: null,
     };
@@ -203,67 +205,66 @@ export async function readAuthorityGatedPage(input: {
     };
   }
   if (
-    provenance.generation_id !== input.generation_id.trim() ||
-    provenance.generation_epoch !== input.generation_epoch ||
-    provenance.page_id !== input.page_id
+    provenance.report_id !== report_id ||
+    provenance.generation_id !== generation_id ||
+    provenance.generation_epoch !== generation_epoch ||
+    provenance.page_id !== page_id
   ) {
-    return {
-      verdict: "mismatch",
-      detail: `provenance identity mismatch`,
-      fence,
-      provenance,
-    };
+    return mismatch(`provenance identity mismatch`, { fence, provenance });
   }
   if (provenance.validity_rev !== fence.validity_rev) {
-    return {
-      verdict: "mismatch",
-      detail: `provenance validity_rev ${provenance.validity_rev} != fence ${fence.validity_rev}`,
-      fence,
-      provenance,
-    };
+    return mismatch(
+      `provenance validity_rev ${provenance.validity_rev} != fence ${fence.validity_rev}`,
+      { fence, provenance },
+    );
   }
   if (provenance.attempt_id !== fence.attempt_id) {
-    return {
-      verdict: "mismatch",
-      detail: `provenance attempt_id mismatch`,
+    return mismatch(`provenance attempt_id mismatch`, { fence, provenance });
+  }
+  if (provenance.task_key !== fence.task_key) {
+    return mismatch(`provenance task_key mismatch vs fence`, {
       fence,
       provenance,
-    };
+    });
   }
   if (provenance.output_fingerprint !== fence.output_fingerprint) {
-    return {
-      verdict: "mismatch",
-      detail: `provenance output_fingerprint mismatch`,
+    return mismatch(`provenance output_fingerprint mismatch`, {
       fence,
       provenance,
-    };
+    });
   }
-  if (!provenance.task_key) {
-    return {
-      verdict: "mismatch",
-      detail: `provenance task_key missing`,
+  if (provenance.input_fingerprint !== fence.input_fingerprint) {
+    return mismatch(`provenance input_fingerprint mismatch vs fence`, {
       fence,
       provenance,
-    };
+    });
   }
   if (
-    !provenance.input_fingerprint ||
+    !fingerprintsMatch(
+      fence.upstream_output_fingerprints,
+      provenance.upstream_output_fingerprints,
+    )
+  ) {
+    return mismatch(`provenance upstream fingerprints mismatch vs fence`, {
+      fence,
+      provenance,
+    });
+  }
+  if (
     !provenance.page_contract_version ||
     !provenance.prompt_version ||
     !provenance.validator_version
   ) {
-    return {
-      verdict: "mismatch",
-      detail: `provenance contract fields incomplete`,
+    return mismatch(`provenance contract versions incomplete`, {
       fence,
       provenance,
-    };
+    });
   }
 
   const authRes = await readAuthorityPageOutput(
-    input.report_id,
-    input.generation_id,
-    input.page_id,
+    report_id,
+    generation_id,
+    page_id,
   );
   if (!authRes.ok) {
     return {
@@ -277,94 +278,136 @@ export async function readAuthorityGatedPage(input: {
   if (!authority_output) {
     return {
       verdict: "missing",
-      detail: `authority output missing for ${input.page_id}`,
+      detail: `authority output missing for ${page_id}`,
       fence,
       provenance,
       authority_output: null,
     };
   }
-  if (authority_output.output_fingerprint !== fence.output_fingerprint) {
-    return {
-      verdict: "mismatch",
-      detail: `authority output fingerprint mismatch`,
+  if (
+    authority_output.report_id !== report_id ||
+    authority_output.generation_id !== generation_id ||
+    authority_output.generation_epoch !== generation_epoch ||
+    authority_output.page_id !== page_id
+  ) {
+    return mismatch(`authority output identity mismatch`, {
       fence,
       provenance,
       authority_output,
-    };
+    });
   }
   if (authority_output.validity_rev !== fence.validity_rev) {
-    return {
-      verdict: "mismatch",
-      detail: `authority output validity_rev mismatch`,
+    return mismatch(`authority output validity_rev mismatch`, {
       fence,
       provenance,
       authority_output,
-    };
+    });
   }
   if (authority_output.attempt_id !== fence.attempt_id) {
-    return {
-      verdict: "mismatch",
-      detail: `authority output attempt_id mismatch`,
+    return mismatch(`authority output attempt_id mismatch`, {
       fence,
       provenance,
       authority_output,
-    };
+    });
+  }
+  if (authority_output.task_key !== fence.task_key) {
+    return mismatch(`authority output task_key mismatch`, {
+      fence,
+      provenance,
+      authority_output,
+    });
+  }
+  if (authority_output.output_fingerprint !== fence.output_fingerprint) {
+    return mismatch(`authority output fingerprint metadata mismatch`, {
+      fence,
+      provenance,
+      authority_output,
+    });
+  }
+
+  // Recompute Authority Output content hash — never trust metadata alone.
+  const authContentFp = hashCanonicalPayload(authority_output.output);
+  if (authContentFp !== authority_output.output_fingerprint) {
+    return mismatch(
+      `authority output content hash ${authContentFp} != metadata fingerprint`,
+      { fence, provenance, authority_output },
+    );
+  }
+  if (authContentFp !== fence.output_fingerprint) {
+    return mismatch(`authority output content hash != fence fingerprint`, {
+      fence,
+      provenance,
+      authority_output,
+    });
+  }
+  if (authContentFp !== provenance.output_fingerprint) {
+    return mismatch(
+      `authority output content hash != provenance fingerprint`,
+      { fence, provenance, authority_output },
+    );
   }
 
   if ((blob.validity_rev ?? -1) !== fence.validity_rev) {
-    return {
-      verdict: "mismatch",
-      detail: `blob validity_rev ${blob.validity_rev ?? "absent"} != fence ${fence.validity_rev}`,
-      fence,
-      provenance,
-      authority_output,
-    };
+    return mismatch(
+      `blob validity_rev ${blob.validity_rev ?? "absent"} != fence ${fence.validity_rev}`,
+      { fence, provenance, authority_output },
+    );
   }
   if (blob.authority_output_fingerprint !== fence.output_fingerprint) {
-    return {
-      verdict: "mismatch",
-      detail: `blob authority_output_fingerprint mismatch`,
+    return mismatch(`blob authority_output_fingerprint mismatch`, {
       fence,
       provenance,
       authority_output,
-    };
+    });
   }
   if (blob.state.output_fingerprint !== fence.output_fingerprint) {
-    return {
-      verdict: "mismatch",
-      detail: `blob state output_fingerprint mismatch`,
+    return mismatch(`blob state output_fingerprint mismatch`, {
       fence,
       provenance,
       authority_output,
-    };
+    });
   }
 
-  if (blob.output !== undefined) {
-    const recomputed = hashCanonicalPayload(blob.output);
-    if (recomputed !== fence.output_fingerprint) {
-      return {
-        verdict: "mismatch",
-        detail: `recomputed blob output fingerprint mismatch`,
+  if (blob.state.outcome === "completed") {
+    if (blob.output === undefined) {
+      return mismatch(`completed blob missing output payload`, {
         fence,
         provenance,
         authority_output,
-      };
+      });
     }
-  } else if (blob.state.outcome === "completed") {
-    return {
-      verdict: "mismatch",
-      detail: `completed blob missing output payload`,
-      fence,
-      provenance,
-      authority_output,
-    };
+    const blobContentFp = hashCanonicalPayload(blob.output);
+    if (blobContentFp !== fence.output_fingerprint) {
+      return mismatch(`recomputed blob output fingerprint mismatch`, {
+        fence,
+        provenance,
+        authority_output,
+      });
+    }
+    if (blobContentFp !== authContentFp) {
+      return mismatch(`blob content hash != authority output content hash`, {
+        fence,
+        provenance,
+        authority_output,
+      });
+    }
+  } else if (blob.output !== undefined) {
+    // Page07 conditional terminals may carry structured skip payloads.
+    const blobContentFp = hashCanonicalPayload(blob.output);
+    if (blobContentFp !== fence.output_fingerprint) {
+      return mismatch(
+        `recomputed conditional blob output fingerprint mismatch`,
+        { fence, provenance, authority_output },
+      );
+    }
   }
 
   return {
     verdict: "valid",
     detail: "authority matches",
     state: blob.state,
-    output: blob.output,
+    // Prefer content-verified authority output for delivery consumers.
+    output: authority_output.output,
     fence,
     provenance,
     authority_output,
@@ -385,7 +428,11 @@ export async function filterPagesThroughAuthority(input: {
 }): Promise<
   Batch3Result<{
     pages: Map<ReportPageId, PageBlob>;
-    demotions: Array<{ page_id: ReportPageId; verdict: AuthorityPageVerdict; detail: string }>;
+    demotions: Array<{
+      page_id: ReportPageId;
+      verdict: AuthorityPageVerdict;
+      detail: string;
+    }>;
   }>
 > {
   const next = new Map<ReportPageId, PageBlob>();
@@ -429,7 +476,6 @@ export async function filterPagesThroughAuthority(input: {
       verdict: read.verdict,
       detail: read.detail,
     });
-    // Keep blob shell for repair/pending diagnostics but strip terminal authority.
     next.set(page_id, {
       ...blob,
       state: {
@@ -483,3 +529,15 @@ export async function assertPageAuthorityForMerge(input: {
     verdict: read.verdict,
   };
 }
+
+/** Bound identity for finalization claims (immutable once claimed). */
+export type AuthorityPageClaimIdentity = {
+  page_id: ReportPageId;
+  generation_id: string;
+  generation_epoch: number;
+  validity_rev: number;
+  attempt_id: string;
+  task_key: string;
+  output_fingerprint: string;
+  input_fingerprint: string;
+};

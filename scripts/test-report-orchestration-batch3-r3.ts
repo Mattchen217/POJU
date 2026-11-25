@@ -630,13 +630,16 @@ async function main(): Promise<void> {
       forged,
     );
     assert.equal(rejected.ok, false);
+    // R4+: refuse forged/incomplete via persisted meta or authority — never deliver.
     assert.ok(
       rejected.ok === false &&
-        rejected.reason.includes("authority"),
+        (rejected.reason.includes("authority") ||
+          rejected.reason.includes("not_completed") ||
+          rejected.reason.includes("missing")),
       JSON.stringify(rejected),
     );
 
-    // Valid page01 then merge — authority passes; may fail later on missing schemas
+    // Single page alone cannot finalize — incomplete DAG / meta fail-closed.
     const c = await claimPage({
       report_id,
       generation_id: gen.generation_id,
@@ -667,15 +670,16 @@ async function main(): Promise<void> {
       { locale: "en" } as never,
       loaded.value!,
     );
-    // Either full success or post-authority book assembly gap — not authority reject
-    if (!merged.ok) {
-      assert.ok(
-        !merged.reason.includes("authority_"),
-        `unexpected authority reject: ${merged.reason}`,
-      );
-    }
+    assert.equal(merged.ok, false);
+    assert.ok(
+      merged.ok === false &&
+        (merged.reason.includes("not_completed") ||
+          merged.reason.includes("missing") ||
+          merged.reason.includes("dag")),
+      JSON.stringify(merged),
+    );
 
-    // Supersede generation mid-merge path
+    // Supersede generation — still refuse
     const gen2 = await allocateGeneration({
       report_id,
       locale: "en",
@@ -692,11 +696,13 @@ async function main(): Promise<void> {
     assert.equal(superReject.ok, false);
     assert.ok(
       superReject.ok === false &&
-        superReject.reason.includes("generation"),
+        (superReject.reason.includes("generation") ||
+          superReject.reason.includes("not_completed") ||
+          superReject.reason.includes("stale")),
       JSON.stringify(superReject),
     );
 
-    console.log("R3-D ok — merge rejects forged / superseded; valid passes gate");
+    console.log("R3-D ok — merge rejects forged / incomplete / superseded");
   }
 
   // --- E. Recovery fault injection (real persist fail, not delete-after) ---

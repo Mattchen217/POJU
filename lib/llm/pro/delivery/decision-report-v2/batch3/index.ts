@@ -13,6 +13,7 @@ export * from "./page-fence";
 export * from "./auth-output";
 export * from "./persist-page-blob";
 export * from "./authority-page-read";
+export * from "./finalization";
 
 // Explicit re-exports used by tests / workers
 export { writePageProvenance, readPageProvenance } from "./provenance";
@@ -32,3 +33,8 @@ export {
   filterPagesThroughAuthority,
   assertPageAuthorityForMerge,
 } from "./authority-page-read";
+export {
+  claimFinalization,
+  readFinalizationClaim,
+  finalizationClaimKey,
+} from "./finalization";
