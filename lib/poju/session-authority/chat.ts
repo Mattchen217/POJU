@@ -15,9 +15,15 @@ import { runWithInProcessDecisionAuthority } from "@/lib/poju/decision-authority
 import type { POJULLMResponse } from "@/lib/llm/poju-llm";
 import {
   getAuthoritativeChatTestHooks,
+  getAuthoritativeCommitTestHook,
   noteAuthoritativeModelInputs,
   runWithLlmCapture,
 } from "@/lib/poju/session-authority/chat-hooks";
+import {
+  getAuthoritativeRevisionAnchor,
+  runWithAuthoritativeRevisionAnchor,
+} from "@/lib/poju/session-authority/authoritative-revision-anchor";
+import { adoptLedgerHeadIntoSessionIfAhead } from "@/lib/poju/session-authority/ledger-head-catchup";
 import { resolveAuthoritativeChatProfileInputs } from "@/lib/poju/session-authority/chat-profile-inputs";
 import { applyAuthoritativeFirstTurnDisplayTitle } from "@/lib/poju/session-list-label";
 import type { POJUActionRecommendationsData } from "@/lib/archive/archive-service";
@@ -134,9 +140,17 @@ export async function executeAuthoritativeChatTurn(
     );
   }
 
-  const boundSession = bindAuthoritativeChatSession(record, incoming, body.session);
+  // Ledger may be ahead of Session Authority after an aborted/conflicted prior
+  // turn. Adopt the durable head into the working snapshot before binding.
+  const catchup = await adoptLedgerHeadIntoSessionIfAhead(record.session_snapshot);
+  const serverSnapshotForTurn = catchup.session;
+  const boundSession = bindAuthoritativeChatSession(
+    { ...record, session_snapshot: serverSnapshotForTurn },
+    incoming,
+    body.session,
+  );
   const profileInputs = resolveAuthoritativeChatProfileInputs({
-    serverSnapshot: record.session_snapshot,
+    serverSnapshot: serverSnapshotForTurn,
     profile: body.profile,
     userProfile: body.userProfile,
     base_analysis: body.base_analysis,
@@ -147,34 +161,43 @@ export async function executeAuthoritativeChatTurn(
     base_analysis: profileInputs.base_analysis,
     claimed_stored_profile_id: profileInputs.claimed_stored_profile_id,
     session_selected_stored_profile_id:
-      record.session_snapshot.selected_stored_profile_id?.trim() ||
-      record.session_snapshot.agent_v2?.selected_profile_id?.trim() ||
+      serverSnapshotForTurn.selected_stored_profile_id?.trim() ||
+      serverSnapshotForTurn.agent_v2?.selected_profile_id?.trim() ||
       null,
   });
 
   const capture: { current?: POJULLMResponse } = {};
   let sessionOut: POJUSessionState;
+  // Captured before leaving the ALS frame — memory bumps must not become CAS expected.
+  let authoritativeExpectedRevision = record.revision;
   try {
-    // In-process DC ledger transport for this turn only (no relative HTTP self-fetch).
-    sessionOut = await runWithInProcessDecisionAuthority(() =>
-      runWithMemorySessionPersist(boundSession, () =>
-        runWithLlmCapture(capture, () =>
-          handleUserMessage({
-            session: boundSession,
-            userMessage: incoming.content,
-            locale: String(body.locale ?? "en"),
-            userAlreadyAppended: true,
-            signal: opts?.signal,
-            attachment: body.attachment ?? null,
-            server_invoke: {
-              base_analysis: profileInputs.base_analysis,
-              profile: profileInputs.profile,
-            },
-            __testOnlyM1Hooks: getAuthoritativeChatTestHooks(),
-          }),
+    // Anchor starts at the turn-start Authority revision. Memory persist may
+    // bump working session_revision; only a real server CAS (e.g. clarification
+    // reserve) advances this anchor via noteAuthoritativeSessionCasRevision.
+    sessionOut = await runWithAuthoritativeRevisionAnchor(record.revision, async () => {
+      const out = await runWithInProcessDecisionAuthority(() =>
+        runWithMemorySessionPersist(boundSession, () =>
+          runWithLlmCapture(capture, () =>
+            handleUserMessage({
+              session: boundSession,
+              userMessage: incoming.content,
+              locale: String(body.locale ?? "en"),
+              userAlreadyAppended: true,
+              signal: opts?.signal,
+              attachment: body.attachment ?? null,
+              server_invoke: {
+                base_analysis: profileInputs.base_analysis,
+                profile: profileInputs.profile,
+              },
+              __testOnlyM1Hooks: getAuthoritativeChatTestHooks(),
+            }),
+          ),
         ),
-      ),
-    );
+      );
+      authoritativeExpectedRevision =
+        getAuthoritativeRevisionAnchor() ?? record.revision;
+      return out;
+    });
   } catch (error) {
     if (isAbortError(error) || opts?.signal?.aborted) {
       return { ok: false, aborted: true, reason: "aborted" };
@@ -192,16 +215,10 @@ export async function executeAuthoritativeChatTurn(
   // retry ONLY the commit — never re-run the model (that was the user-visible
   // failure mode: OpenRouter had a valid JSON, the page still showed 连接异常).
   //
-  // Clarification claim reservation may have already CAS-bumped the server
-  // revision; final commit must use sessionOut.session_revision (post-reserve),
-  // not the revision captured at turn start.
-  const commitExpectedRevision = (): number => {
-    const fromSession = sessionOut.session_revision;
-    if (typeof fromSession === "number" && Number.isFinite(fromSession)) {
-      return fromSession;
-    }
-    return record.revision;
-  };
+  // Final CAS expectedRevision is the authoritative anchor (turn-start revision,
+  // or the head after a successful clarification reservation CAS) — never the
+  // working_session_revision produced by request-scoped memory persist.
+  const commitExpectedRevision = (): number => authoritativeExpectedRevision;
   const COMMIT_ATTEMPTS = 3;
   let committed: Awaited<ReturnType<typeof commitAuthoritativeSessionUpdate>> | null = null;
   let lastCommitError: unknown = null;
@@ -216,6 +233,15 @@ export async function executeAuthoritativeChatTurn(
         sessionOut,
         new Date().toISOString(),
       );
+      const commitHook = getAuthoritativeCommitTestHook();
+      if (commitHook) {
+        await commitHook({
+          sessionId,
+          expectedRevision,
+          session: sessionOut,
+        });
+      }
+      throwIfAborted(opts?.signal);
       committed = await commitAuthoritativeSessionUpdate({
         sessionId,
         expectedRevision,
@@ -227,6 +253,9 @@ export async function executeAuthoritativeChatTurn(
       break;
     } catch (error) {
       lastCommitError = error;
+      if (isAbortError(error) || opts?.signal?.aborted) {
+        return { ok: false, aborted: true, reason: "aborted" };
+      }
       const timedOut =
         error instanceof SessionAuthorityError &&
         error.code === "server_persistence_unavailable" &&

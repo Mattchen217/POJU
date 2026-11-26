@@ -8,6 +8,7 @@ import { AsyncLocalStorage } from "node:async_hooks";
 import type { POJULLMResponse } from "@/lib/llm/poju-llm";
 import type { AdaptiveTurnTestHooks } from "@/lib/poju/decision-intake/adaptive-turn";
 import type { UserProfile } from "@/lib/profile/types";
+import type { POJUSessionState } from "@/lib/poju/types";
 import {
   bindAuthoritativeChatHookRuntime,
   type TestChatModel,
@@ -21,6 +22,13 @@ export type AuthoritativeModelInputCapture = {
   claimed_stored_profile_id: string | null;
   session_selected_stored_profile_id: string | null;
 };
+
+/** Test-only: runs immediately before the final authoritative Session CAS. */
+export type AuthoritativeCommitTestHook = (ctx: {
+  sessionId: string;
+  expectedRevision: number;
+  session: POJUSessionState;
+}) => void | Promise<void>;
 
 const llmCaptureAls = new AsyncLocalStorage<{ current?: POJULLMResponse }>();
 const testModelAls = new AsyncLocalStorage<TestChatModel>();
@@ -59,6 +67,7 @@ export function noteAuthoritativeModelInputs(input: AuthoritativeModelInputCaptu
 }
 
 const testHooksAls = new AsyncLocalStorage<AdaptiveTurnTestHooks>();
+const commitTestHookAls = new AsyncLocalStorage<AuthoritativeCommitTestHook>();
 
 export function getAuthoritativeChatTestHooks(): AdaptiveTurnTestHooks | undefined {
   return testHooksAls.getStore();
@@ -69,6 +78,17 @@ export function runWithAuthoritativeChatTestHooks<T>(
   fn: () => T | Promise<T>,
 ): Promise<T> {
   return Promise.resolve(testHooksAls.run(hooks, fn));
+}
+
+export function getAuthoritativeCommitTestHook(): AuthoritativeCommitTestHook | undefined {
+  return commitTestHookAls.getStore();
+}
+
+export function runWithAuthoritativeCommitTestHook<T>(
+  hook: AuthoritativeCommitTestHook,
+  fn: () => T | Promise<T>,
+): Promise<T> {
+  return Promise.resolve(commitTestHookAls.run(hook, fn));
 }
 
 bindAuthoritativeChatHookRuntime({

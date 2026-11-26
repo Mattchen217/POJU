@@ -17,6 +17,7 @@ import {
   requireAuthoritativeSession,
 } from "@/lib/poju/session-authority/lifecycle";
 import type { ServerSessionRecord } from "@/lib/poju/session-authority/types";
+import { noteAuthoritativeSessionCasRevision } from "@/lib/poju/session-authority/authoritative-revision-anchor";
 import { claimClarification, GLOBAL_CORE_SPENT_CEILING } from "./budget-ledger";
 
 const CAS_RETRY_MAX = 8;
@@ -321,6 +322,7 @@ async function defaultAuthoritativeReserve(
     );
     // Idempotent re-reserve of an open claim: keep current revision (no second CAS bump).
     if (existingClaim?.status === "claimed") {
+      noteAuthoritativeSessionCasRevision(current.revision);
       return {
         ok: true,
         session: overlayClaimOntoWorkingSession(
@@ -364,6 +366,8 @@ async function defaultAuthoritativeReserve(
     }
 
     if (casResult.ok) {
+      // Server Authority CAS succeeded — advance the request-scoped authoritative anchor.
+      noteAuthoritativeSessionCasRevision(next.revision);
       // Keep the caller's in-flight turn state; only overlay the CAS claim + new revision.
       return {
         ok: true,
