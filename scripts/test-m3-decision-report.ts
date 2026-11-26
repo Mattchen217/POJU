@@ -661,24 +661,37 @@ async function main() {
           assert.equal(r.context_hash, dc.content_hash);
           assert.equal(r.job_id, firstJobId);
           assert.equal(r.execution_generation, job!.execution_generation);
-          assert.ok(r.content_markdown.trim().length > 0);
+          const empty03 =
+            r.page_id === "03" && r.applicability === "not_applicable" && !r.content_markdown.trim();
+          if (!empty03) {
+            assert.ok(r.content_markdown.trim().length > 0, `page ${r.page_id} empty`);
+          }
           assert.ok(!r.content_markdown.includes("```"), `page ${r.page_id} leaked a code fence`);
           assert.ok(!r.content_markdown.includes("\"reality_facts\""), `page ${r.page_id} leaked DC JSON`);
         }
         assert.equal(recs.find((r) => r.page_id === "07")?.applicability, "not_applicable");
         const p03 = recs.find((r) => r.page_id === "03")!;
-        assert.ok(p03.content_markdown.includes("CFP-01") || p03.content_markdown.length > 20);
+        // Default fixtures use no soft-translated evidence terms → glossary omitted.
+        assert.equal(p03.applicability, "not_applicable");
+        assert.equal(p03.content_markdown, "");
+        assert.equal(p03.structured, null);
+        assert.ok(!result.full_text.includes(DECISION_PAGE_SCHEMAS["03"].title));
 
         assert.ok(result.full_text.includes("05") || result.full_text.length > 200);
-        const order = types.DI2_READING_ORDER.filter((id) => id !== "07");
+        firstJobPagesSnapshot = JSON.stringify(recs);
+        const { decisionFaceKicker: faceKicker } = await import(
+          "../lib/llm/pro/delivery/page-schema/face-kicker"
+        );
+        const order = types.DI2_READING_ORDER.filter(
+          (id) => id !== "07" && !(id === "03" && p03.applicability === "not_applicable"),
+        );
         let last = -1;
         for (const id of order) {
-          const heading = DECISION_PAGE_SCHEMAS[id].title;
+          const heading = `## ${faceKicker(id, "zh")}`;
           const at = result.full_text.indexOf(heading);
           assert.ok(at > last, `page ${id} (${heading}) out of reading order`);
           last = at;
         }
-        firstJobPagesSnapshot = JSON.stringify(recs);
 
         const analysis = await store.loadAnalysis(input.analysis_key);
         assert.equal(analysis?.record.status, "completed");
@@ -967,6 +980,393 @@ async function main() {
     assert.equal(client.di2ReportNeedsAutoStart(legacy), false);
     const draft = { ...base, decision_context: { ...dc, status: "draft" } } as typeof base;
     assert.equal(client.di2ReportNeedsAutoStart(draft), false);
+  });
+
+  // ─── D03: Page 03 glossary appendix (code-built, trailing) ─────────────────
+
+  const { resolveTermForLocale } = await import("../lib/llm/pro/delivery/decision-report-v2/body-compliance");
+  const { buildGlossaryAppendix } = await import("../lib/llm/pro/delivery/decision-report-v2/glossary-appendix");
+  const { decisionFaceKicker } = await import("../lib/llm/pro/delivery/page-schema/face-kicker");
+  const {
+    encodeAndPolishDeliveryEvidence,
+    parseTermMarkers,
+    stripMarkersForPrompt,
+  } = await import("../lib/llm/sanitize/term-marking");
+  const render = await import("../lib/poju/decision-intake/decision-report-render");
+
+  function emptyBlocks(pageId: DecisionPageId, basis: string, refs: string[] = ["DEF"]): import("../lib/poju/decision-intake/decision-report-render").Di2PageStructured {
+    return {
+      page_id: pageId,
+      title: DECISION_PAGE_SCHEMAS[pageId].title,
+      blocks: DECISION_PAGE_SCHEMAS[pageId].segments.map((seg) => ({
+        segment_id: seg.id,
+        heading: "",
+        body: "这一段给出与当前决策直接相关的白话结论和理由。",
+        basis,
+        evidence_refs: refs,
+      })),
+    };
+  }
+
+  await check("D03-T1: used evidence terms enter glossary appendix in first-seen order", () => {
+    const locale = "zh";
+    const p02 = emptyBlocks("02", "依据：日主偏强");
+    const p04 = emptyBlocks("04", "卡点与用神相关，日主再度出现");
+    const p01 = emptyBlocks("01", "无术语依据");
+    const refIndex = new Map<string, import("../lib/poju/decision-intake/decision-report-types").EvidenceReference>();
+    // Polish as production validation does, then build appendix from structured pages.
+    for (const p of [p02, p04, p01]) {
+      for (const b of p.blocks) b.basis = encodeAndPolishDeliveryEvidence(b.basis, locale);
+    }
+    const ids = pages.collectDi2EvidenceTermIds({ pages: [p02, p04, p01], refIndex, locale });
+    assert.deepEqual(ids, ["day_master", "yong_shen"]);
+    const built = pages.buildAppendixPage({ pages: [p02, p04, p01], refIndex, locale });
+    assert.equal(built.applicability, "applies");
+    assert.ok(built.page);
+    assert.equal(built.page!.appendix?.kind, "glossary_appendix");
+    assert.deepEqual(built.page!.appendix?.term_ids, ["day_master", "yong_shen"]);
+    const md = pages.renderPageMarkdown(built.page!, refIndex, locale);
+    const day = resolveTermForLocale("day_master", locale)!;
+    const yong = resolveTermForLocale("yong_shen", locale)!;
+    assert.ok(md.includes(day.soft_label));
+    assert.ok(md.includes(day.definition));
+    assert.ok(md.includes(yong.soft_label));
+    assert.ok(!md.includes("日主"));
+    assert.ok(!md.includes("用神"));
+    assert.ok(!md.includes("day_master"));
+    assert.ok(!/\bCFP-/.test(md));
+  });
+
+  await check("D03-T2: cited local chart excerpt terms enter appendix after polish", () => {
+    const locale = "zh";
+    const chartText = projectionStrong.chart_lines[0]!.text;
+    assert.ok(/日主|用神|四柱|干支|五行/.test(chartText) || chartText.length > 4, "need a chart line");
+    const refId = projectionStrong.chart_lines[0]!.ref_id;
+    const refIndex = new Map<string, import("../lib/poju/decision-intake/decision-report-types").EvidenceReference>([
+      [
+        refId,
+        {
+          ref_id: refId,
+          kind: "chart_line",
+          status: "local_calculation",
+          excerpt: chartText,
+        },
+      ],
+      [
+        "DEF",
+        {
+          ref_id: "DEF",
+          kind: "definition",
+          status: "decision_definition",
+          excerpt: QUESTION_PLAIN,
+        },
+      ],
+    ]);
+    const p02 = emptyBlocks("02", "依据本地排盘锚点", [refId, "DEF"]);
+    p02.blocks[0]!.basis = encodeAndPolishDeliveryEvidence(p02.blocks[0]!.basis, locale);
+    const layer = render.di2EvidenceLayerText(
+      p02.blocks[0]!.basis,
+      p02.blocks[0]!.evidence_refs,
+      refIndex,
+      locale,
+    );
+    const softLayer = stripMarkersForPrompt(layer, locale);
+    assert.ok(parseTermMarkers(layer).length > 0 || softLayer !== layer, "chart excerpt should polish");
+    const built = pages.buildAppendixPage({ pages: [p02], refIndex, locale });
+    if (parseTermMarkers(layer).length === 0) {
+      assert.equal(built.applicability, "not_applicable");
+    } else {
+      assert.equal(built.applicability, "applies");
+      const md = pages.renderPageMarkdown(built.page!, refIndex, locale);
+      assert.ok(!md.includes("八字本题切片") && !md.includes("Bazi lines"));
+      for (const id of built.page!.appendix!.term_ids) {
+        const row = resolveTermForLocale(id, locale);
+        assert.ok(row, `SSOT missing for ${id}`);
+        assert.ok(md.includes(row!.soft_label));
+      }
+    }
+  });
+
+  await check("D03-T3: no terms → Page 03 not_applicable empty; completeness + book omit", () => {
+    const locale = "zh";
+    const modelPages = (["01", "02", "04", "05", "06", "08"] as DecisionPageId[]).map((id) => {
+      const p = emptyBlocks(id, "依据冻结事实与个人分析");
+      for (const b of p.blocks) b.basis = encodeAndPolishDeliveryEvidence(b.basis, locale);
+      if (id === "05") {
+        p.paths = [
+          {
+            path_id: "P1",
+            rank: 1,
+            label: "先核实",
+            conditions: "核实后仍成立",
+            cost: "沟通成本",
+            risk: "窗口错过",
+            reversibility: "可撤回",
+            exit_condition: "不符退出",
+            ranking_basis: encodeAndPolishDeliveryEvidence("兼顾收入与稳定", locale),
+            evidence_refs: ["DEF"],
+          },
+          {
+            path_id: "P2",
+            rank: 2,
+            label: "维持",
+            conditions: "现岗稳定",
+            cost: "放弃涨薪",
+            risk: "停滞",
+            reversibility: "可再评估",
+            exit_condition: "裁员信号",
+            ranking_basis: encodeAndPolishDeliveryEvidence("稳定已知", locale),
+            evidence_refs: ["DEF"],
+          },
+        ];
+      }
+      return p;
+    });
+    const refIndex = new Map();
+    const built = pages.buildAppendixPage({ pages: modelPages, refIndex, locale });
+    assert.equal(built.applicability, "not_applicable");
+    assert.equal(built.page, null);
+
+    const eight = DECISION_PAGE_IDS.map((pageId) => {
+      if (pageId === "03") {
+        return { pageId, content: "", applicability: "not_applicable" as const };
+      }
+      if (pageId === "07") {
+        return {
+          pageId,
+          content: render.DI2_PAGE07_NOT_APPLICABLE_NOTE(locale),
+          applicability: "not_applicable" as const,
+        };
+      }
+      return { pageId, content: `body-${pageId}`, applicability: "applies" as const };
+    });
+    fbr.assertCompleteEightPageReport(eight);
+
+    const bookPages = eight.map((p) => ({
+      page_id: p.pageId as DecisionPageId,
+      applicability: p.applicability,
+      content_markdown: p.content,
+      status: "completed" as const,
+    }));
+    const full = render.renderDi2BookMarkdown({
+      pages: bookPages,
+      locale,
+      question: QUESTION_PLAIN,
+      binding: { context_id: "ctx", context_version: 1, context_hash: "h".repeat(64) },
+      report_id: "rpt_d03t3",
+      generated_at: NOW,
+    });
+    assert.ok(!full.includes(decisionFaceKicker("03", locale)));
+    assert.ok(!full.includes(DECISION_PAGE_SCHEMAS["03"].title));
+    assert.ok(!/##\s*$/m.test(full.split("---")[1] ?? ""));
+  });
+
+  await check("D03-T4: with terms, Page 03 is last in TOC and body", () => {
+    const locale = "zh";
+    const p02 = emptyBlocks("02", "依据：日主偏强");
+    for (const b of p02.blocks) b.basis = encodeAndPolishDeliveryEvidence(b.basis, locale);
+    const built = pages.buildAppendixPage({
+      pages: [p02],
+      refIndex: new Map(),
+      locale,
+    });
+    assert.equal(built.applicability, "applies");
+    const md03 = pages.renderPageMarkdown(built.page!, new Map(), locale);
+    const bookPages = [
+      ...(["01", "02", "04", "05", "06", "08"] as DecisionPageId[]).map((id) => ({
+        page_id: id,
+        applicability: "applies" as const,
+        content_markdown: `body-${id}`,
+        status: "completed" as const,
+      })),
+      {
+        page_id: "07" as DecisionPageId,
+        applicability: "not_applicable" as const,
+        content_markdown: render.DI2_PAGE07_NOT_APPLICABLE_NOTE(locale),
+        status: "completed" as const,
+      },
+      {
+        page_id: "03" as DecisionPageId,
+        applicability: "applies" as const,
+        content_markdown: md03,
+        status: "completed" as const,
+      },
+    ];
+    const full = render.renderDi2BookMarkdown({
+      pages: bookPages,
+      locale,
+      question: QUESTION_PLAIN,
+      binding: { context_id: "ctx", context_version: 1, context_hash: "h".repeat(64) },
+      report_id: "rpt_d03t4",
+      generated_at: NOW,
+    });
+    const kicker03 = decisionFaceKicker("03", locale);
+    const tocBlock = full.split("---")[0] ?? "";
+    const tocIdx = tocBlock.lastIndexOf(kicker03);
+    assert.ok(tocIdx > 0, "03 in TOC");
+    for (const id of ["01", "02", "04", "05", "06", "08"] as DecisionPageId[]) {
+      assert.ok(tocBlock.indexOf(decisionFaceKicker(id, locale)) < tocIdx, `${id} before 03 in TOC`);
+    }
+    assert.ok(!tocBlock.includes(decisionFaceKicker("07", locale)));
+    const bodyIdx = full.lastIndexOf(`## ${kicker03}`);
+    assert.ok(bodyIdx > 0);
+    for (const id of ["01", "02", "04", "05", "06", "08"] as DecisionPageId[]) {
+      assert.ok(full.indexOf(`## ${decisionFaceKicker(id, locale)}`) < bodyIdx);
+    }
+  });
+
+  await check("D03-T5: invalid term_id fails closed", () => {
+    const locale = "zh";
+    const p02 = emptyBlocks("02", "⟦t:not_a_real_ssot_term|坏标签|⟧");
+    assert.throws(
+      () => pages.buildAppendixPage({ pages: [p02], refIndex: new Map(), locale }),
+      /glossary|SSOT|term_id|compliance/i,
+    );
+    assert.throws(
+      () => buildGlossaryAppendix({ locale, usedTermIds: ["not_a_real_ssot_term"] }),
+      /glossary|SSOT|term_id|compliance/i,
+    );
+    assert.equal(buildGlossaryAppendix({ locale, usedTermIds: [] }), null);
+  });
+
+  await check("D03-T6: empty-page completeness boundaries", () => {
+    const base = DECISION_PAGE_IDS.map((pageId) => ({
+      pageId,
+      content: pageId === "03" ? "" : `ok-${pageId}`,
+      applicability: pageId === "03" ? ("applies" as const) : ("applies" as const),
+    }));
+    assert.throws(() => fbr.assertCompleteEightPageReport(base), /Empty report page 03/);
+
+    const omit = base.map((p) =>
+      p.pageId === "03" ? { ...p, applicability: "not_applicable" as const, content: "" } : p,
+    );
+    fbr.assertCompleteEightPageReport(omit);
+
+    const residual = omit.map((p) =>
+      p.pageId === "03" ? { ...p, content: "leftover appendix" } : p,
+    );
+    assert.throws(() => fbr.assertCompleteEightPageReport(residual), /not_applicable/);
+
+    const empty01 = omit.map((p) => (p.pageId === "01" ? { ...p, content: "" } : p));
+    assert.throws(() => fbr.assertCompleteEightPageReport(empty01), /Empty report page 01/);
+
+    const empty07 = omit.map((p) =>
+      p.pageId === "07" ? { ...p, applicability: "not_applicable" as const, content: "" } : p,
+    );
+    assert.throws(() => fbr.assertCompleteEightPageReport(empty07), /Empty report page 07/);
+  });
+
+  await check("D03-T7: multilingual SSOT soft labels for glossary appendix", () => {
+    const ids = ["day_master", "yong_shen"] as const;
+    for (const locale of ["zh", "en", "es", "fr", "de"] as const) {
+      const glossary = buildGlossaryAppendix({ locale, usedTermIds: [...ids] });
+      assert.ok(glossary, locale);
+      assert.ok(glossary!.reading_note.trim().length > 10);
+      assert.ok(glossary!.page_title.trim().length > 0);
+      const built = pages.buildAppendixPage({
+        pages: [
+          {
+            page_id: "02",
+            title: "t",
+            blocks: [
+              {
+                segment_id: "A",
+                heading: "",
+                body: "body text for the page",
+                basis: `⟦t:day_master|x|⟧ then ⟦t:yong_shen|y|⟧`,
+                evidence_refs: [],
+              },
+            ],
+          },
+        ],
+        refIndex: new Map(),
+        locale,
+      });
+      assert.equal(built.applicability, "applies", locale);
+      const md = pages.renderPageMarkdown(built.page!, new Map(), locale);
+      for (const id of ids) {
+        const row = resolveTermForLocale(id, locale);
+        assert.ok(row, `${locale}:${id}`);
+        assert.ok(md.includes(row!.soft_label), `${locale} missing ${row!.soft_label}`);
+        assert.ok(md.includes(row!.definition), `${locale} missing definition`);
+        assert.ok(!md.includes("日主") && !md.includes("用神"));
+      }
+      assert.equal(decisionFaceKicker("03", locale), glossary!.page_title || decisionFaceKicker("03", locale));
+      // kicker and reading note stay in the requested language family
+      if (locale === "zh") {
+        assert.match(decisionFaceKicker("03", locale), /术语/);
+        assert.match(glossary!.reading_note, /软译/);
+      } else if (locale === "en") {
+        assert.match(decisionFaceKicker("03", locale), /Terms/i);
+        assert.match(glossary!.reading_note, /soft labels/i);
+      }
+    }
+  });
+
+  await check("D03-T8: Page 07 applicability does not disturb trailing Page 03", () => {
+    const locale = "zh";
+    const withTerms = pages.buildAppendixPage({
+      pages: [
+        {
+          page_id: "02",
+          title: "t",
+          blocks: [
+            {
+              segment_id: "A",
+              heading: "",
+              body: "body",
+              basis: encodeAndPolishDeliveryEvidence("依据日主", locale),
+              evidence_refs: [],
+            },
+          ],
+        },
+      ],
+      refIndex: new Map(),
+      locale,
+    });
+    assert.equal(withTerms.applicability, "applies");
+    const md03 = pages.renderPageMarkdown(withTerms.page!, new Map(), locale);
+
+    for (const page07Applies of [true, false]) {
+      const bookPages = (["01", "02", "04", "05", "06", "07", "08", "03"] as DecisionPageId[]).map((id) => {
+        if (id === "03") {
+          return {
+            page_id: id,
+            applicability: "applies" as const,
+            content_markdown: md03,
+            status: "completed" as const,
+          };
+        }
+        if (id === "07" && !page07Applies) {
+          return {
+            page_id: id,
+            applicability: "not_applicable" as const,
+            content_markdown: render.DI2_PAGE07_NOT_APPLICABLE_NOTE(locale),
+            status: "completed" as const,
+          };
+        }
+        return {
+          page_id: id,
+          applicability: "applies" as const,
+          content_markdown: `body-${id}`,
+          status: "completed" as const,
+        };
+      });
+      const order = render.di2ReadingOrder(bookPages);
+      assert.equal(order[order.length - 1], "03");
+      if (page07Applies) assert.ok(order.includes("07"));
+      else assert.ok(!order.includes("07"));
+      const full = render.renderDi2BookMarkdown({
+        pages: bookPages,
+        locale,
+        question: QUESTION_PLAIN,
+        binding: { context_id: "ctx", context_version: 1, context_hash: "h".repeat(64) },
+        report_id: `rpt_d03t8_${page07Applies}`,
+        generated_at: NOW,
+      });
+      assert.ok(full.lastIndexOf(`## ${decisionFaceKicker("03", locale)}`) >
+        full.indexOf(`## ${decisionFaceKicker("08", locale)}`));
+    }
   });
 
   pa.__setPersonalAnalysisModelForTests(null);

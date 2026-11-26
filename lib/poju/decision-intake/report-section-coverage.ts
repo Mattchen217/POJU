@@ -63,7 +63,8 @@ function evaluateDdrCoverage(
   blueprint: DecisionBlueprint | null | undefined,
   ddr: DdrDefinitionEntry,
 ): ReportSectionCoverageItem {
-  // Page 03 chart appendix: local CFP/profile — never ask user for chart internals.
+  // Page 03 glossary appendix: derived from final evidence-layer term markers +
+  // SSOT after model pages complete — never a user investigation task.
   if (ddr.ddr_id === "DDR-03-CHART-APPENDIX") {
     return {
       page_id: ddr.report_page_id,

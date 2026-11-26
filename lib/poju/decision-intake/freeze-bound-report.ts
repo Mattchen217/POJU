@@ -142,7 +142,10 @@ export type FreezeBoundReportPage = {
   status: "completed" | "failed" | "empty";
   generated_at: string;
   error?: string | null;
-  /** DI2: topic-gated page (07) may be explicitly not applicable — still non-empty. */
+  /**
+   * DI2: topic-gated page (07) may be not_applicable (note content still allowed).
+   * Page 03 glossary appendix may be not_applicable with empty content (omitted from TOC).
+   */
   applicability?: "applies" | "not_applicable";
 };
 
@@ -505,7 +508,11 @@ export async function defaultGeneratePage(
 }
 
 export function assertCompleteEightPageReport(
-  pages: Array<{ pageId: string; content: string }>,
+  pages: Array<{
+    pageId: string;
+    content: string;
+    applicability?: "applies" | "not_applicable";
+  }>,
 ): void {
   if (pages.length !== 8) {
     throw new FreezeBoundReportError(
@@ -529,7 +536,19 @@ export function assertCompleteEightPageReport(
     }
   }
   for (const page of pages) {
-    if (!page.content || page.content.trim().length === 0) {
+    const empty = !page.content || page.content.trim().length === 0;
+    // Page 03 glossary appendix may be omitted (not_applicable + empty).
+    // Residual appendix content with not_applicable is still a hard fail.
+    if (page.pageId === "03" && page.applicability === "not_applicable") {
+      if (!empty) {
+        throw new FreezeBoundReportError(
+          "EMPTY_REPORT_PAGE",
+          `Page 03 marked not_applicable but still has appendix content`,
+        );
+      }
+      continue;
+    }
+    if (empty) {
       throw new FreezeBoundReportError(
         "EMPTY_REPORT_PAGE",
         `Empty report page ${page.pageId}`,

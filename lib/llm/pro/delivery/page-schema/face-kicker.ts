@@ -13,6 +13,7 @@ type FaceKickerRow = {
   zh: string;
   es?: string;
   fr?: string;
+  de?: string;
 };
 
 const FACE_KICKERS: Record<DecisionPageId, FaceKickerRow> = {
@@ -29,10 +30,11 @@ const FACE_KICKERS: Record<DecisionPageId, FaceKickerRow> = {
     fr: "Pourquoi ça tient",
   },
   "03": {
-    en: "Chart appendix",
-    zh: "盘面附录",
-    es: "Apéndice del mapa",
-    fr: "Annexe du thème",
+    en: "Terms used in this report",
+    zh: "本报告使用的术语",
+    es: "Términos usados",
+    fr: "Termes utilisés",
+    de: "Verwendete Begriffe",
   },
   "04": {
     en: "The real block",
@@ -78,5 +80,6 @@ export function decisionFaceKicker(pageId: string, locale: string): string {
   if (l.startsWith("zh")) return row.zh;
   if (l.startsWith("es") && row.es) return row.es;
   if (l.startsWith("fr") && row.fr) return row.fr;
+  if (l.startsWith("de") && row.de) return row.de;
   return row.en;
 }

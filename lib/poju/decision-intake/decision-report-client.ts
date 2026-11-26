@@ -410,7 +410,11 @@ function verifyCompletedReport(
     if (p.job_id !== payload.job_id || p.execution_generation !== gen || p.analysis_id !== result.analysis_id) {
       bindingMismatch(`Page ${id} belongs to another job or generation`);
     }
-    return { pageId: id, content: p.content_markdown };
+    return {
+      pageId: id,
+      content: p.content_markdown,
+      applicability: p.applicability,
+    };
   });
   assertCompleteEightPageReport(pages);
 }

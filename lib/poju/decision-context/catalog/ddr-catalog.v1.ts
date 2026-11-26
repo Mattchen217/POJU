@@ -113,14 +113,18 @@ const RAW: DdrDefinitionEntry[] = [
     topic_gated: false,
   },
   {
+    // Stable historical id — content is now the code-built glossary appendix
+    // (soft-translated terms from the final evidence layer), not a chart list.
     ddr_id: "DDR-03-CHART-APPENDIX",
-    name: "Chart appendix",
-    purpose: "Source-backed chart appendix (CFP required)",
+    name: "Glossary / terms appendix",
+    purpose:
+      "Trailing code-built glossary of soft-translated terms that actually appeared in the report evidence layer (SSOT only; omit when unused)",
     priority: "P2",
     required_dir_ids: [],
     report_page_id: "03",
     report_section_id: "A",
-    completion_criteria: "CFP source_ok or explicit N/A evidence",
+    completion_criteria:
+      "Derived from final evidence-layer term markers + SSOT; empty when no terms used (page omitted)",
     affects_option_ranking: false,
     decision_critical: false,
     always_on: true,

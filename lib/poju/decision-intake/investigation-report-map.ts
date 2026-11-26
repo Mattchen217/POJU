@@ -86,7 +86,8 @@ function mapping(
 
 /**
  * Closed map for production DIRs used in Blueprint investigation.
- * Pages: 01/02/04/05/06/08 main narrative; 03 chart = local calc (no ask);
+ * Pages: 01/02/04/05/06/08 main narrative;
+ * 03 glossary appendix = generated from final report term markers (no ask);
  * 07 topic-gated only when applicable.
  */
 export const INVESTIGATION_REPORT_MAP: readonly InvestigationReportMapping[] = [

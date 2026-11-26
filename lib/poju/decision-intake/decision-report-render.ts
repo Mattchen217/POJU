@@ -4,12 +4,17 @@
  * current shelf / HTML archive reads DI2 reports without a second display path.
  */
 
+import { resolveGlossaryAppendixRows } from "@/lib/llm/pro/delivery/decision-report-v2/glossary-appendix";
 import {
   deliveryCoverCopy,
   deliveryEvidenceLeadLabel,
   deliverySectionHeading,
 } from "@/lib/llm/pro/delivery/delivery-locale";
 import type { DecisionPageId } from "@/lib/llm/pro/delivery/page-feed-matrix";
+import {
+  encodeAndPolishDeliveryEvidence,
+  stripMarkersForPrompt,
+} from "@/lib/llm/sanitize/term-marking";
 import type { DecisionContextBinding } from "@/lib/poju/decision-context/types";
 import {
   DI2_READING_ORDER,
@@ -58,7 +63,12 @@ export type Di2Review = {
   evidence_refs: string[];
 };
 
-export type Di2AppendixLine = { ref_id: string; text: string };
+/** Code-built glossary appendix (Page 03). term_ids only — soft labels from SSOT at render. */
+export type Di2GlossaryAppendix = {
+  kind: "glossary_appendix";
+  reading_note: string;
+  term_ids: string[];
+};
 
 export type Di2PageStructured = {
   page_id: DecisionPageId;
@@ -67,11 +77,7 @@ export type Di2PageStructured = {
   paths?: Di2PathOption[];
   experiment?: Di2Experiment;
   review?: Di2Review;
-  appendix?: {
-    bazi_lines: Di2AppendixLine[];
-    ziwei_lines: Di2AppendixLine[];
-    contrast: string;
-  };
+  appendix?: Di2GlossaryAppendix;
 };
 
 function isZh(locale: string): boolean {
@@ -136,22 +142,38 @@ function clip(text: string, max: number): string {
   return t.length > max ? `${t.slice(0, max - 1)}…` : t;
 }
 
-/** Basis fold text: model basis + the frozen status of every cited source. */
-function basisWithRefs(
+/**
+ * Final evidence-layer text (with term markers): polished model basis + polished
+ * cited local/context excerpts. Used for appendix term collection and for render.
+ */
+export function di2EvidenceLayerText(
   basis: string,
   refs: string[],
   refIndex: ReadonlyMap<string, EvidenceReference>,
   locale: string,
 ): string {
   const lines: string[] = [];
-  const b = basis.replace(/\s*\n+\s*/g, " ").trim();
+  const b = encodeAndPolishDeliveryEvidence(basis.replace(/\s*\n+\s*/g, " ").trim(), locale);
   if (b) lines.push(b);
   const cited = refs
     .map((r) => refIndex.get(r))
     .filter((r): r is EvidenceReference => Boolean(r))
-    .map((r) => `${evidenceStatusLabel(r.status, locale)}：${clip(r.excerpt, 80)}`);
+    .map((r) => {
+      const excerpt = encodeAndPolishDeliveryEvidence(clip(r.excerpt, 80), locale);
+      return `${evidenceStatusLabel(r.status, locale)}：${excerpt}`;
+    });
   if (cited.length) lines.push(cited.join("；"));
   return lines.join(" ");
+}
+
+/** Reader-visible evidence fold: SSOT soft labels, no raw markers. */
+function basisWithRefs(
+  basis: string,
+  refs: string[],
+  refIndex: ReadonlyMap<string, EvidenceReference>,
+  locale: string,
+): string {
+  return stripMarkersForPrompt(di2EvidenceLayerText(basis, refs, refIndex, locale), locale);
 }
 
 function pushArgument(
@@ -229,25 +251,29 @@ export function renderDi2PageBody(
     pushArgument(parts, body, basisWithRefs("", r.evidence_refs, refIndex, locale), lead);
   }
 
-  if (page.appendix) {
+  if (page.appendix?.kind === "glossary_appendix") {
     const a = page.appendix;
-    if (a.bazi_lines.length) {
+    if (a.reading_note.trim()) parts.push(a.reading_note.trim());
+    const rows = resolveGlossaryAppendixRows(
+      {
+        page: "03",
+        face: "03",
+        kind: "glossary_appendix",
+        page_title: page.title,
+        page_subtitle: "",
+        reading_note: a.reading_note,
+        term_ids: a.term_ids,
+      },
+      locale,
+    );
+    if (rows.length) {
       parts.push(
         [
-          `**${fieldLabel(locale, "八字本题切片", "Bazi lines used in this report")}**`,
-          ...a.bazi_lines.map((l) => `- ${l.text}`),
+          `**${fieldLabel(locale, "本报告使用的术语", "Terms used in this report")}**`,
+          ...rows.map((r) => `- **${r.soft_label}**：${r.definition}`),
         ].join("\n"),
       );
     }
-    if (a.ziwei_lines.length) {
-      parts.push(
-        [
-          `**${fieldLabel(locale, "紫微本题切片", "Ziwei lines used in this report")}**`,
-          ...a.ziwei_lines.map((l) => `- ${l.text}`),
-        ].join("\n"),
-      );
-    }
-    if (a.contrast.trim()) parts.push(a.contrast.trim());
   }
 
   return parts.join("\n\n");

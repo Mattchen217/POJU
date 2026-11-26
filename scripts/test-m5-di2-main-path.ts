@@ -289,7 +289,11 @@ async function main() {
     assert.equal(row?.pages.length, 8);
     for (const p of row!.pages) {
       assert.equal(p.status, "completed", `page ${p.pageId}`);
-      assert.ok(p.content.trim().length > 0, `page ${p.pageId} content`);
+      const emptyGlossaryOk =
+        p.pageId === "03" && p.applicability === "not_applicable" && !p.content.trim();
+      if (!emptyGlossaryOk) {
+        assert.ok(p.content.trim().length > 0, `page ${p.pageId} content`);
+      }
     }
     const a = (s.personal_analysis_records ?? []).find((r) => r.analysis_id === rec!.analysis_id);
     assert.equal(a?.status, "completed");

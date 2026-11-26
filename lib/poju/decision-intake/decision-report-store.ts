@@ -295,6 +295,11 @@ export function verifyCompletedReportRecord(rec: CompletedReportRecord): void {
   if (!Array.isArray(rec.pages) || rec.pages.length !== DECISION_PAGE_IDS.length) invalid("page count");
   for (const id of DECISION_PAGE_IDS) {
     const p = rec.pages.find((x) => x.page_id === id);
+    const emptyGlossaryOk =
+      id === "03" &&
+      p?.applicability === "not_applicable" &&
+      !p.content_markdown.trim() &&
+      p.structured == null;
     if (
       !p ||
       p.status !== "completed" ||
@@ -304,7 +309,7 @@ export function verifyCompletedReportRecord(rec: CompletedReportRecord): void {
       p.context_hash !== rec.context_hash ||
       p.analysis_id !== rec.analysis_id ||
       p.report_schema_version !== rec.report_schema_version ||
-      !p.content_markdown.trim()
+      (!emptyGlossaryOk && !p.content_markdown.trim())
     ) {
       invalid(`page ${id} is incomplete or bound elsewhere`);
     }

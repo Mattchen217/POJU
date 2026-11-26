@@ -8,11 +8,11 @@
 
 import type { DecisionPageId } from "@/lib/llm/pro/delivery/page-feed-matrix";
 
-export const DI2_REPORT_SCHEMA_VERSION = "di2-eight-page-v1" as const;
+export const DI2_REPORT_SCHEMA_VERSION = "di2-eight-page-v2" as const;
 export const PERSONAL_ANALYSIS_SCHEMA_VERSION = "di2-personal-analysis-v1" as const;
 export const DI2_REPORT_SOURCE = "decision_intake_v2" as const;
 
-/** Reading order: 07 only when topic applies; 03 appendix always last. */
+/** Reading order: 07 only when topic applies; 03 glossary appendix always last when present. */
 export const DI2_READING_ORDER: readonly DecisionPageId[] = [
   "01",
   "02",
@@ -26,8 +26,8 @@ export const DI2_READING_ORDER: readonly DecisionPageId[] = [
 
 /**
  * Page dependency waves. One model wave per invoke; later waves read earlier pages.
- * 03 is assembled deterministically from the chart lines every other page cited,
- * so it closes the chain.
+ * 03 is assembled deterministically from term markers in the final evidence layer
+ * (after all model pages), so it closes the chain without a model call.
  */
 export const DI2_PAGE_WAVES: readonly (readonly DecisionPageId[])[] = [
   ["02", "04", "05", "07"],

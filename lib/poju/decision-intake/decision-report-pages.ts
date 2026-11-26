@@ -4,10 +4,16 @@
  * Each model page reads: frozen DC page feed (dc-page-feed) + Personal Analysis
  * artifact + local chart lines + page definition (DECISION_PAGE_SCHEMAS) +
  * validated upstream pages. Output is structured JSON, validated (A: judge only),
- * then rendered deterministically. 03 is assembled by code from cited chart
- * lines; 07 is generated only when the topic gate applies.
+ * then rendered deterministically. 03 is a code-built glossary appendix from
+ * term markers in the final evidence layer (no model call); 07 is generated
+ * only when the topic gate applies.
  */
 
+import { resolveTermForLocale } from "@/lib/llm/pro/delivery/decision-report-v2/body-compliance";
+import {
+  buildGlossaryAppendix,
+  collectUsedTermIdsFromEvidence,
+} from "@/lib/llm/pro/delivery/decision-report-v2/glossary-appendix";
 import { DELIVERY_LLM_MAX_TOKENS } from "@/lib/llm/pro/delivery/delivery-tasks";
 import type { DecisionPageId } from "@/lib/llm/pro/delivery/page-feed-matrix";
 import { DECISION_PAGE_SCHEMAS } from "@/lib/llm/pro/delivery/page-schema/decision-pages";
@@ -16,11 +22,19 @@ import {
   page07Applies,
 } from "@/lib/llm/pro/delivery/slice-for-page";
 import { buildUserFacingExpressionContractBlock } from "@/lib/llm/prompts/user-facing-expression-contract";
-import { bareMingliWordInPlain } from "@/lib/llm/sanitize/term-marking";
+import {
+  bareMingliWordInPlain,
+  encodeAndPolishDeliveryEvidence,
+  listUnresolvedWordSlots,
+  maskMarkersForAudit,
+  parseTermMarkers,
+} from "@/lib/llm/sanitize/term-marking";
+import { pojuTermBySlug } from "@/lib/glossary/pojulife-terms";
 import { buildDecisionContextPageFeed } from "@/lib/poju/decision-context/dc-page-feed";
 import type { DecisionContext } from "@/lib/poju/decision-context/types";
 import { tryParseJsonObject } from "@/lib/poju/shared/json-tools";
 import {
+  DI2_READING_ORDER,
   PERSONAL_ANALYSIS_SECTIONS,
   type EvidenceReference,
   type PersonalAnalysisArtifact,
@@ -28,8 +42,8 @@ import {
   type DecisionReportPageRecord,
 } from "./decision-report-types";
 import {
+  di2EvidenceLayerText,
   renderDi2PageBody,
-  type Di2AppendixLine,
   type Di2Experiment,
   type Di2PageBlock,
   type Di2PageStructured,
@@ -43,6 +57,15 @@ import {
   type ProfileProjection,
 } from "./personal-analysis";
 import type { DecisionBlueprint } from "./types";
+
+/** Fail-closed: raw term markers must resolve in SSOT before polish demotion can hide them. */
+function assertEvidenceTermMarkersResolvable(text: string, locale: string): void {
+  for (const m of parseTermMarkers(text)) {
+    if (!m.id) continue;
+    if (pojuTermBySlug(m.id) || resolveTermForLocale(m.id, locale)) continue;
+    throw new Error(`glossary term_id「${m.id}」missing SSOT soft label for locale`);
+  }
+}
 
 // ─── Topic gate (07) ───────────────────────────────────────────────────────
 
@@ -124,8 +147,7 @@ export function buildReportEvidenceCoverage(input: {
   const entries: ReportEvidenceCoverageEntry[] = [];
 
   // Every substantive generated page must use both analysis and frozen-context
-  // evidence. Page 03 is a code-built chart appendix, so it is checked separately
-  // through its exact chart anchors below.
+  // evidence. Page 03 is a code-built glossary appendix (no model evidence refs).
   for (const p of input.pages) {
     if (p.page_id === "03" || p.applicability === "not_applicable") continue;
     const refs = referencesByPage.get(p.page_id) ?? new Set<string>();
@@ -147,31 +169,6 @@ export function buildReportEvidenceCoverage(input: {
   });
 
   const evidenceById = new Map(input.artifact.evidence_references.map((ref) => [ref.ref_id, ref]));
-  for (const p of input.pages.filter((page) => page.page_id === "03" && page.applicability !== "not_applicable")) {
-    const structured = p.structured as Record<string, unknown> | null;
-    const appendix = structured?.appendix as Record<string, unknown> | undefined;
-    const lines = [
-      ...(Array.isArray(appendix?.bazi_lines) ? appendix!.bazi_lines as Array<Record<string, unknown>> : []),
-      ...(Array.isArray(appendix?.ziwei_lines) ? appendix!.ziwei_lines as Array<Record<string, unknown>> : []),
-    ];
-    const bad = lines.find((line) => typeof line.ref_id !== "string" ||
-      !["chart_line", "ziwei_line"].includes(evidenceById.get(line.ref_id)?.kind ?? ""));
-    if (bad) entries.push({
-      source_id: `page:03:${String(bad.ref_id ?? "missing_ref")}`, source_type: "chart_appendix",
-      status: "invalid", related_direction_id: null, expected_sections: ["03"], actual_sections: ["03"],
-      evidence_reference: typeof bad.ref_id === "string" ? bad.ref_id : null,
-      coverage_result: "missing", missing_reason: "appendix_line_is_not_a_valid_chart_calculation_reference",
-    });
-    const actualIds = new Set(lines.flatMap((line) => typeof line.ref_id === "string" ? [line.ref_id] : []));
-    const requiredIds = new Set(input.artifact.personal_pattern_analysis.flatMap((item) =>
-      item.evidence_refs.filter((id) => ["chart_line", "ziwei_line"].includes(evidenceById.get(id)?.kind ?? "")),
-    ));
-    for (const ref of requiredIds) if (!actualIds.has(ref)) entries.push({
-      source_id: ref, source_type: "chart_appendix", status: "cited_by_personal_pattern",
-      related_direction_id: null, expected_sections: ["03"], actual_sections: ["03"],
-      evidence_reference: ref, coverage_result: "missing", missing_reason: "cited_chart_anchor_missing_from_report_appendix",
-    });
-  }
   const validPageRefs = new Set(["DEF", ...dcEvidence.keys(), ...evidenceById.keys(), ...analysisById.keys()]);
   for (const [page, refs] of referencesByPage) {
     for (const ref of refs) if (!validPageRefs.has(ref)) entries.push({
@@ -548,6 +545,20 @@ export function validateDecisionReportPage(input: {
     return null;
   };
 
+  /** Polish evidence-layer text; fail-closed on unresolved traditional vocabulary. */
+  const polishBasis = (text: string, where: string): { ok: true; text: string } | { ok: false; reason: string } => {
+    const polished = encodeAndPolishDeliveryEvidence(text, input.locale);
+    const unresolved = listUnresolvedWordSlots(polished);
+    if (unresolved.length) {
+      return { ok: false, reason: `unresolved_term_slot:${where}:${unresolved[0]}` };
+    }
+    if (zh) {
+      const bare = bareMingliWordInPlain(maskMarkersForAudit(polished));
+      if (bare) return { ok: false, reason: `bare_term:${where}:${bare}` };
+    }
+    return { ok: true, text: polished };
+  };
+
   const title = s(parsed.title);
   const titleErr = checkVisible(title, "title", 2);
   if (titleErr) return { ok: false, reason: titleErr };
@@ -557,14 +568,16 @@ export function validateDecisionReportPage(input: {
   for (let i = 0; i < blocksRaw.length; i++) {
     const o = blocksRaw[i] as Record<string, unknown> | null;
     if (!o || typeof o !== "object") return { ok: false, reason: `bad_block:${i}` };
+    const where = `block[${i}:${String(o.segment_id ?? i).toUpperCase()}]`;
+    const basisPolished = polishBasis(s(o.basis), `${where}.basis`);
+    if (!basisPolished.ok) return { ok: false, reason: basisPolished.reason };
     const block: Di2PageBlock = {
       segment_id: s(o.segment_id).toUpperCase(),
       heading: s(o.heading),
       body: s(o.body),
-      basis: s(o.basis),
+      basis: basisPolished.text,
       evidence_refs: refsOf(o.evidence_refs),
     };
-    const where = `block[${i}:${block.segment_id}]`;
     const e =
       checkVisible(block.body, `${where}.body`, 10) ??
       (block.heading ? checkVisible(block.heading, `${where}.heading`, 1) : null) ??
@@ -602,6 +615,9 @@ export function validateDecisionReportPage(input: {
         if (e) return { ok: false, reason: e };
       }
       if (p.ranking_basis.length < 4) return { ok: false, reason: `thin:${where}.ranking_basis` };
+      const rb = polishBasis(p.ranking_basis, `${where}.ranking_basis`);
+      if (!rb.ok) return { ok: false, reason: rb.reason };
+      p.ranking_basis = rb.text;
       const e = checkRefs(p.evidence_refs, where);
       if (e) return { ok: false, reason: e };
       const grounded = p.evidence_refs.some((r) => {
@@ -673,38 +689,88 @@ export function validateDecisionReportPage(input: {
 
 // ─── Deterministic pages ───────────────────────────────────────────────────
 
-/** 03: chart lines actually cited by the analysis and pages (B: code-assembled). */
-export function buildAppendixPage(input: {
-  projection: ProfileProjection;
-  artifact: PersonalAnalysisArtifact;
+/**
+ * Collect term_ids from the final rendered evidence layer of applicable pages,
+ * in DI2 reading order (first appearance wins). No model call.
+ */
+export function collectDi2EvidenceTermIds(input: {
   pages: ReadonlyArray<Di2PageStructured>;
+  refIndex: ReadonlyMap<string, EvidenceReference>;
   locale: string;
-}): Di2PageStructured {
-  const cited = new Set<string>();
-  for (const key of PERSONAL_ANALYSIS_SECTIONS) {
-    for (const it of input.artifact[key]) for (const r of it.evidence_refs) cited.add(r);
+}): string[] {
+  const byId = new Map(input.pages.map((p) => [p.page_id, p]));
+  const lists: string[][] = [];
+  for (const id of DI2_READING_ORDER) {
+    if (id === "03") continue;
+    const page = byId.get(id);
+    if (!page) continue;
+    const layerTexts: string[] = [];
+    const scanRefs = (refs: string[]) => {
+      for (const ref of refs) {
+        const row = input.refIndex.get(ref);
+        if (row?.excerpt) assertEvidenceTermMarkersResolvable(row.excerpt, input.locale);
+      }
+    };
+    for (const block of page.blocks) {
+      assertEvidenceTermMarkersResolvable(block.basis, input.locale);
+      scanRefs(block.evidence_refs);
+      layerTexts.push(di2EvidenceLayerText(block.basis, block.evidence_refs, input.refIndex, input.locale));
+    }
+    for (const path of page.paths ?? []) {
+      assertEvidenceTermMarkersResolvable(path.ranking_basis, input.locale);
+      scanRefs(path.evidence_refs);
+      layerTexts.push(di2EvidenceLayerText(path.ranking_basis, path.evidence_refs, input.refIndex, input.locale));
+    }
+    if (page.experiment) {
+      scanRefs(page.experiment.evidence_refs);
+      layerTexts.push(di2EvidenceLayerText("", page.experiment.evidence_refs, input.refIndex, input.locale));
+    }
+    if (page.review) {
+      scanRefs(page.review.evidence_refs);
+      layerTexts.push(di2EvidenceLayerText("", page.review.evidence_refs, input.refIndex, input.locale));
+    }
+    const ids: string[] = [];
+    for (const text of layerTexts) {
+      for (const m of parseTermMarkers(text)) {
+        if (m.id) ids.push(m.id);
+      }
+    }
+    lists.push(ids);
   }
-  for (const p of input.pages) {
-    for (const b of p.blocks) for (const r of b.evidence_refs) cited.add(r);
-    for (const x of p.paths ?? []) for (const r of x.evidence_refs) cited.add(r);
-    for (const r of p.experiment?.evidence_refs ?? []) cited.add(r);
-    for (const r of p.review?.evidence_refs ?? []) cited.add(r);
+  return collectUsedTermIdsFromEvidence(lists);
+}
+
+export type BuildAppendixPageResult =
+  | { applicability: "applies"; page: Di2PageStructured }
+  | { applicability: "not_applicable"; page: null };
+
+/**
+ * 03: code-built glossary appendix from term markers in the final evidence layer.
+ * Returns not_applicable (omit from reading order) when no terms were used.
+ * Throws on invalid / non-SSOT term_ids (fail-closed).
+ */
+export function buildAppendixPage(input: {
+  pages: ReadonlyArray<Di2PageStructured>;
+  refIndex: ReadonlyMap<string, EvidenceReference>;
+  locale: string;
+}): BuildAppendixPageResult {
+  const usedTermIds = collectDi2EvidenceTermIds(input);
+  const glossary = buildGlossaryAppendix({ locale: input.locale, usedTermIds });
+  if (!glossary) {
+    return { applicability: "not_applicable", page: null };
   }
-  const bazi_lines: Di2AppendixLine[] = input.projection.chart_lines
-    .filter((l) => cited.has(l.ref_id))
-    .map((l) => ({ ref_id: l.ref_id, text: l.text }));
-  const ziwei_lines: Di2AppendixLine[] = input.projection.ziwei_lines
-    .filter((l) => cited.has(l.ref_id))
-    .map((l) => ({ ref_id: l.ref_id, text: l.text }));
-  const zh = (input.locale || "").toLowerCase().startsWith("zh");
-  const contrast = zh
-    ? `以上是本报告实际引用的 ${bazi_lines.length} 条八字锚${ziwei_lines.length ? `与 ${ziwei_lines.length} 条紫微锚` : "；紫微未进入本题切片"}，均由本地排盘计算，未经模型改写。`
-    : `These are the ${bazi_lines.length} Bazi anchors${ziwei_lines.length ? ` and ${ziwei_lines.length} Ziwei anchors` : " (no Ziwei lines entered this report)"} the report actually cites, computed locally and not rewritten by the model.`;
   return {
-    page_id: "03",
-    title: DECISION_PAGE_SCHEMAS["03"].title,
-    blocks: [],
-    appendix: { bazi_lines, ziwei_lines, contrast },
+    applicability: "applies",
+    page: {
+      page_id: "03",
+      title: glossary.page_title || DECISION_PAGE_SCHEMAS["03"].title,
+      blocks: [],
+      appendix: {
+        kind: "glossary_appendix",
+        reading_note: glossary.reading_note,
+        term_ids: [...glossary.term_ids],
+      },
+    },
   };
 }
 

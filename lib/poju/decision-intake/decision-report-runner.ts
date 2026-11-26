@@ -461,16 +461,41 @@ async function runPagesStage(ctx: Ctx): Promise<void> {
       pages.set(pageId, stored);
       return true;
     }
-    const appendix = buildAppendixPage({
-      projection,
-      artifact,
-      pages: completedStructured().filter((p) => p.page_id !== "03"),
-      locale: input.locale,
-    });
+    let built: ReturnType<typeof buildAppendixPage>;
+    try {
+      built = buildAppendixPage({
+        pages: completedStructured().filter((p) => p.page_id !== "03"),
+        refIndex: idx,
+        locale: input.locale,
+      });
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      await failDecisionReportJob(ctx, "segments", `page_03_glossary:${msg}`.slice(0, 300), {
+        kind: "fatal",
+      });
+      return false;
+    }
+    if (built.applicability === "not_applicable" || !built.page) {
+      const stored = await savePage({
+        record: {
+          ...base,
+          status: "completed",
+          applicability: "not_applicable",
+          content_markdown: "",
+          structured: null,
+          generated_at: t,
+        },
+        structured: null,
+      });
+      pages.set(pageId, stored);
+      return true;
+    }
+    const appendix = built.page;
     const stored = await savePage({
       record: {
         ...base,
         status: "completed",
+        applicability: "applies",
         content_markdown: renderPageMarkdown(appendix, idx, input.locale),
         structured: appendix as unknown as Record<string, unknown>,
         generated_at: t,
@@ -627,6 +652,8 @@ async function runAssembleStage(ctx: Ctx): Promise<void> {
       return;
     }
     const r = p.record;
+    const emptyOk =
+      r.page_id === "03" && r.applicability === "not_applicable" && !r.content_markdown.trim();
     const mismatch =
       r.status !== "completed" ||
       r.job_id !== ctx.job.job_id ||
@@ -635,7 +662,7 @@ async function runAssembleStage(ctx: Ctx): Promise<void> {
       r.context_hash !== input.context_hash ||
       r.report_schema_version !== input.report_schema_version ||
       r.analysis_id !== analysis.record.analysis_id ||
-      !r.content_markdown.trim();
+      (!emptyOk && !r.content_markdown.trim());
     if (mismatch) {
       await failDecisionReportJob(ctx, "assemble", `page_integrity:${id}:${r.status}`, { kind: "fatal" });
       return;
@@ -643,7 +670,13 @@ async function runAssembleStage(ctx: Ctx): Promise<void> {
     pages.push(r);
   }
   try {
-    assertCompleteEightPageReport(pages.map((p) => ({ pageId: p.page_id, content: p.content_markdown })));
+    assertCompleteEightPageReport(
+      pages.map((p) => ({
+        pageId: p.page_id,
+        content: p.content_markdown,
+        applicability: p.applicability,
+      })),
+    );
   } catch (e) {
     await failDecisionReportJob(ctx, "assemble", `report_integrity:${e instanceof Error ? e.message : String(e)}`, {
       kind: "fatal",
