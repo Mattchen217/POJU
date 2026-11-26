@@ -212,7 +212,7 @@ async function main() {
       seeded.session,
       seeded.plan!,
       sourceTurnId,
-    );
+    ).session;
     await mutatePOJUSession(sid, {
       operation_id: operationId,
       kind: "session_patch",
@@ -846,7 +846,7 @@ async function main() {
         init.session,
         init.plan!,
         `ask_${tag}`,
-      );
+      ).session;
       await mutatePOJUSession(sid, {
         operation_id: `op_m24_${tag}_init`,
         kind: "session_patch",
@@ -1235,7 +1235,11 @@ async function main() {
       const { attachAuthorizedAssistantQuestion } = await import(
         "../lib/poju/decision-intake/adaptive-turn"
       );
-      s = attachAuthorizedAssistantQuestion(turn.session, turn.plan!, "ask_m24g_clarify");
+      s = attachAuthorizedAssistantQuestion(
+        turn.session,
+        turn.plan!,
+        "ask_m24g_clarify",
+      ).session;
       await mutatePOJUSession(sid, {
         operation_id: "op_m24g_attach",
         kind: "session_patch",
@@ -1337,7 +1341,11 @@ async function main() {
         const { attachAuthorizedAssistantQuestion } = await import(
           "../lib/poju/decision-intake/adaptive-turn"
         );
-        s = attachAuthorizedAssistantQuestion(s, s.adaptive_ask_plan, "ask_m24h_t2");
+        s = attachAuthorizedAssistantQuestion(
+          s,
+          s.adaptive_ask_plan,
+          "ask_m24h_t2",
+        ).session;
         await savePOJUSession(s);
       }
 
@@ -1529,7 +1537,11 @@ async function main() {
       const { attachAuthorizedAssistantQuestion } = await import(
         "../lib/poju/decision-intake/adaptive-turn"
       );
-      s = attachAuthorizedAssistantQuestion(s, optionOnlyPlan, "ask_m24i_option");
+      s = attachAuthorizedAssistantQuestion(
+        s,
+        optionOnlyPlan,
+        "ask_m24i_option",
+      ).session;
       await mutatePOJUSession(sid, {
         operation_id: "op_m24i_attach",
         kind: "session_patch",
@@ -1874,7 +1886,7 @@ async function main() {
         turn.session,
         turn.plan!,
         `ask_${tag}`,
-      );
+      ).session;
       await mutatePOJUSession(sid, {
         operation_id: `op_${tag}_attach`,
         kind: "session_patch",
@@ -2813,7 +2825,7 @@ async function main() {
         seeded.session,
         seeded.plan!,
         `ask_${tag}`,
-      );
+      ).session;
       await mutatePOJUSession(sid, {
         operation_id: `op_${tag}_init`,
         kind: "session_patch",

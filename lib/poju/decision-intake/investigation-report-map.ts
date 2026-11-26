@@ -52,14 +52,6 @@ function sectionsForDir(dirId: string): {
   const ddrIds = [...(DIR_TO_DDR_INDEX_V1.get(dirId) ?? [])];
   const pages: DecisionPageId[] = [...pagesFromUnits];
   const sections: string[] = [...report_units];
-  for (const ddrId of ddrIds) {
-    const ddr = DDR_CATALOG_V1_ENTRIES.find((e) => e.ddr_id === ddrId);
-    if (!ddr) continue;
-    const page = ddr.report_page_id as DecisionPageId;
-    if (!pages.includes(page)) pages.push(page);
-    const sectionKey = `${ddr.report_page_id}:${ddr.report_section_id}`;
-    if (!sections.includes(sectionKey)) sections.push(sectionKey);
-  }
   return { pages, sections, ddr_ids: ddrIds, report_units };
 }
 

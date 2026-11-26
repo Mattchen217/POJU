@@ -60,6 +60,8 @@ export {
   runAdaptiveQuestionTurn,
   attachAuthorizedAssistantQuestion,
   guardAndAttachAuthorizedQuestion,
+  confirmAuthorizedQuestionSend,
+  releaseAuthorizedQuestionClaim,
   type AttachAuthorizedQuestionResult,
 } from "./adaptive-turn";
 export {

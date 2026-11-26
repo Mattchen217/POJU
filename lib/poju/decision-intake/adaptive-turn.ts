@@ -49,7 +49,9 @@ import {
   confirmClarification,
   isMaterialDcWrite,
   reconcileClarificationClaims,
+  releaseClarification,
 } from "./budget-ledger";
+import { reportInformationNeedById } from "./report-information-needs.v1";
 import { bumpBudgetAfterAsk, refundIneffectiveQuestion } from "./scope-budget";
 import { buildUnderstandingState, refreshDecisionUnderstanding } from "./understanding-state";
 import { bindPersonalAnalysisProfile } from "./personal-analysis-profile";
@@ -1565,15 +1567,30 @@ async function runAdaptiveQuestionTurnInner(
         };
       }
 
-      // Persist DC via C1
+      // Persist DC via C1 (budget bump on session before commit)
       const key = `dc_collect:${current.session_id}:${input.source_turn_id}`;
-      const persisted = await persistDcLifecycleChange(
-        input.session,
-        applied.session,
-        key,
+      let working: POJUSessionState = {
+        ...applied.session,
+        decision_understanding:
+          applied.session.decision_understanding ?? current.decision_understanding,
+        decision_blueprint:
+          current.decision_blueprint ?? applied.session.decision_blueprint,
+        messages: current.messages,
+        agent_v2: current.agent_v2,
+      };
+      working = sessionWithCoreBudgetAfterMaterialWrite(
+        working,
+        applied,
+        answer_event,
+        input.source_turn_id,
       );
+      const persisted = await persistDcLifecycleChange(input.session, working, key);
       if (persisted.error === "idempotent_skip") {
-        current = persisted.session;
+        current = {
+          ...persisted.session,
+          decision_understanding:
+            working.decision_understanding ?? persisted.session.decision_understanding,
+        };
         persist_error = "idempotent_skip";
       } else if (!persisted.committed) {
         return {
@@ -1606,17 +1623,8 @@ async function runAdaptiveQuestionTurnInner(
           agent_v2: applied.session.agent_v2,
           session_revision: persisted.session.session_revision,
           dc_write_revision: persisted.session.dc_write_revision,
-          decision_understanding:
-            applied.session.decision_understanding ??
-            persisted.session.decision_understanding ??
-            current.decision_understanding,
+          decision_understanding: working.decision_understanding,
         };
-        current = sessionWithCoreBudgetAfterMaterialWrite(
-          current,
-          applied,
-          answer_event,
-          input.source_turn_id,
-        );
       }
       if (
         answer_event.classification === "unknown" ||
@@ -2144,6 +2152,15 @@ export type AttachAuthorizedQuestionResult = {
   block_reason?: string;
 };
 
+function ordinaryPlanNeedIdsValid(plan: AdaptiveQuestionPlan): boolean {
+  const ids = plan.need_ids;
+  if (!ids?.length) return false;
+  return ids.every((id) => {
+    const need = reportInformationNeedById(id);
+    return Boolean(need && need.ask_policy !== "never");
+  });
+}
+
 export function guardAndAttachAuthorizedQuestion(
   session: POJUSessionState,
   plan: AdaptiveQuestionPlan,
@@ -2159,26 +2176,59 @@ export function guardAndAttachAuthorizedQuestion(
   const understanding = session.decision_understanding;
   if (!understanding) {
     return {
-      session: { ...session, adaptive_ask_plan: planWithMode },
-      attached: true,
+      session,
+      attached: false,
+      block_reason: "missing_decision_understanding",
     };
   }
   const already =
     understanding.last_sent_question?.plan_id === planWithMode.plan_id;
+  if (already) {
+    return {
+      session: {
+        ...session,
+        adaptive_ask_plan: planWithMode,
+        decision_understanding: {
+          ...understanding,
+          next_question_plan: planWithMode,
+        },
+      },
+      attached: true,
+    };
+  }
+
+  if (collection_mode === "ordinary" && !ordinaryPlanNeedIdsValid(planWithMode)) {
+    return {
+      session,
+      attached: false,
+      block_reason: "invalid_ssot_need_ids",
+    };
+  }
+
   let budget = understanding.budget;
 
-  if (!already) {
-    if (collection_mode === "clarification") {
-      const claim = claimClarification(budget, planWithMode.plan_id, now);
-      if (!claim.ok) {
-        return {
-          session,
-          attached: false,
-          block_reason: "clarification_allowance_exhausted",
-        };
-      }
-      budget = claim.budget;
-    } else if (!canAskOrdinary(budget)) {
+  if (budget.session_asked_count >= budget.hard_budget_limit) {
+    return {
+      session,
+      attached: false,
+      block_reason: "hard_budget_exhausted",
+    };
+  }
+
+  if (collection_mode === "clarification") {
+    const claim = claimClarification(budget, planWithMode.plan_id, now);
+    if (!claim.ok) {
+      return {
+        session,
+        attached: false,
+        block_reason: "clarification_allowance_exhausted",
+      };
+    }
+    // Claim reserves allowance; asked-count is charged here and refunded on release
+    // if the assistant question never enters the outbound messages.
+    budget = bumpBudgetAfterAsk(claim.budget, planWithMode);
+  } else {
+    if (!canAskOrdinary(budget)) {
       return {
         session,
         attached: false,
@@ -2186,14 +2236,6 @@ export function guardAndAttachAuthorizedQuestion(
       };
     }
     budget = bumpBudgetAfterAsk(budget, planWithMode);
-    if (collection_mode === "clarification") {
-      budget = confirmClarification(
-        budget,
-        planWithMode.plan_id,
-        now,
-        turnId,
-      );
-    }
   }
 
   return {
@@ -2225,15 +2267,92 @@ export function guardAndAttachAuthorizedQuestion(
   };
 }
 
+export function confirmAuthorizedQuestionSend(
+  session: POJUSessionState,
+  plan_id: string,
+  _turnId: string,
+  send_event_id: string,
+  now?: string,
+): POJUSessionState {
+  const understanding = session.decision_understanding;
+  if (!understanding) return session;
+  const claims = understanding.budget.clarification_claims ?? [];
+  const claim = claims.find((c) => c.plan_id === plan_id);
+  if (!claim || claim.status !== "claimed") return session;
+  const iso = now ?? new Date().toISOString();
+  const budget = confirmClarification(
+    understanding.budget,
+    plan_id,
+    iso,
+    send_event_id,
+  );
+  return {
+    ...session,
+    decision_understanding: { ...understanding, budget },
+  };
+}
+
+export function releaseAuthorizedQuestionClaim(
+  session: POJUSessionState,
+  plan_id: string,
+  now?: string,
+): POJUSessionState {
+  const understanding = session.decision_understanding;
+  if (!understanding) return session;
+  const claims = understanding.budget.clarification_claims ?? [];
+  const claim = claims.find((c) => c.plan_id === plan_id);
+  if (!claim || claim.status !== "claimed") return session;
+  const iso = now ?? new Date().toISOString();
+  let budget = releaseClarification(understanding.budget, plan_id, iso);
+  const plan =
+    session.adaptive_ask_plan?.plan_id === plan_id
+      ? session.adaptive_ask_plan
+      : understanding.next_question_plan?.plan_id === plan_id
+        ? understanding.next_question_plan
+        : null;
+  if (plan) {
+    budget = refundIneffectiveQuestion(budget, {
+      plan_id: plan.plan_id,
+      dir_ids: Array.isArray(plan.dir_ids) ? plan.dir_ids : [],
+      budget_cost: typeof plan.budget_cost === "number" ? plan.budget_cost : 1,
+    });
+  } else if (understanding.last_sent_question?.plan_id === plan_id) {
+    budget = refundIneffectiveQuestion(budget, {
+      plan_id,
+      dir_ids: understanding.last_sent_question.dir_ids ?? [],
+      budget_cost: 1,
+    });
+  }
+  const last = understanding.last_sent_question;
+  const last_sent_question =
+    last?.plan_id === plan_id ? null : last;
+  return {
+    ...session,
+    adaptive_ask_plan:
+      session.adaptive_ask_plan?.plan_id === plan_id
+        ? null
+        : session.adaptive_ask_plan,
+    decision_understanding: {
+      ...understanding,
+      budget,
+      last_sent_question,
+      next_question_plan:
+        understanding.next_question_plan?.plan_id === plan_id
+          ? null
+          : understanding.next_question_plan,
+    },
+  };
+}
+
 /** Mark a plan as actually shown without double-counting (restore same plan_id). */
 export function attachAuthorizedAssistantQuestion(
   session: POJUSessionState,
   plan: AdaptiveQuestionPlan,
   turnId: string,
   now?: string,
-): POJUSessionState {
+): AttachAuthorizedQuestionResult {
   const iso = now ?? plan.built_at ?? new Date().toISOString();
-  return guardAndAttachAuthorizedQuestion(session, plan, turnId, iso).session;
+  return guardAndAttachAuthorizedQuestion(session, plan, turnId, iso);
 }
 
 function finishPendingFromEvent(
@@ -2678,9 +2797,28 @@ async function handlePendingAnswerResolutionTurn(input: {
       );
       const persistFn =
         input.test_hooks?.pendingBindPersist ?? persistDcLifecycleChange;
-      const persisted = await persistFn(input.original, applied.session, key);
+      let working: POJUSessionState = {
+        ...applied.session,
+        decision_understanding:
+          applied.session.decision_understanding ?? current.decision_understanding,
+        decision_blueprint:
+          current.decision_blueprint ?? applied.session.decision_blueprint,
+        messages: current.messages,
+        agent_v2: current.agent_v2,
+      };
+      working = sessionWithCoreBudgetAfterMaterialWrite(
+        working,
+        applied,
+        answer_event,
+        resolving.source_turn_id,
+      );
+      const persisted = await persistFn(input.original, working, key);
       if (persisted.error === "idempotent_skip") {
-        current = persisted.session;
+        current = {
+          ...persisted.session,
+          decision_understanding:
+            working.decision_understanding ?? persisted.session.decision_understanding,
+        };
         persistedOk = true;
       } else if (!persisted.committed) {
         return {
@@ -2711,13 +2849,8 @@ async function handlePendingAnswerResolutionTurn(input: {
           agent_v2: applied.session.agent_v2,
           session_revision: persisted.session.session_revision,
           dc_write_revision: persisted.session.dc_write_revision,
+          decision_understanding: working.decision_understanding,
         };
-        current = sessionWithCoreBudgetAfterMaterialWrite(
-          current,
-          applied,
-          answer_event,
-          resolving.source_turn_id,
-        );
         persistedOk = true;
       }
     }
@@ -2851,9 +2984,33 @@ async function applyAndPersistIntakeControlAnswer(input: {
       return { ok: true, session: input.current };
     }
     const key = `dc_collect:${input.current.session_id}:${input.source_turn_id}`;
-    const persisted = await input.persist(input.original, applied.session, key);
+    let working: POJUSessionState = {
+      ...applied.session,
+      decision_understanding:
+        applied.session.decision_understanding ?? input.current.decision_understanding,
+      decision_blueprint:
+        input.current.decision_blueprint ?? applied.session.decision_blueprint,
+      messages: input.current.messages,
+      agent_v2: input.current.agent_v2,
+      pending_intake_control:
+        applied.session.pending_intake_control ?? input.current.pending_intake_control,
+    };
+    working = sessionWithCoreBudgetAfterMaterialWrite(
+      working,
+      applied,
+      input.answer_event,
+      input.source_turn_id,
+    );
+    const persisted = await input.persist(input.original, working, key);
     if (persisted.error === "idempotent_skip") {
-      return { ok: true, session: persisted.session };
+      return {
+        ok: true,
+        session: {
+          ...persisted.session,
+          decision_understanding:
+            working.decision_understanding ?? persisted.session.decision_understanding,
+        },
+      };
     }
     if (!persisted.committed) {
       return {
@@ -2862,7 +3019,7 @@ async function applyAndPersistIntakeControlAnswer(input: {
         persist_error: persisted.error ?? "persist_failed",
       };
     }
-    let merged: POJUSessionState = {
+    const merged: POJUSessionState = {
       ...applied.session,
       ...persisted.session,
       decision_context:
@@ -2883,17 +3040,8 @@ async function applyAndPersistIntakeControlAnswer(input: {
       pending_intake_control:
         applied.session.pending_intake_control ??
         persisted.session.pending_intake_control,
-      decision_understanding:
-        applied.session.decision_understanding ??
-        persisted.session.decision_understanding ??
-        input.current.decision_understanding,
+      decision_understanding: working.decision_understanding,
     };
-    merged = sessionWithCoreBudgetAfterMaterialWrite(
-      merged,
-      applied,
-      input.answer_event,
-      input.source_turn_id,
-    );
     return { ok: true, session: merged };
   } catch (e) {
     return {

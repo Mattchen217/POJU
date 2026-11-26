@@ -1619,7 +1619,7 @@ async function runAgentTurn(input: HandleInput, internalTurn: InternalTurn): Pro
     };
     let sessionOut = withSessionProfileFlags({
       ...m1CollectingTurn.session,
-      messages: [...messagesWithUser, assistantMessage],
+      messages: messagesWithUser,
       agent_v2,
       last_interaction_at: nowIso,
       expires_at: rollingExpiry,
@@ -1665,14 +1665,62 @@ async function runAgentTurn(input: HandleInput, internalTurn: InternalTurn): Pro
       ...m1AuditFields(m1CollectingTurn.session, sessionForLlm),
     });
     if (m1HasAuthorizedQuestion && m1CollectingTurn.plan) {
-      const { attachAuthorizedAssistantQuestion } = await import(
-        "@/lib/poju/decision-intake"
-      );
-      sessionOut = attachAuthorizedAssistantQuestion(
+      const {
+        guardAndAttachAuthorizedQuestion,
+        confirmAuthorizedQuestionSend,
+        releaseAuthorizedQuestionClaim,
+        classifyCollectionMode,
+      } = await import("@/lib/poju/decision-intake");
+      const plan = m1CollectingTurn.plan;
+      const guarded = guardAndAttachAuthorizedQuestion(
         sessionOut,
-        m1CollectingTurn.plan,
+        plan,
         turnId,
+        nowIso,
       );
+      if (!guarded.attached) {
+        const released = releaseAuthorizedQuestionClaim(
+          guarded.session,
+          plan.plan_id,
+          nowIso,
+        );
+        const summary =
+          m1CollectingTurn.understanding?.current_understanding.summary?.trim() ||
+          "当前关键信息已足够。请确认以上理解是否正确；确认后进入下一阶段。";
+        finalContent = `【理解确认】${summary}
+
+如果以上理解正确，请回复确认；如需补充，请直接说明。`;
+        sessionOut = {
+          ...released,
+          adaptive_ask_plan: null,
+          messages: [
+            ...messagesWithUser,
+            { ...assistantMessage, content: finalContent },
+          ],
+        };
+      } else {
+        sessionOut = {
+          ...guarded.session,
+          messages: [
+            ...messagesWithUser,
+            { ...assistantMessage, content: finalContent },
+          ],
+        };
+        if (classifyCollectionMode(plan) === "clarification") {
+          sessionOut = confirmAuthorizedQuestionSend(
+            sessionOut,
+            plan.plan_id,
+            turnId,
+            assistantMessage.client_id!,
+            nowIso,
+          );
+        }
+      }
+    } else {
+      sessionOut = {
+        ...sessionOut,
+        messages: [...messagesWithUser, assistantMessage],
+      };
     }
     sessionOut = stampDecisionUnderstandingBoxOnLastUser(sessionOut);
     if (input.server_invoke?.skip_delivery_pipeline) return sessionOut;
@@ -2100,7 +2148,7 @@ async function runAgentTurn(input: HandleInput, internalTurn: InternalTurn): Pro
   let sessionOut = withSessionProfileFlags({
     ...workingSession,
     original_question: resolvedOriginalQuestion,
-    messages: [...messagesWithUser, assistantMessage],
+    messages: messagesWithUser,
     context_collected: {
       ...sessionBase.context_collected,
       ...(llmResponse.context_updates ?? {}),
@@ -2121,59 +2169,98 @@ async function runAgentTurn(input: HandleInput, internalTurn: InternalTurn): Pro
   // M1 — Plan controls the actual sent question (post-LLM enforce / attach).
   // DC + Understanding + Plan already ran BEFORE the LLM call.
   if (m1CollectingTurn?.plan && m1CollectingTurn.authorized_question) {
-    const { assertQuestionMatchesPlan, attachAuthorizedAssistantQuestion } = await import(
-      "@/lib/poju/decision-intake"
-    );
+    const {
+      assertQuestionMatchesPlan,
+      guardAndAttachAuthorizedQuestion,
+      confirmAuthorizedQuestionSend,
+      releaseAuthorizedQuestionClaim,
+      classifyCollectionMode,
+    } = await import("@/lib/poju/decision-intake");
     const matched = assertQuestionMatchesPlan(finalContent, m1CollectingTurn.plan);
     finalContent = matched.text;
     const lastUser = [...messagesWithUser]
       .reverse()
       .find((m) => m.role === "user" && !m.is_rejected);
     const turnId = lastUser?.client_id?.trim() || "unknown_turn";
-    sessionOut = attachAuthorizedAssistantQuestion(
-      {
-        ...sessionOut,
-        decision_context:
-          m1CollectingTurn.session.decision_context ?? sessionOut.decision_context,
-        decision_context_versions:
-          m1CollectingTurn.session.decision_context_versions ??
-          sessionOut.decision_context_versions,
-        decision_context_idempotency_keys:
-          m1CollectingTurn.session.decision_context_idempotency_keys ??
-          sessionOut.decision_context_idempotency_keys,
-        control_plane:
-          m1CollectingTurn.session.control_plane ?? sessionOut.control_plane,
-        decision_blueprint:
-          m1CollectingTurn.session.decision_blueprint ?? sessionOut.decision_blueprint,
-        decision_understanding:
-          m1CollectingTurn.session.decision_understanding ??
-          sessionOut.decision_understanding,
-        adaptive_ask_plan:
-          m1CollectingTurn.plan ?? sessionOut.adaptive_ask_plan,
-        intake_ask_plan:
-          m1CollectingTurn.session.intake_ask_plan ?? sessionOut.intake_ask_plan,
-        session_revision:
-          m1CollectingTurn.session.session_revision ?? sessionOut.session_revision,
-        dc_write_revision:
-          m1CollectingTurn.session.dc_write_revision ?? sessionOut.dc_write_revision,
-        pending_answer_resolution:
-          m1CollectingTurn.session.pending_answer_resolution !== undefined
-            ? m1CollectingTurn.session.pending_answer_resolution
-            : sessionOut.pending_answer_resolution,
-        pending_intake_control:
-          m1CollectingTurn.session.pending_intake_control !== undefined
-            ? m1CollectingTurn.session.pending_intake_control
-            : sessionOut.pending_intake_control,
-        ...m1AuditFields(m1CollectingTurn.session, sessionOut),
-        last_answer_event:
-          m1CollectingTurn.session.last_answer_event ??
-          m1CollectingTurn.answer_event ??
-          sessionOut.last_answer_event,
-        messages: [...messagesWithUser, { ...assistantMessage, content: finalContent }],
-      },
-      m1CollectingTurn.plan,
+    const plan = m1CollectingTurn.plan;
+    const preGuard: POJUSessionState = {
+      ...sessionOut,
+      decision_context:
+        m1CollectingTurn.session.decision_context ?? sessionOut.decision_context,
+      decision_context_versions:
+        m1CollectingTurn.session.decision_context_versions ??
+        sessionOut.decision_context_versions,
+      decision_context_idempotency_keys:
+        m1CollectingTurn.session.decision_context_idempotency_keys ??
+        sessionOut.decision_context_idempotency_keys,
+      control_plane:
+        m1CollectingTurn.session.control_plane ?? sessionOut.control_plane,
+      decision_blueprint:
+        m1CollectingTurn.session.decision_blueprint ?? sessionOut.decision_blueprint,
+      decision_understanding:
+        m1CollectingTurn.session.decision_understanding ??
+        sessionOut.decision_understanding,
+      adaptive_ask_plan: plan ?? sessionOut.adaptive_ask_plan,
+      intake_ask_plan:
+        m1CollectingTurn.session.intake_ask_plan ?? sessionOut.intake_ask_plan,
+      session_revision:
+        m1CollectingTurn.session.session_revision ?? sessionOut.session_revision,
+      dc_write_revision:
+        m1CollectingTurn.session.dc_write_revision ?? sessionOut.dc_write_revision,
+      pending_answer_resolution:
+        m1CollectingTurn.session.pending_answer_resolution !== undefined
+          ? m1CollectingTurn.session.pending_answer_resolution
+          : sessionOut.pending_answer_resolution,
+      pending_intake_control:
+        m1CollectingTurn.session.pending_intake_control !== undefined
+          ? m1CollectingTurn.session.pending_intake_control
+          : sessionOut.pending_intake_control,
+      ...m1AuditFields(m1CollectingTurn.session, sessionOut),
+      last_answer_event:
+        m1CollectingTurn.session.last_answer_event ??
+        m1CollectingTurn.answer_event ??
+        sessionOut.last_answer_event,
+      messages: messagesWithUser,
+    };
+    const guarded = guardAndAttachAuthorizedQuestion(
+      preGuard,
+      plan,
       turnId,
+      nowIso,
     );
+  const outboundAssistant = { ...assistantMessage, client_id: assistantMessageId };
+    if (!guarded.attached) {
+      const released = releaseAuthorizedQuestionClaim(
+        guarded.session,
+        plan.plan_id,
+        nowIso,
+      );
+      const summary =
+        m1CollectingTurn.understanding?.current_understanding.summary?.trim() ||
+        "当前关键信息已足够。请确认以上理解是否正确；确认后进入下一阶段。";
+      finalContent = `【理解确认】${summary}
+
+如果以上理解正确，请回复确认；如需补充，请直接说明。`;
+      sessionOut = {
+        ...released,
+        adaptive_ask_plan: null,
+        messages: [...messagesWithUser, { ...outboundAssistant, content: finalContent }],
+      };
+    } else {
+      sessionOut = {
+        ...guarded.session,
+        messages: [...messagesWithUser, { ...outboundAssistant, content: finalContent }],
+      };
+      if (classifyCollectionMode(plan) === "clarification") {
+        sessionOut = confirmAuthorizedQuestionSend(
+          sessionOut,
+          plan.plan_id,
+          turnId,
+          outboundAssistant.client_id!,
+          nowIso,
+        );
+      }
+    }
   } else if (
     m1CollectingTurn &&
     m1CollectingTurn.outcome !== "planner_blocked" &&
@@ -2220,6 +2307,11 @@ async function runAgentTurn(input: HandleInput, internalTurn: InternalTurn): Pro
         m1CollectingTurn.answer_event ??
         sessionOut.last_answer_event,
       messages: [...messagesWithUser, { ...assistantMessage, content: finalContent }],
+    };
+  } else {
+    sessionOut = {
+      ...sessionOut,
+      messages: [...messagesWithUser, assistantMessage],
     };
   }
   sessionOut = stampDecisionUnderstandingBoxOnLastUser(sessionOut);

@@ -116,7 +116,8 @@ function ledgerEventIds(budget: SessionBudgetSnapshot): string[] {
 function counterLedgerConsistent(budget: SessionBudgetSnapshot): boolean {
   const core = budget.core_effective_answer_rounds ?? 0;
   const turns = ledgerTurnIds(budget);
-  if (core !== turns.length) return false;
+  const expected = Math.min(turns.length, GLOBAL_CORE_SPENT_CEILING);
+  if (core !== expected) return false;
   return true;
 }
 
@@ -242,17 +243,6 @@ export function migrateSessionBudget(
   }
 
   if (orphanMaterialWithoutTurnIds(dc)) {
-    const reconstructed = materialTurns.length;
-    if (reconstructed > 0) {
-      const core = Math.min(GLOBAL_CORE_SPENT_CEILING, reconstructed);
-      return {
-        ...base,
-        core_effective_answer_rounds: core,
-        core_counted_source_turn_ids: materialTurns,
-        budget_migration_version: "1",
-        budget_migration_evidence: "reconstructed_from_dc_turn_ids",
-      };
-    }
     return {
       ...base,
       core_effective_answer_rounds: GLOBAL_CORE_SPENT_CEILING,
@@ -444,8 +434,8 @@ export function reconcileClarificationClaims(
   let next = budget;
   for (const claim of budget.clarification_claims ?? []) {
     if (claim.status !== "claimed") continue;
-    if (sent.has(claim.plan_id)) {
-      next = confirmClarification(next, claim.plan_id, now);
+    if (sent.has(claim.plan_id) && claim.send_event_id) {
+      next = confirmClarification(next, claim.plan_id, now, claim.send_event_id);
     }
   }
   for (const claim of budget.clarification_claims ?? []) {
@@ -484,6 +474,7 @@ const BAND_RANK: Record<"simple" | "medium" | "complex", number> = {
 export function ensureComplexityBand(
   budget: SessionBudgetSnapshot,
   classification: IntakeComplexityDecision,
+  now?: string,
 ): SessionBudgetSnapshot {
   const nextBand = classification.complexity;
   const prev = budget.complexity_band;
@@ -499,6 +490,21 @@ export function ensureComplexityBand(
   } else if (!prev) {
     reasons.push(...classification.reasons);
   }
+  const at = now ?? new Date().toISOString();
+  let complexity_upgrade_events = [...(budget.complexity_upgrade_events ?? [])];
+  if (prev && BAND_RANK[band] > BAND_RANK[prev]) {
+    const dup = complexity_upgrade_events.some(
+      (e) => e.from === prev && e.to === band,
+    );
+    if (!dup) {
+      complexity_upgrade_events.push({
+        from: prev,
+        to: band,
+        at,
+        reasons: [...classification.reasons],
+      });
+    }
+  }
   return {
     ...budget,
     complexity_band: band,
@@ -506,6 +512,7 @@ export function ensureComplexityBand(
     clarification_allowance:
       budget.clarification_allowance ?? classification.clarification_allowance,
     complexity_reasons: [...new Set(reasons)],
+    complexity_upgrade_events,
   };
 }
 

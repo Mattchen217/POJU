@@ -21,6 +21,7 @@ import {
 import { snapshotFromDc } from "./question-planning";
 import type { DecisionContext } from "./types";
 import type { DecisionBlueprint } from "@/lib/poju/decision-intake/types";
+import { reportInformationNeedsForDirIds } from "@/lib/poju/decision-intake/report-information-needs.v1";
 import {
   activateNextBlueprintPriorityBand,
   gateClassForDirFromCatalog,
@@ -60,6 +61,12 @@ export function buildIntakeCandidatesFromDc(
     // No legal Catalog DDR link → not a formal DDR investigation candidate.
     if (ddr_ids.length === 0) continue;
     if (ddr_ids.some((id) => id.startsWith("DDR_FOR_"))) continue;
+    const ssotNeeds = reportInformationNeedsForDirIds([dir.dir_id]).filter(
+      (n) =>
+        n.source_kind === "decision_context" && n.ask_policy === "ask_if_material",
+    );
+    if (ssotNeeds.length === 0) continue;
+    const need_ids = ssotNeeds.map((n) => n.need_id);
     const fact_role_codes = roles.map(
       (r) => `v1/dir/${dir.dir_id}/role/${r}`,
     );
@@ -92,6 +99,7 @@ export function buildIntakeCandidatesFromDc(
       dir_ids: [dir.dir_id],
       ddr_ids,
       fact_role_codes,
+      need_ids,
       impact: {
         decision_critical,
         may_affect_p5_ranking,

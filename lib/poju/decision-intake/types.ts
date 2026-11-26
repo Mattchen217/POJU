@@ -621,6 +621,12 @@ export type SessionBudgetSnapshot = {
     boundary_reason?: string;
   }>;
   complexity_reasons?: string[];
+  complexity_upgrade_events?: Array<{
+    from: "simple" | "medium" | "complex";
+    to: "simple" | "medium" | "complex";
+    at: string;
+    reasons: string[];
+  }>;
 };
 
 export type ReadinessSnapshot = {

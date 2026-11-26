@@ -102,7 +102,12 @@ async function main() {
   const {
     attachAuthorizedAssistantQuestion,
     guardAndAttachAuthorizedQuestion,
+    confirmAuthorizedQuestionSend,
+    releaseAuthorizedQuestionClaim,
   } = await import("../lib/poju/decision-intake/adaptive-turn");
+  const { buildIntakeCandidatesFromDc } = await import(
+    "../lib/poju/decision-context/production-intake-ask"
+  );
 
   const NOW = "2026-11-26T12:00:00.000Z";
 
@@ -447,6 +452,7 @@ async function main() {
       built_at: NOW,
       scoring_path: "test",
       collection_mode: "ordinary",
+      need_ids: ["need:dc:DIR-DEF-QUESTION"],
     };
     const baseBudget: SessionBudgetSnapshot = {
       soft_budget_limit: 12,
@@ -467,9 +473,9 @@ async function main() {
         last_sent_question: null,
       },
     } as POJUSessionState;
-    session = attachAuthorizedAssistantQuestion(session, plan, "ask_1", NOW);
+    session = attachAuthorizedAssistantQuestion(session, plan, "ask_1", NOW).session;
     const afterFirst = session.decision_understanding!.budget;
-    session = attachAuthorizedAssistantQuestion(session, plan, "ask_2", NOW);
+    session = attachAuthorizedAssistantQuestion(session, plan, "ask_2", NOW).session;
     const afterSecond = session.decision_understanding!.budget;
     assert.equal(afterSecond.session_asked_count, afterFirst.session_asked_count);
     assert.equal(
@@ -500,6 +506,240 @@ async function main() {
       r2.session.decision_understanding!.budget.session_asked_count,
       r1.session.decision_understanding!.budget.session_asked_count,
     );
+    const claim = r1.session.decision_understanding!.budget.clarification_claims?.[0];
+    assert.equal(claim?.status, "claimed");
+    const confirmed = confirmAuthorizedQuestionSend(
+      r1.session,
+      clarPlan.plan_id,
+      "t1",
+      "msg_1",
+      NOW,
+    );
+    assert.equal(
+      confirmed.decision_understanding!.budget.clarification_claims?.[0]?.status,
+      "confirmed",
+    );
+  });
+
+  await check("counterLedgerConsistent: 15 turn ids with core=12", () => {
+    const turnIds = Array.from({ length: 15 }, (_, i) => `turn_${i}`);
+    const budget: SessionBudgetSnapshot = {
+      soft_budget_limit: 12,
+      hard_budget_limit: 15,
+      session_asked_count: 0,
+      review_cycle: 1,
+      cycle_base_asked: 0,
+      remaining_hard_budget: 15,
+      depth_by_dir: {},
+      core_effective_answer_rounds: GLOBAL_CORE_SPENT_CEILING,
+      core_counted_source_turn_ids: turnIds,
+      budget_migration_version: "1",
+    };
+    const migrated = migrateSessionBudget(budget, null);
+    assert.equal(migrated.core_effective_answer_rounds, GLOBAL_CORE_SPENT_CEILING);
+    assert.equal(migrated.core_counted_source_turn_ids?.length, 15);
+  });
+
+  await check("orphan + partial turn ids fail-closed (no reconstruct)", () => {
+    const dc = draftDc({
+      reality_facts: [
+        {
+          fact_id: "orphan",
+          statement: "orphan material",
+          status: "confirmed",
+          verification_level: "user_stated",
+          source_stage: "collecting_context",
+          user_confirmed: true,
+          fact_roles: ["situation"],
+          related_dir_ids: ["DIR-DEF-QUESTION"],
+        },
+        {
+          fact_id: "ok",
+          statement: "with turn",
+          status: "confirmed",
+          verification_level: "user_stated",
+          source_stage: "collecting_context",
+          source_turn_id: "turn_ok",
+          user_confirmed: true,
+          fact_roles: ["situation"],
+          related_dir_ids: ["DIR-DEF-QUESTION"],
+        },
+      ],
+    });
+    const migrated = migrateSessionBudget(
+      {
+        soft_budget_limit: 12,
+        hard_budget_limit: 15,
+        session_asked_count: 0,
+        review_cycle: 1,
+        cycle_base_asked: 0,
+        remaining_hard_budget: 15,
+        depth_by_dir: {},
+      },
+      dc,
+    );
+    assert.equal(migrated.core_effective_answer_rounds, GLOBAL_CORE_SPENT_CEILING);
+    assert.equal(
+      migrated.budget_migration_evidence,
+      "uncertain_orphan_facts_fail_closed",
+    );
+  });
+
+  await check("guard blocked: no question text left on last_sent when missing understanding", () => {
+    const plan: AdaptiveQuestionPlan = {
+      plan_id: "qp_no_u",
+      candidate_id: "c1",
+      direction_id: "DIRN-DEFINITION",
+      ddr_ids: ["DDR-P05-01"],
+      dir_ids: ["DIR-DEF-QUESTION"],
+      fact_role_codes: ["v1/dir/DIR-DEF-QUESTION/role/situation"],
+      missing_info: "unknown",
+      decision_value: "decision_critical",
+      ask_now_reason: "test",
+      expected_info: "info",
+      depth: 1,
+      budget_cost: 1,
+      remaining_hard_budget: 14,
+      gate_class: "P0",
+      scope_boundary: "test",
+      rationale: "test",
+      question_text: "问题？",
+      built_at: NOW,
+      scoring_path: "test",
+      need_ids: ["need:dc:DIR-DEF-QUESTION"],
+    };
+    const session = { messages: [] } as POJUSessionState;
+    const r = guardAndAttachAuthorizedQuestion(session, plan, "t1", NOW);
+    assert.equal(r.attached, false);
+    assert.equal(r.block_reason, "missing_decision_understanding");
+  });
+
+  await check("buildIntakeCandidatesFromDc attaches SSOT need_ids", async () => {
+    const dc = draftDc({
+      dirs: [
+        {
+          dir_id: "DIR-DEF-QUESTION",
+          need: "q",
+          why: "w",
+          required_fact_roles: ["situation"],
+          current_state: "unknown",
+          partial_satisfaction: false,
+          agenda_item_ids: [],
+          id_lifecycle: "active",
+          may_affect_p5_ranking: true,
+        },
+      ],
+    });
+    const bp = minimalBlueprint();
+    const expectedNeeds = reportInformationNeedById("need:dc:DIR-DEF-QUESTION");
+    assert.ok(
+      expectedNeeds &&
+        expectedNeeds.source_kind === "decision_context" &&
+        expectedNeeds.ask_policy === "ask_if_material",
+    );
+    const { resolveDdrIdsForDir } = await import(
+      "../lib/poju/decision-intake/blueprint"
+    );
+    const ddr = resolveDdrIdsForDir("DIR-DEF-QUESTION", bp);
+  if (ddr.length === 0) {
+      console.log("  SKIP  buildIntakeCandidatesFromDc ddr catalog unavailable in shim");
+      return;
+    }
+    const candidates = buildIntakeCandidatesFromDc(dc, bp);
+    assert.ok(candidates.length >= 1);
+    for (const c of candidates) {
+      assert.ok(c.need_ids?.length);
+      for (const id of c.need_ids ?? []) {
+        assert.ok(reportInformationNeedById(id));
+      }
+    }
+  });
+
+  await check("material core bump applied before simulated persist commit", () => {
+    const dc = draftDc({
+      reality_facts: [
+        {
+          fact_id: "f1",
+          statement: "material",
+          status: "confirmed",
+          verification_level: "user_stated",
+          source_stage: "collecting_context",
+          source_turn_id: "mat_turn",
+          user_confirmed: true,
+          fact_roles: ["situation"],
+          related_dir_ids: ["DIR-DEF-QUESTION"],
+        },
+      ],
+    });
+    const session = {
+      decision_context: dc,
+      decision_understanding: {
+        budget: {
+          soft_budget_limit: 12,
+          hard_budget_limit: 15,
+          session_asked_count: 0,
+          review_cycle: 1,
+          cycle_base_asked: 0,
+          remaining_hard_budget: 15,
+          depth_by_dir: {},
+          core_effective_answer_rounds: 0,
+          core_counted_source_turn_ids: [],
+        },
+      },
+    } as POJUSessionState;
+    const bumped = bumpCoreAfterMaterialWrite(
+      session.decision_understanding!.budget,
+      { source_turn_id: "mat_turn", answer_event_id: "ev1" },
+    );
+    const working = {
+      ...session,
+      decision_understanding: {
+        ...session.decision_understanding!,
+        budget: bumped,
+      },
+    };
+    assert.equal(working.decision_understanding!.budget.core_effective_answer_rounds, 1);
+    const saved = migrateSessionBudget(working.decision_understanding!.budget, dc);
+    assert.equal(saved.core_effective_answer_rounds, 1);
+    assert.deepEqual(saved.core_counted_source_turn_ids, ["mat_turn"]);
+  });
+
+  await check("release drops claimed clarification without confirm", () => {
+    let budget: SessionBudgetSnapshot = {
+      soft_budget_limit: 12,
+      hard_budget_limit: 15,
+      session_asked_count: 0,
+      review_cycle: 1,
+      cycle_base_asked: 0,
+      remaining_hard_budget: 15,
+      depth_by_dir: {},
+      clarification_allowance: 3,
+      clarification_claims: [],
+    };
+    const claimed = claimClarification(budget, "plan_abort", NOW);
+    budget = claimed.budget;
+    const session = {
+      decision_understanding: {
+        budget,
+        last_sent_question: {
+          plan_id: "plan_abort",
+          question_text: "q?",
+          direction_id: "DIRN-DEFINITION",
+          dir_ids: ["DIR-DEF-QUESTION"],
+          ddr_ids: [],
+          fact_role_codes: [],
+          turn_id: "t1",
+        },
+      },
+      adaptive_ask_plan: { plan_id: "plan_abort" },
+    } as POJUSessionState;
+    const released = releaseAuthorizedQuestionClaim(session, "plan_abort", NOW);
+    assert.equal(
+      released.decision_understanding!.budget.clarification_claims?.[0]?.status,
+      "released",
+    );
+    assert.equal(released.decision_understanding!.last_sent_question, null);
+    assert.equal(released.adaptive_ask_plan, null);
   });
 
   await check("soft-12: validateScopeDepthBudget blocks P2 after soft", () => {

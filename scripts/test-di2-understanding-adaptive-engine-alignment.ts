@@ -209,6 +209,7 @@ async function main() {
         kind: "dir_based",
         ddr_ids: blueprint.ddr_ids?.length ? [blueprint.ddr_ids[0]!] : ["DDR-TEST"],
         dir_ids: [dirId],
+        need_ids: [`need:dc:${dirId}`],
         fact_role_codes: [`v1/dir/${dirId}/role/${role}`],
         missing_info: "unknown",
         decision_value: "decision_critical",
@@ -243,7 +244,8 @@ async function main() {
     assert.ok(llm > early, "generic Chat LLM call must come after the M1 early return");
     assert.match(src, /m1HasAuthorizedQuestion/);
     assert.match(src, /assertQuestionMatchesPlan/);
-    assert.match(src, /attachAuthorizedAssistantQuestion/);
+    assert.match(src, /guardAndAttachAuthorizedQuestion/);
+    assert.match(src, /confirmAuthorizedQuestionSend/);
     const gen = readFileSync(
       join(process.cwd(), "lib/poju/decision-intake/question-generation.ts"),
       "utf8",

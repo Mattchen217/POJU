@@ -1043,7 +1043,7 @@ async function main() {
         turn.session,
         turn.plan!,
         "t_r2b_ask",
-      );
+      ).session;
       delivered = {
         ...delivered,
         messages: [

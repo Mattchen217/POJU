@@ -17,6 +17,17 @@ import {
   type ScopeBudgetVerdict,
 } from "./scope-budget";
 import type { SessionBudgetSnapshot } from "./types";
+import { reportInformationNeedById } from "./report-information-needs.v1";
+
+function candidateOrdinaryNeedIdsValid(
+  need_ids: string[] | undefined,
+): boolean {
+  if (!need_ids?.length) return false;
+  return need_ids.every((id) => {
+    const need = reportInformationNeedById(id);
+    return Boolean(need && need.ask_policy !== "never");
+  });
+}
 
 function roleCodesToRoles(codes: string[]): string[] {
   return codes
@@ -312,6 +323,40 @@ export function buildAdaptiveQuestionPlan(input: {
   prior_dir_questions?: string[];
 }): { plan: AdaptiveQuestionPlan; validation: ScopeBudgetVerdict } {
   const c = input.selected.candidate;
+  if (
+    c.kind === "dir_based" &&
+    !candidateOrdinaryNeedIdsValid(c.need_ids)
+  ) {
+    return {
+      plan: {
+        plan_id: `qp_blocked_${c.candidate_id}_${input.now}`.slice(0, 120),
+        candidate_id: c.candidate_id,
+        direction_id: "DIRN-DEFINITION",
+        ddr_ids: [...c.ddr_ids],
+        dir_ids: [...c.dir_ids],
+        fact_role_codes: [...c.fact_role_codes],
+        missing_info: input.selected.score.gap_type,
+        decision_value: "supporting",
+        ask_now_reason: "invalid_ssot_need_ids",
+        expected_info: c.dir_ids[0] ?? "",
+        depth: 1,
+        budget_cost: c.budget_cost,
+        remaining_hard_budget: input.budget.remaining_hard_budget,
+        gate_class: c.impact.gate_class,
+        scope_boundary: "blocked",
+        rationale: "missing or invalid SSOT need_ids",
+        question_text: "",
+        built_at: input.now,
+        scoring_path: input.scoring_path,
+        collection_mode: "ordinary",
+      },
+      validation: {
+        ok: false,
+        reason_code: "invalid_ssot_need_ids",
+        detail: "ordinary plan requires valid SSOT need_ids",
+      },
+    };
+  }
   const dirId = c.dir_ids[0] ?? "";
   const direction_id = dirId
     ? directionIdForDir(input.blueprint, dirId)
@@ -361,9 +406,7 @@ export function buildAdaptiveQuestionPlan(input: {
       scoring_path: input.scoring_path,
       collection_mode: "ordinary",
       question_shape: "single",
-      ...((c as { need_ids?: string[] }).need_ids?.length
-        ? { need_ids: [...(c as { need_ids?: string[] }).need_ids!] }
-        : {}),
+      ...(c.need_ids?.length ? { need_ids: [...c.need_ids] } : {}),
     };
     return {
       plan: shell,
@@ -405,9 +448,7 @@ export function buildAdaptiveQuestionPlan(input: {
     scoring_path: input.scoring_path,
     collection_mode: "ordinary",
     question_shape: "single",
-    ...((c as { need_ids?: string[] }).need_ids?.length
-      ? { need_ids: [...(c as { need_ids?: string[] }).need_ids!] }
-      : {}),
+    ...(c.need_ids?.length ? { need_ids: [...c.need_ids] } : {}),
   };
   const validation = validateScopeDepthBudget({
     blueprint: input.blueprint,

@@ -37,6 +37,8 @@ export type PlanningCandidate = {
   dir_ids: string[];
   ddr_ids: string[];
   fact_role_codes: string[];
+  /** SSOT report information need ids authorizing this ask. */
+  need_ids?: string[];
   source_code?: string;
   impact: {
     decision_critical: boolean;
