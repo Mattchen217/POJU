@@ -41,6 +41,15 @@ import {
   resolveDdrIdsForDir,
 } from "./blueprint";
 import { buildAdaptiveQuestionPlan } from "./question-generation";
+import {
+  bumpCoreAfterMaterialWrite,
+  canAskOrdinary,
+  claimClarification,
+  classifyCollectionMode,
+  confirmClarification,
+  isMaterialDcWrite,
+  reconcileClarificationClaims,
+} from "./budget-ledger";
 import { bumpBudgetAfterAsk, refundIneffectiveQuestion } from "./scope-budget";
 import { buildUnderstandingState, refreshDecisionUnderstanding } from "./understanding-state";
 import { bindPersonalAnalysisProfile } from "./personal-analysis-profile";
@@ -203,11 +212,46 @@ function withUnderstanding(
 
 type DirBasedNeed = Extract<NeedItem, { kind: "dir_based" }>;
 
-function openBlueprintP0P1Needs(understanding: UnderstandingState): DirBasedNeed[] {
+function openBlockingReportNeeds(understanding: UnderstandingState): DirBasedNeed[] {
   return understanding.need_to_understand.items.filter(
-    (n): n is DirBasedNeed =>
-      n.kind === "dir_based" && (n.priority === "P0" || n.priority === "P1"),
+    (n): n is DirBasedNeed => n.kind === "dir_based" && n.must_continue === true,
   );
+}
+
+function sessionWithCoreBudgetAfterMaterialWrite(
+  session: POJUSessionState,
+  applied: {
+    applied: boolean;
+    skipped_reason?: string;
+    fact_ids_written: string[];
+    constraint_ids_written: string[];
+    session: POJUSessionState;
+  },
+  answer_event: AnswerEvent,
+  source_turn_id: string,
+): POJUSessionState {
+  if (!applied.applied || applied.skipped_reason === "turn_already_mapped") {
+    return session;
+  }
+  const dcSession = applied.session;
+  if (
+    !isMaterialDcWrite({
+      fact_ids_written: applied.fact_ids_written,
+      constraint_ids_written: applied.constraint_ids_written,
+      session: dcSession,
+      answer: { classification: answer_event.classification },
+    })
+  ) {
+    return session;
+  }
+  const u = session.decision_understanding;
+  if (!u) return session;
+  const budget = bumpCoreAfterMaterialWrite(u.budget, {
+    source_turn_id,
+    answer_event_id: answer_event.event_id,
+  });
+  if (budget === u.budget) return session;
+  return { ...session, decision_understanding: { ...u, budget } };
 }
 
 function outcomeFromPlanResult(planned: {
@@ -456,11 +500,11 @@ async function continueInvestigationAfterTerminalRefusal(input: {
 }
 
 /**
- * Deterministic Catalog-scoped fallback for an unfinished Blueprint P0/P1 DIR.
+ * Deterministic Catalog-scoped fallback for open blocking report needs (DIR-based).
  * Must still pass DDR association + Blueprint scope/depth/budget/NA via
  * buildAdaptiveQuestionPlan validation — never a free-form substitute.
  */
-function tryCatalogFallbackForOpenP0P1(input: {
+function tryCatalogFallbackForOpenBlocking(input: {
   dc: NonNullable<POJUSessionState["decision_context"]>;
   blueprint: NonNullable<POJUSessionState["decision_blueprint"]>;
   understanding: UnderstandingState;
@@ -468,7 +512,7 @@ function tryCatalogFallbackForOpenP0P1(input: {
   now: string;
   scoring_path: string;
 }): { plan: AdaptiveQuestionPlan | null; last_reject: string | null } {
-  const needs = openBlueprintP0P1Needs(input.understanding).slice().sort((a, b) => {
+  const needs = openBlockingReportNeeds(input.understanding).slice().sort((a, b) => {
     const pr = (p: "P0" | "P1" | "P2") => (p === "P0" ? 0 : p === "P1" ? 1 : 2);
     const d = pr(a.priority) - pr(b.priority);
     if (d !== 0) return d;
@@ -1130,6 +1174,35 @@ async function runAdaptiveQuestionTurnInner(
   input: AdaptiveTurnInput,
 ): Promise<AdaptiveTurnResult> {
   let current = bindPersonalAnalysisProfile(input.session, input.now);
+  const du0 = current.decision_understanding;
+  if (du0) {
+    const sentPlanIds = new Set<string>();
+    if (du0.last_sent_question?.plan_id) {
+      sentPlanIds.add(du0.last_sent_question.plan_id);
+    }
+    if (current.adaptive_ask_plan?.plan_id) {
+      sentPlanIds.add(current.adaptive_ask_plan.plan_id);
+    }
+    for (const claim of du0.budget.clarification_claims ?? []) {
+      if (
+        (claim.status === "confirmed" || claim.status === "claimed") &&
+        claim.plan_id
+      ) {
+        sentPlanIds.add(claim.plan_id);
+      }
+    }
+    const budget = reconcileClarificationClaims(
+      du0.budget,
+      { sent_plan_ids: [...sentPlanIds] },
+      input.now,
+    );
+    if (budget !== du0.budget) {
+      current = {
+        ...current,
+        decision_understanding: { ...du0, budget },
+      };
+    }
+  }
   const buildUnderstanding = (
     args: Parameters<typeof buildUnderstandingState>[0],
   ): UnderstandingState => {
@@ -1533,7 +1606,17 @@ async function runAdaptiveQuestionTurnInner(
           agent_v2: applied.session.agent_v2,
           session_revision: persisted.session.session_revision,
           dc_write_revision: persisted.session.dc_write_revision,
+          decision_understanding:
+            applied.session.decision_understanding ??
+            persisted.session.decision_understanding ??
+            current.decision_understanding,
         };
+        current = sessionWithCoreBudgetAfterMaterialWrite(
+          current,
+          applied,
+          answer_event,
+          input.source_turn_id,
+        );
       }
       if (
         answer_event.classification === "unknown" ||
@@ -1623,8 +1706,8 @@ async function runAdaptiveQuestionTurnInner(
       }
     }
     if (u) {
-      const openP0P1 = openBlueprintP0P1Needs(u);
-      if (openP0P1.length > 0 && u.budget.remaining_hard_budget > 0) {
+      const openBlocking = openBlockingReportNeeds(u);
+      if (openBlocking.length > 0 && u.budget.remaining_hard_budget > 0) {
         const blockedU: UnderstandingState = {
           ...u,
           next_question_plan: null,
@@ -1634,7 +1717,7 @@ async function runAdaptiveQuestionTurnInner(
             can_ask: true,
             reasons: [
               ...u.readiness.reasons,
-              "open_blueprint_p0_p1_obligations",
+              "open_blocking_report_needs",
               "planner_blocked",
               "planner_exception",
             ],
@@ -1721,6 +1804,31 @@ async function planFromState(
     };
   }
 
+  if (!canAskOrdinary(budget)) {
+    const u: UnderstandingState = {
+      ...understanding,
+      budget,
+      next_question_plan: null,
+      readiness: {
+        ...understanding.readiness,
+        verdict: "ready_for_final_confirm",
+        can_ask: false,
+        reasons: [
+          ...understanding.readiness.reasons,
+          "core_effective_answer_cap_reached",
+          "core_budget_exhausted_final_review",
+        ],
+      },
+    };
+    return {
+      session: withUnderstanding(session, u, null, session.intake_ask_plan ?? null),
+      understanding: u,
+      plan: null,
+      authorized_question: null,
+      planner_block: null,
+    };
+  }
+
   const intakeLayer = understanding.current_intake_layer ?? null;
   const candidates = buildIntakeCandidatesFromDc(dc, blueprint).map((c) => {
     const dirId = c.dir_ids[0];
@@ -1794,12 +1902,12 @@ async function planFromState(
     ),
   };
 
-  const openP0P1 = openBlueprintP0P1Needs(understanding);
-  // Catalog P0/P1 fallback must not skip problem/desired gates by injecting detail DIRs.
+  const openBlocking = openBlockingReportNeeds(understanding);
+  // Catalog fallback must not skip problem/desired gates by injecting detail DIRs.
   const earlyIntakeLayer =
     intakeLayer === "problem_understanding" || intakeLayer === "desired_outcome";
-  const protectOpenP0P1 =
-    openP0P1.length > 0 &&
+  const protectOpenBlocking =
+    openBlocking.length > 0 &&
     budget.remaining_hard_budget > 0 &&
     !earlyIntakeLayer;
 
@@ -1817,7 +1925,7 @@ async function planFromState(
         can_ask: true,
         reasons: [
           ...understanding.readiness.reasons,
-          "open_blueprint_p0_p1_obligations",
+          "open_blocking_report_needs",
           "planner_blocked",
           ...extraReasons,
         ],
@@ -1833,7 +1941,7 @@ async function planFromState(
   };
 
   const tryFallbackOrBlock = (reason_code: string, detail: string, extraReasons: string[]) => {
-    const fb = tryCatalogFallbackForOpenP0P1({
+    const fb = tryCatalogFallbackForOpenBlocking({
       dc,
       blueprint,
       understanding,
@@ -1873,7 +1981,7 @@ async function planFromState(
 
   if (!planResult.selected) {
     // M2.3-R2-FU: open P0/P1 + remaining hard budget must not become false completion.
-    if (protectOpenP0P1) {
+    if (protectOpenBlocking) {
       return tryFallbackOrBlock(
         "no_selectable_candidate",
         "open_p0_p1_no_selectable_candidate",
@@ -1978,7 +2086,7 @@ async function planFromState(
     }
     // M2.3-R2-FU: all candidates rejected — preserve exact reason; never false-complete.
     const rejectReason = `scope_budget_reject:${built.validation.reason_code}`;
-    if (protectOpenP0P1) {
+    if (protectOpenBlocking) {
       return tryFallbackOrBlock(
         "all_candidates_rejected",
         `${built.validation.reason_code}:${built.validation.detail}`,
@@ -2022,49 +2130,110 @@ async function planFromState(
   };
 }
 
+/**
+ * SEND_SITE_INVENTORY — user-visible DI2 investigation sends must use
+ * attachAuthorizedAssistantQuestion (budget guard + last_sent_question):
+ * - lib/poju/agent.ts (post-LLM display attach)
+ * - protect / invalid-input paths that re-present the same authorized plan
+ * Clarification plans are attached only through agent after orchestration returns plan.
+ */
+
+export type AttachAuthorizedQuestionResult = {
+  session: POJUSessionState;
+  attached: boolean;
+  block_reason?: string;
+};
+
+export function guardAndAttachAuthorizedQuestion(
+  session: POJUSessionState,
+  plan: AdaptiveQuestionPlan,
+  turnId: string,
+  now: string,
+): AttachAuthorizedQuestionResult {
+  const collection_mode = classifyCollectionMode(plan);
+  const planWithMode: AdaptiveQuestionPlan = {
+    ...plan,
+    collection_mode: plan.collection_mode ?? collection_mode,
+    question_shape: plan.question_shape ?? "single",
+  };
+  const understanding = session.decision_understanding;
+  if (!understanding) {
+    return {
+      session: { ...session, adaptive_ask_plan: planWithMode },
+      attached: true,
+    };
+  }
+  const already =
+    understanding.last_sent_question?.plan_id === planWithMode.plan_id;
+  let budget = understanding.budget;
+
+  if (!already) {
+    if (collection_mode === "clarification") {
+      const claim = claimClarification(budget, planWithMode.plan_id, now);
+      if (!claim.ok) {
+        return {
+          session,
+          attached: false,
+          block_reason: "clarification_allowance_exhausted",
+        };
+      }
+      budget = claim.budget;
+    } else if (!canAskOrdinary(budget)) {
+      return {
+        session,
+        attached: false,
+        block_reason: "core_ordinary_cap_reached",
+      };
+    }
+    budget = bumpBudgetAfterAsk(budget, planWithMode);
+    if (collection_mode === "clarification") {
+      budget = confirmClarification(
+        budget,
+        planWithMode.plan_id,
+        now,
+        turnId,
+      );
+    }
+  }
+
+  return {
+    session: {
+      ...session,
+      adaptive_ask_plan: planWithMode,
+      decision_understanding: {
+        ...understanding,
+        budget,
+        next_question_plan: planWithMode,
+        last_sent_question: {
+          question_text: planWithMode.question_text,
+          plan_id: planWithMode.plan_id,
+          direction_id: planWithMode.direction_id,
+          dir_ids: planWithMode.dir_ids,
+          ddr_ids: planWithMode.ddr_ids,
+          fact_role_codes: [...planWithMode.fact_role_codes],
+          turn_id: turnId,
+          conflict_clarification: planWithMode.conflict_clarification
+            ? {
+                conflict_id: planWithMode.conflict_clarification.conflict_id,
+                fact_ids: [...planWithMode.conflict_clarification.fact_ids],
+              }
+            : null,
+        },
+      },
+    },
+    attached: true,
+  };
+}
+
 /** Mark a plan as actually shown without double-counting (restore same plan_id). */
 export function attachAuthorizedAssistantQuestion(
   session: POJUSessionState,
   plan: AdaptiveQuestionPlan,
   turnId: string,
+  now?: string,
 ): POJUSessionState {
-  const understanding = session.decision_understanding;
-  if (!understanding) {
-    return {
-      ...session,
-      adaptive_ask_plan: plan,
-    };
-  }
-  const already =
-    understanding.last_sent_question?.plan_id === plan.plan_id;
-  const budget = already
-    ? understanding.budget
-    : bumpBudgetAfterAsk(understanding.budget, plan);
-  return {
-    ...session,
-    adaptive_ask_plan: plan,
-    decision_understanding: {
-      ...understanding,
-      budget,
-      next_question_plan: plan,
-      last_sent_question: {
-        question_text: plan.question_text,
-        plan_id: plan.plan_id,
-        direction_id: plan.direction_id,
-        dir_ids: plan.dir_ids,
-        ddr_ids: plan.ddr_ids,
-        // Must come from the actually-sent Plan — never inferred from DIR.required_fact_roles.
-        fact_role_codes: [...plan.fact_role_codes],
-        turn_id: turnId,
-        conflict_clarification: plan.conflict_clarification
-          ? {
-              conflict_id: plan.conflict_clarification.conflict_id,
-              fact_ids: [...plan.conflict_clarification.fact_ids],
-            }
-          : null,
-      },
-    },
-  };
+  const iso = now ?? plan.built_at ?? new Date().toISOString();
+  return guardAndAttachAuthorizedQuestion(session, plan, turnId, iso).session;
 }
 
 function finishPendingFromEvent(
@@ -2543,6 +2712,12 @@ async function handlePendingAnswerResolutionTurn(input: {
           session_revision: persisted.session.session_revision,
           dc_write_revision: persisted.session.dc_write_revision,
         };
+        current = sessionWithCoreBudgetAfterMaterialWrite(
+          current,
+          applied,
+          answer_event,
+          resolving.source_turn_id,
+        );
         persistedOk = true;
       }
     }
@@ -2687,31 +2862,39 @@ async function applyAndPersistIntakeControlAnswer(input: {
         persist_error: persisted.error ?? "persist_failed",
       };
     }
-    return {
-      ok: true,
-      session: {
-        ...applied.session,
-        ...persisted.session,
-        decision_context:
-          persisted.session.decision_context ?? applied.session.decision_context,
-        decision_context_versions:
-          persisted.session.decision_context_versions ??
-          applied.session.decision_context_versions,
-        decision_context_idempotency_keys:
-          persisted.session.decision_context_idempotency_keys ??
-          applied.session.decision_context_idempotency_keys,
-        control_plane:
-          persisted.session.control_plane ?? applied.session.control_plane,
-        decision_blueprint: applied.session.decision_blueprint,
-        messages: applied.session.messages,
-        agent_v2: applied.session.agent_v2,
-        session_revision: persisted.session.session_revision,
-        dc_write_revision: persisted.session.dc_write_revision,
-        pending_intake_control:
-          applied.session.pending_intake_control ??
-          persisted.session.pending_intake_control,
-      },
+    let merged: POJUSessionState = {
+      ...applied.session,
+      ...persisted.session,
+      decision_context:
+        persisted.session.decision_context ?? applied.session.decision_context,
+      decision_context_versions:
+        persisted.session.decision_context_versions ??
+        applied.session.decision_context_versions,
+      decision_context_idempotency_keys:
+        persisted.session.decision_context_idempotency_keys ??
+        applied.session.decision_context_idempotency_keys,
+      control_plane:
+        persisted.session.control_plane ?? applied.session.control_plane,
+      decision_blueprint: applied.session.decision_blueprint,
+      messages: applied.session.messages,
+      agent_v2: applied.session.agent_v2,
+      session_revision: persisted.session.session_revision,
+      dc_write_revision: persisted.session.dc_write_revision,
+      pending_intake_control:
+        applied.session.pending_intake_control ??
+        persisted.session.pending_intake_control,
+      decision_understanding:
+        applied.session.decision_understanding ??
+        persisted.session.decision_understanding ??
+        input.current.decision_understanding,
     };
+    merged = sessionWithCoreBudgetAfterMaterialWrite(
+      merged,
+      applied,
+      input.answer_event,
+      input.source_turn_id,
+    );
+    return { ok: true, session: merged };
   } catch (e) {
     return {
       ok: false,

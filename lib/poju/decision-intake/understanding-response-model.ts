@@ -880,37 +880,35 @@ export function applyUnderstandingModelToState(
   plan: AdaptiveQuestionPlan | null,
   output: DecisionUnderstandingModelOutput,
 ): { understanding: UnderstandingState; plan: AdaptiveQuestionPlan | null } {
-  const needItems = understanding.need_to_understand.items.map((item, idx) => {
-    const overlay = output.need_to_understand[idx];
+  const needItems = understanding.need_to_understand.items.map((item) => {
+    const overlay = output.need_to_understand.find((n) => {
+      const dirIds = n.related_dir_ids ?? [];
+      if (item.kind === "dir_based" && dirIds.includes(item.dir_id)) return true;
+      if (
+        item.need_id &&
+        (n as { need_id?: string }).need_id === item.need_id
+      ) {
+        return true;
+      }
+      return false;
+    });
     if (!overlay) return item;
     if (item.kind === "dir_based") {
       return {
         ...item,
         why: overlay.why_it_matters || item.why,
         missing_content: overlay.label || item.missing_content,
+        must_continue: item.must_continue,
       };
     }
     return {
       ...item,
       why: overlay.label || overlay.why_it_matters || item.why,
+      must_continue: item.must_continue,
     };
   });
 
-  const projectedNeeds =
-    needItems.length > 0
-      ? needItems
-      : output.need_to_understand.slice(0, 8).map((n, i) => ({
-          kind: "source_only" as const,
-          ddr_id: `model_need_${i}`,
-          source_code: "model_need",
-          source_state: "missing" as const,
-          priority: n.priority,
-          why: n.label || n.why_it_matters,
-          may_affect_p5_ranking: n.priority !== "P2",
-          gap_type: "source_pending" as const,
-          user_askable: true,
-          must_continue: n.necessity === "required",
-        }));
+  const projectedNeeds = needItems;
 
   const labelOverlays = output.understood_labels
     .map((item) => ({

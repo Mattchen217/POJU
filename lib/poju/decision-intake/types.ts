@@ -466,6 +466,10 @@ export type NeedItem =
       may_affect_p5_ranking: boolean;
       gap_type: "unknown" | "partial" | "conflict" | "declined";
       must_continue: boolean;
+      need_id?: string;
+      necessity?: string;
+      report_unit_ids?: string[];
+      source_kind?: string;
     }
   | {
       kind: "source_only";
@@ -478,6 +482,10 @@ export type NeedItem =
       gap_type: "source_pending";
       user_askable: boolean;
       must_continue: boolean;
+      need_id?: string;
+      necessity?: string;
+      report_unit_ids?: string[];
+      source_kind?: string;
     };
 
 export type PersonalPatternInsightBlock = {
@@ -519,6 +527,11 @@ export type AdaptiveQuestionPlan = {
   scoring_path: string;
   /** Exact Conflict addressed by this plan, if any. Scheduling metadata only. */
   conflict_clarification?: ConflictClarificationTarget | null;
+  /** Budget category only — not bundle shape. */
+  collection_mode?: "ordinary" | "clarification";
+  question_shape?: "single" | "bundle";
+  need_ids?: string[];
+  report_unit_ids?: string[];
 };
 
 export type PendingAnswerResolutionStatus = "pending" | "rejected";
@@ -589,6 +602,25 @@ export type SessionBudgetSnapshot = {
   depth_by_dir: Record<string, number>;
   /** Sent plans refunded because the answer carried no usable information. */
   ineffective_plan_ids?: string[];
+  core_effective_answer_rounds?: number;
+  clarification_rounds?: number;
+  complexity_band?: "simple" | "medium" | "complex";
+  core_round_hard_cap?: number;
+  clarification_allowance?: number;
+  budget_migration_version?: "1";
+  budget_migration_evidence?: string;
+  core_counted_source_turn_ids?: string[];
+  core_counted_answer_event_ids?: string[];
+  clarification_claims?: Array<{
+    plan_id: string;
+    status: "claimed" | "confirmed" | "released";
+    claimed_at: string;
+    confirmed_at?: string;
+    released_at?: string;
+    send_event_id?: string;
+    boundary_reason?: string;
+  }>;
+  complexity_reasons?: string[];
 };
 
 export type ReadinessSnapshot = {
@@ -651,6 +683,9 @@ export type UnderstandingState = {
       status: string;
       missing_dir_ids: string[];
       asks_user: boolean;
+      unit_id?: string;
+      need_ids?: string[];
+      resolution?: string;
     }>;
   };
   understood: { items: UnderstoodItem[] };

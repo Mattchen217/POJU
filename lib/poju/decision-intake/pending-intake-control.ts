@@ -269,6 +269,7 @@ export function buildIntakeControlPlan(input: {
     built_at: input.now,
     scoring_path: `pending_intake_control→deterministic_${item.kind}`,
     conflict_clarification: null,
+    collection_mode: "clarification",
   };
 }
 

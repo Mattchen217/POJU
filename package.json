@@ -208,6 +208,7 @@
     "test:di2-understanding-adaptive-engine-alignment": "tsx scripts/test-di2-understanding-adaptive-engine-alignment.ts",
     "test:di2-understanding-answer-interpretation-context": "tsx scripts/test-di2-understanding-answer-interpretation-context.ts",
     "test:di2-browser-authoritative-chat-integration": "tsx --require ./scripts/fixtures/register-server-only.cjs scripts/test-di2-browser-authoritative-chat-integration.ts",
+    "test:di2-report-information-needs": "tsx scripts/test-di2-report-information-needs.ts",
     "test:deliverable-skeleton": "tsx scripts/test-deliverable-skeleton.ts",
     "test:m5-r1-authorization": "tsx scripts/test-m5-r1-authorization.ts",
     "test:m5-r1-fu1": "tsx scripts/test-m5-r1-authorization.ts --only=FU1",

@@ -94,6 +94,7 @@ export function bindConflictClarificationToPlan(
   return {
     ...plan,
     conflict_clarification: target,
+    collection_mode: "clarification",
     question_text: clarificationQuestionText(facts),
   };
 }
@@ -133,6 +134,7 @@ export function planForSameConflictClarification(
       conflict_id: target.conflict_id,
       fact_ids: [...target.fact_ids],
     },
+    collection_mode: "clarification",
     question_text: clarificationQuestionText(facts),
   };
 }

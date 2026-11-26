@@ -9,6 +9,7 @@ import {
   DDR_CATALOG_V1_ENTRIES,
   DIR_TO_DDR_INDEX_V1,
 } from "@/lib/poju/decision-context/catalog/ddr-catalog.v1";
+import { reportInformationNeedsForDirIds } from "./report-information-needs.v1";
 
 /** Scheduling layers for report-driven intake (Q&A focus, not a second fact store). */
 export type IntakeLayerFocus =
@@ -39,10 +40,18 @@ function sectionsForDir(dirId: string): {
   pages: DecisionPageId[];
   sections: string[];
   ddr_ids: string[];
+  report_units: string[];
 } {
+  const needs = reportInformationNeedsForDirIds([dirId]);
+  const report_units = [
+    ...new Set(needs.flatMap((n) => [...n.served_by_units])),
+  ];
+  const pagesFromUnits = report_units
+    .map((u) => u.split(":")[0] as DecisionPageId)
+    .filter((p) => p);
   const ddrIds = [...(DIR_TO_DDR_INDEX_V1.get(dirId) ?? [])];
-  const pages: DecisionPageId[] = [];
-  const sections: string[] = [];
+  const pages: DecisionPageId[] = [...pagesFromUnits];
+  const sections: string[] = [...report_units];
   for (const ddrId of ddrIds) {
     const ddr = DDR_CATALOG_V1_ENTRIES.find((e) => e.ddr_id === ddrId);
     if (!ddr) continue;
@@ -51,7 +60,7 @@ function sectionsForDir(dirId: string): {
     const sectionKey = `${ddr.report_page_id}:${ddr.report_section_id}`;
     if (!sections.includes(sectionKey)) sections.push(sectionKey);
   }
-  return { pages, sections, ddr_ids: ddrIds };
+  return { pages, sections, ddr_ids: ddrIds, report_units };
 }
 
 function mapping(
@@ -290,8 +299,10 @@ export function formatReportPurposeForPrompt(
   report_pages: DecisionPageId[];
   report_section_ids: string[];
   ddr_ids: string[];
+  report_units: string[];
   report_purpose: string;
   required_precondition: boolean;
+  need_ssot_lines?: string[];
 } {
   const hits = dirIds
     .map((id) => BY_DIR.get(id))
@@ -303,6 +314,7 @@ export function formatReportPurposeForPrompt(
       report_pages: [],
       report_section_ids: [],
       ddr_ids: [],
+      report_units: [],
       report_purpose: "",
       required_precondition: false,
     };
@@ -319,15 +331,38 @@ export function formatReportPurposeForPrompt(
     hits.find((h) => h.intake_layer === "desired_outcome")?.intake_layer ??
     hits.find((h) => h.intake_layer === "problem_understanding")?.intake_layer ??
     hits[0]!.intake_layer;
+  const ssotNeeds = reportInformationNeedsForDirIds(dirIds);
+  const report_units = [
+    ...new Set(ssotNeeds.flatMap((n) => [...n.served_by_units])),
+  ];
+  const need_ssot_lines = ssotNeeds.map((n) => {
+    const parts = [
+      n.need_id,
+      `units=${n.served_by_units.join(",")}`,
+      `necessity=${n.necessity}`,
+      `source=${n.source_kind}`,
+      `ask=${n.ask_policy}`,
+      `missing=${n.missing_behavior}`,
+    ];
+    if (n.sufficient_when_zh) parts.push(`sufficient_when=${n.sufficient_when_zh}`);
+    return parts.join(" · ");
+  });
+  const purposeBase = hits
+    .map((h) => (isZh ? h.report_purpose_zh : h.report_purpose_en))
+    .join(" · ");
+  const report_purpose =
+    need_ssot_lines.length > 0
+      ? `${purposeBase}\n${need_ssot_lines.join("\n")}`
+      : purposeBase;
   return {
     layer,
     intake_layer,
     report_pages: pages,
     report_section_ids: sections,
     ddr_ids,
-    report_purpose: hits
-      .map((h) => (isZh ? h.report_purpose_zh : h.report_purpose_en))
-      .join(" · "),
+    report_units,
+    report_purpose,
     required_precondition: hits.some((h) => h.required_precondition),
+    need_ssot_lines,
   };
 }

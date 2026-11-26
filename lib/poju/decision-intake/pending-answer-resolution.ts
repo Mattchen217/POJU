@@ -661,6 +661,7 @@ export function buildClarificationPlan(input: {
     built_at: input.now,
     scoring_path: `pending_answer_resolution→deterministic_${item.reason}`,
     conflict_clarification: null,
+    collection_mode: "clarification",
   };
 }
 

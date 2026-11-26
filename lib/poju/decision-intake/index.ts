@@ -59,6 +59,8 @@ export {
 export {
   runAdaptiveQuestionTurn,
   attachAuthorizedAssistantQuestion,
+  guardAndAttachAuthorizedQuestion,
+  type AttachAuthorizedQuestionResult,
 } from "./adaptive-turn";
 export {
   bootstrapFreshSessionMainLoop,
@@ -82,6 +84,21 @@ export {
   buildIntakeLayerGateSnapshot,
 } from "./intake-layer-gates";
 export { computeReportSectionCoverage } from "./report-section-coverage";
+export {
+  GLOBAL_CORE_SPENT_CEILING,
+  CLARIFICATION_ALLOWANCE,
+  isMaterialDcWrite,
+  bumpCoreAfterMaterialWrite,
+  repairCoreLedgerFromDc,
+  migrateSessionBudget,
+  claimClarification,
+  confirmClarification,
+  releaseClarification,
+  reconcileClarificationClaims,
+  canAskOrdinary,
+  ensureComplexityBand,
+  classifyCollectionMode,
+} from "./budget-ledger";
 export { seedOpeningAssertedFacts, matchOpeningClaims } from "./opening-asserted-facts";
 export {
   applyIntakeProtection,

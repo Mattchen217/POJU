@@ -17,7 +17,19 @@ import {
 } from "@/lib/poju/decision-context/catalog";
 import { dirIntakeAnswerCoverage } from "./intake-answer-coverage";
 import { buildIntakeLayerGateSnapshot } from "./intake-layer-gates";
-import { computeReportSectionCoverage } from "./report-section-coverage";
+import {
+  computeReportSectionCoverage,
+  isDirBlockingNeedActive,
+} from "./report-section-coverage";
+import {
+  canAskOrdinary,
+  ensureComplexityBand,
+  migrateSessionBudget,
+} from "./budget-ledger";
+import {
+  classifyDecisionIntakeComplexity,
+  reportInformationNeedById,
+} from "./report-information-needs.v1";
 import type {
   AdaptiveQuestionPlan,
   DecisionBlueprint,
@@ -29,6 +41,27 @@ import type {
 } from "./types";
 import { evaluateQaPersonalPatternInsight } from "./personal-analysis-profile";
 
+function complexitySignalsFromSession(
+  session: POJUSessionState,
+  blueprint: DecisionBlueprint,
+): Parameters<typeof classifyDecisionIntakeComplexity>[0] {
+  const dc = session.decision_context;
+  const openConflicts =
+    (dc?.conflicts ?? []).some((c) => c.state === "open") ?? false;
+  const optionFacts = (dc?.reality_facts ?? []).filter((f) =>
+    (f.related_dir_ids ?? []).includes("DIR-OPT-ON-TABLE"),
+  );
+  let option_count = 2;
+  if (optionFacts.length >= 4) option_count = 4;
+  else if (optionFacts.length >= 3) option_count = 3;
+  const high_stakes = blueprint.dir_ids.includes("DIR-DEF-STAKES");
+  const irreversible =
+    blueprint.dir_ids.includes("DIR-OPT-IRREV") ||
+    blueprint.dir_ids.includes("DIR-EXIT-CRITERIA");
+  const multi_topic = blueprint.page_07_emit === true;
+  return { option_count, high_stakes, irreversible, multi_topic, open_conflicts: openConflicts };
+}
+
 export function defaultBudget(
   session: POJUSessionState,
   blueprint: DecisionBlueprint,
@@ -37,7 +70,7 @@ export function defaultBudget(
   const soft = blueprint.question_budget.soft;
   const hard = blueprint.question_budget.hard;
   const session_asked_count = prev?.session_asked_count ?? 0;
-  return {
+  const seed: SessionBudgetSnapshot = {
     soft_budget_limit: soft,
     hard_budget_limit: hard,
     session_asked_count,
@@ -48,6 +81,51 @@ export function defaultBudget(
     ...(prev?.ineffective_plan_ids?.length
       ? { ineffective_plan_ids: [...prev.ineffective_plan_ids] }
       : {}),
+    ...(prev?.core_effective_answer_rounds != null
+      ? { core_effective_answer_rounds: prev.core_effective_answer_rounds }
+      : {}),
+    ...(prev?.clarification_rounds != null
+      ? { clarification_rounds: prev.clarification_rounds }
+      : {}),
+    ...(prev?.complexity_band ? { complexity_band: prev.complexity_band } : {}),
+    ...(prev?.core_round_hard_cap != null
+      ? { core_round_hard_cap: prev.core_round_hard_cap }
+      : {}),
+    ...(prev?.clarification_allowance != null
+      ? { clarification_allowance: prev.clarification_allowance }
+      : {}),
+    ...(prev?.budget_migration_version
+      ? { budget_migration_version: prev.budget_migration_version }
+      : {}),
+    ...(prev?.budget_migration_evidence
+      ? { budget_migration_evidence: prev.budget_migration_evidence }
+      : {}),
+    ...(prev?.core_counted_source_turn_ids?.length
+      ? { core_counted_source_turn_ids: [...prev.core_counted_source_turn_ids] }
+      : {}),
+    ...(prev?.core_counted_answer_event_ids?.length
+      ? { core_counted_answer_event_ids: [...prev.core_counted_answer_event_ids] }
+      : {}),
+    ...(prev?.clarification_claims?.length
+      ? { clarification_claims: [...prev.clarification_claims] }
+      : {}),
+    ...(prev?.complexity_reasons?.length
+      ? { complexity_reasons: [...prev.complexity_reasons] }
+      : {}),
+  };
+  let budget = migrateSessionBudget(seed, session.decision_context, {
+    session_asked_count,
+  });
+  budget = ensureComplexityBand(
+    budget,
+    classifyDecisionIntakeComplexity(complexitySignalsFromSession(session, blueprint)),
+  );
+  return {
+    ...budget,
+    soft_budget_limit: soft,
+    hard_budget_limit: hard,
+    session_asked_count,
+    remaining_hard_budget: Math.max(0, hard - session_asked_count),
   };
 }
 
@@ -327,6 +405,12 @@ export function buildUnderstandingState(input: {
       missingRoles.length > 0
         ? `missing_roles:${missingRoles.join(",")}; ${dir.need}`
         : dir.need;
+    const ssotNeed = reportInformationNeedById(`need:dc:${dir.dir_id}`);
+    const must_continue = isDirBlockingNeedActive(
+      dir.dir_id,
+      dc,
+      input.blueprint,
+    );
     needs.push({
       kind: "dir_based",
       dir_id: dir.dir_id,
@@ -337,7 +421,15 @@ export function buildUnderstandingState(input: {
       missing_content,
       may_affect_p5_ranking: ranking,
       gap_type,
-      must_continue: ranking || priority === "P0" || priority === "P1",
+      must_continue,
+      ...(ssotNeed
+        ? {
+            need_id: ssotNeed.need_id,
+            necessity: ssotNeed.necessity,
+            report_unit_ids: [...ssotNeed.served_by_units],
+            source_kind: ssotNeed.source_kind,
+          }
+        : {}),
     });
   }
 
@@ -361,6 +453,8 @@ export function buildUnderstandingState(input: {
     if (ddr_ids.length === 0) continue;
     const priority =
       gate?.gate_class ?? direction?.priority ?? "P2";
+    const ssotNeed = reportInformationNeedById(`need:dc:${dirId}`);
+    const must_continue = isDirBlockingNeedActive(dirId, dc, input.blueprint);
     needs.push({
       kind: "dir_based",
       dir_id: dirId,
@@ -372,7 +466,15 @@ export function buildUnderstandingState(input: {
       may_affect_p5_ranking:
         gate?.may_affect_p5_ranking ?? direction?.priority === "P0",
       gap_type: "unknown",
-      must_continue: (gate?.may_affect_p5_ranking ?? false) || priority === "P0" || priority === "P1",
+      must_continue,
+      ...(ssotNeed
+        ? {
+            need_id: ssotNeed.need_id,
+            necessity: ssotNeed.necessity,
+            report_unit_ids: [...ssotNeed.served_by_units],
+            source_kind: ssotNeed.source_kind,
+          }
+        : {}),
     });
   }
 
@@ -407,12 +509,9 @@ export function buildUnderstandingState(input: {
   const hasCollectingEvidence =
     (dc.reality_facts?.length ?? 0) > 0 || (dc.constraints?.length ?? 0) > 0;
 
-  const openPriorityBandNeeds = needs.filter(
-    (n) =>
-      n.kind === "dir_based" &&
-      (n.priority === "P0" || n.priority === "P1"),
+  const openBlockingNeeds = needs.filter(
+    (n) => n.must_continue,
   );
-  const hasOpenP0OrP1 = openPriorityBandNeeds.length > 0;
 
   const sufficiency = evaluateDecisionSufficiency(dc);
   const report_coverage = computeReportSectionCoverage({
@@ -426,6 +525,7 @@ export function buildUnderstandingState(input: {
     previous_layer: prev?.current_intake_layer ?? null,
   });
   const remaining = budget.remaining_hard_budget;
+  const ordinaryAskAllowed = canAskOrdinary(budget);
   let readiness_verdict: UnderstandingState["readiness"]["verdict"] = "continue";
   let can_ask = true;
   const reasons = [...sufficiency.reasons];
@@ -440,10 +540,21 @@ export function buildUnderstandingState(input: {
   } else {
     reasons.push("desired_outcome_gate_passed");
   }
+  if (!ordinaryAskAllowed) {
+    can_ask = false;
+    reasons.push("core_effective_answer_cap_reached");
+  }
   if (remaining <= 0) {
     readiness_verdict = "hard_budget_exhausted";
     can_ask = false;
     reasons.push("hard_budget_exhausted");
+  } else if (
+    !ordinaryAskAllowed &&
+    layerGates.current_intake_layer !== "problem_understanding" &&
+    layerGates.current_intake_layer !== "desired_outcome"
+  ) {
+    readiness_verdict = "ready_for_final_confirm";
+    reasons.push("core_budget_exhausted_final_review");
   } else if (layerGates.current_intake_layer === "final_understanding_review") {
     readiness_verdict = "ready_for_final_confirm";
     can_ask = false;
@@ -454,12 +565,14 @@ export function buildUnderstandingState(input: {
   ) {
     // Layer gates force continue; do not jump to detail P0/P1 or false-complete.
     readiness_verdict = "continue";
-    can_ask = true;
+    can_ask = ordinaryAskAllowed && remaining > 0;
     reasons.push("intake_layer_gate_continue");
-  } else if (hasOpenP0OrP1 || report_coverage.missing_required_count > 0) {
+  } else if (openBlockingNeeds.length > 0 || report_coverage.missing_required_count > 0) {
     readiness_verdict = "continue";
-    can_ask = true;
-    if (hasOpenP0OrP1) reasons.push("open_blueprint_p0_p1_obligations");
+    can_ask = ordinaryAskAllowed && remaining > 0;
+    if (openBlockingNeeds.length > 0) {
+      reasons.push("open_blocking_report_needs");
+    }
     if (report_coverage.missing_required_count > 0) {
       reasons.push("report_required_sections_missing");
     }
@@ -579,6 +692,9 @@ export function buildUnderstandingState(input: {
         status: i.status,
         missing_dir_ids: i.missing_dir_ids,
         asks_user: i.asks_user,
+        ...(i.unit_id ? { unit_id: i.unit_id } : {}),
+        ...(i.need_ids?.length ? { need_ids: i.need_ids } : {}),
+        ...(i.resolution ? { resolution: i.resolution } : {}),
       })),
     },
     understood: { items: understood },

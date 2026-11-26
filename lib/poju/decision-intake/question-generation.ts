@@ -359,6 +359,11 @@ export function buildAdaptiveQuestionPlan(input: {
       question_text: "",
       built_at: input.now,
       scoring_path: input.scoring_path,
+      collection_mode: "ordinary",
+      question_shape: "single",
+      ...((c as { need_ids?: string[] }).need_ids?.length
+        ? { need_ids: [...(c as { need_ids?: string[] }).need_ids!] }
+        : {}),
     };
     return {
       plan: shell,
@@ -398,6 +403,11 @@ export function buildAdaptiveQuestionPlan(input: {
     question_text,
     built_at: input.now,
     scoring_path: input.scoring_path,
+    collection_mode: "ordinary",
+    question_shape: "single",
+    ...((c as { need_ids?: string[] }).need_ids?.length
+      ? { need_ids: [...(c as { need_ids?: string[] }).need_ids!] }
+      : {}),
   };
   const validation = validateScopeDepthBudget({
     blueprint: input.blueprint,
