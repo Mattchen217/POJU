@@ -248,7 +248,12 @@ const DIR_NEEDS: readonly ReportInformationNeed[] = [
   }),
   buildDirNeed({
     dir_id: "DIR-OPT-ON-TABLE",
-    served_by_units: [unitId("01", "A"), unitId("05", "A"), unitId("01", "D")],
+    served_by_units: [
+      unitId("01", "A"),
+      unitId("05", "A"),
+      unitId("05", "B"),
+      unitId("01", "D"),
+    ],
     collection_cluster: "options_and_tradeoffs",
     decision_materiality: "decision_critical",
     necessity: "required",
@@ -405,7 +410,7 @@ const DIR_NEEDS: readonly ReportInformationNeed[] = [
   }),
   buildDirNeed({
     dir_id: "DIR-VALIDATION-CAPACITY",
-    served_by_units: [unitId("06", "A")],
+    served_by_units: [unitId("06", "A"), unitId("06", "C")],
     collection_cluster: "validation_and_execution",
     decision_materiality: "ranking_relevant",
     necessity: "required",
@@ -441,7 +446,7 @@ const DIR_NEEDS: readonly ReportInformationNeed[] = [
     missing_behavior: "preserve_boundary",
     sufficient_when_zh: "职业主题下角色/薪酬/组织条件已知或边界已记录",
     applicability: "page_07_topic_active",
-    readiness_effect: "block_when_page_active",
+    readiness_effect: "never_block",
     description_zh: "工作机会与角色条件",
     why_it_matters_zh: "07 职业主题场域判断的证据",
   }),
@@ -455,7 +460,7 @@ const DIR_NEEDS: readonly ReportInformationNeed[] = [
     missing_behavior: "preserve_boundary",
     sufficient_when_zh: "创业主题下商业模式与依赖已知或边界已记录",
     applicability: "page_07_topic_active",
-    readiness_effect: "block_when_page_active",
+    readiness_effect: "never_block",
     description_zh: "商业模式与关键依赖",
     why_it_matters_zh: "07 创业主题场域判断的证据",
   }),
@@ -469,7 +474,7 @@ const DIR_NEEDS: readonly ReportInformationNeed[] = [
     missing_behavior: "preserve_boundary",
     sufficient_when_zh: "关系互动与边界动态已述或边界已记录",
     applicability: "page_07_topic_active",
-    readiness_effect: "block_when_page_active",
+    readiness_effect: "never_block",
     description_zh: "关系互动与边界动态",
     why_it_matters_zh: "07 关系主题的场域与互动段落",
   }),
@@ -483,7 +488,7 @@ const DIR_NEEDS: readonly ReportInformationNeed[] = [
     missing_behavior: "preserve_boundary",
     sufficient_when_zh: "迁移主题下落地约束已知或边界已记录",
     applicability: "page_07_topic_active",
-    readiness_effect: "block_when_page_active",
+    readiness_effect: "never_block",
     description_zh: "搬迁与落地约束",
     why_it_matters_zh: "07 迁移主题场域判断",
   }),
@@ -497,7 +502,7 @@ const DIR_NEEDS: readonly ReportInformationNeed[] = [
     missing_behavior: "preserve_boundary",
     sufficient_when_zh: "教育/发展路径条件已知或边界已记录",
     applicability: "page_07_topic_active",
-    readiness_effect: "block_when_page_active",
+    readiness_effect: "never_block",
     description_zh: "教育与发展路径条件",
     why_it_matters_zh: "07 教育主题场域判断",
   }),
@@ -639,7 +644,8 @@ const SYNTHETIC_NEEDS: readonly ReportInformationNeed[] = [
     decision_materiality: "supporting",
     source_kind: "decision_context",
     necessity: "conditional",
-    ask_policy: "ask_if_material",
+    // Collected via conflict-clarification path, not ordinary DIR AQE candidates.
+    ask_policy: "never",
     missing_behavior: "omit_specific_claim",
     sufficient_when_zh: "开放冲突或相关假设已记录",
     applicability: "model_judged",
@@ -678,7 +684,8 @@ const SYNTHETIC_NEEDS: readonly ReportInformationNeed[] = [
     readiness_effect: "never_block",
     description_zh: "用户真实经历与实际表现",
     why_it_matters_zh: "缺少事实时不推断行为",
-    dir_ids: [],
+    // Same collect path as past attempts / lived experience DIR.
+    dir_ids: ["DIR-PAST-ATTEMPTS"],
   }),
   synthNeed({
     need_id: "need:derived:04d-leverage",
@@ -719,13 +726,14 @@ const SYNTHETIC_NEEDS: readonly ReportInformationNeed[] = [
     decision_materiality: "ranking_relevant",
     source_kind: "decision_context",
     necessity: "conditional",
-    ask_policy: "ask_if_material",
-    missing_behavior: "omit_specific_claim",
+    // Real options are collected only via DIR-OPT-ON-TABLE (unit 05:B now served by that DIR).
+    ask_policy: "never",
+    missing_behavior: "derive_from_upstream",
     sufficient_when_zh: "存在真实替代选项或用户确认仅一条现实路径",
     applicability: "model_judged",
     readiness_effect: "never_block",
     description_zh: "真实替代选项",
-    why_it_matters_zh: "不能为凑数编造机会",
+    why_it_matters_zh: "不能为凑数编造机会；与 DIR-OPT-ON-TABLE 同一收集路径",
     dir_ids: [],
   }),
   synthNeed({
@@ -758,7 +766,7 @@ const SYNTHETIC_NEEDS: readonly ReportInformationNeed[] = [
     readiness_effect: "never_block",
     description_zh: "选项之间的真实冲突",
     why_it_matters_zh: "无冲突时不制造慎选路径",
-    dir_ids: [],
+    dir_ids: ["DIR-OPT-ON-TABLE"],
   }),
   synthNeed({
     need_id: "need:default:05d-qualitative-exit",
@@ -854,7 +862,7 @@ const SYNTHETIC_NEEDS: readonly ReportInformationNeed[] = [
     readiness_effect: "never_block",
     description_zh: "真实执行经历与困难",
     why_it_matters_zh: "自我调节 optional，禁止固定人格标签",
-    dir_ids: [],
+    dir_ids: ["DIR-VALIDATION-CAPACITY"],
   }),
   synthNeed({
     need_id: "need:pa:06c-self-regulation",
@@ -902,7 +910,7 @@ const SYNTHETIC_NEEDS: readonly ReportInformationNeed[] = [
     readiness_effect: "never_block",
     description_zh: "用户观察到的关系互动",
     why_it_matters_zh: "不要求他人命盘补洞",
-    dir_ids: [],
+    dir_ids: ["DIR-REL-DYNAMICS"],
   }),
   synthNeed({
     need_id: "need:local:07b-counterparty-profile",
@@ -1062,7 +1070,11 @@ const NEED_IDS_BY_UNIT: Record<string, readonly string[]> = {
     dcNeedId("DIR-OPT-IRREV"),
     "need:pa:05a-ranking-context",
   ],
-  "05:B": ["need:dc:05b-alternative-options", "need:derived:05b-stage-strategy"],
+  "05:B": [
+    dcNeedId("DIR-OPT-ON-TABLE"),
+    "need:dc:05b-alternative-options",
+    "need:derived:05b-stage-strategy",
+  ],
   "05:C": [
     dcNeedId("DIR-DEF-UNACCEPTABLE"),
     dcNeedId("DIR-OPT-CONSTRAINTS"),
@@ -1083,7 +1095,11 @@ const NEED_IDS_BY_UNIT: Record<string, readonly string[]> = {
     dcNeedId("DIR-VALIDATION-CAPACITY"),
   ],
   "06:B": ["need:local:06b-da-yun", "need:local:06b-ziwei-stage"],
-  "06:C": ["need:dc:06c-execution-experience", "need:pa:06c-self-regulation"],
+  "06:C": [
+    dcNeedId("DIR-VALIDATION-CAPACITY"),
+    "need:dc:06c-execution-experience",
+    "need:pa:06c-self-regulation",
+  ],
   "06:D": ["need:default:06d-rhythm", dcNeedId("DIR-TIMING-WINDOW")],
   "07:A": [
     dcNeedId("DIR-JOB-OFFER"),
@@ -1263,6 +1279,89 @@ export function formatReportInformationNeedsForPrompt(
   return lines.join("\n");
 }
 
+const BOUNDARY_COMPLEXITY_STATUSES = new Set([
+  "unknown",
+  "declined",
+  "not_applicable",
+  "unverified",
+]);
+
+function materialStatementsForDir(
+  dc: {
+    reality_facts?: ReadonlyArray<{
+      statement?: string;
+      status?: string;
+      related_dir_ids?: string[] | null;
+    }>;
+    constraints?: ReadonlyArray<{
+      statement?: string;
+      status?: string;
+      related_dir_ids?: string[] | null;
+    }>;
+  } | null | undefined,
+  dirId: string,
+): string[] {
+  const out: string[] = [];
+  for (const f of dc?.reality_facts ?? []) {
+    if (!(f.related_dir_ids ?? []).includes(dirId)) continue;
+    if (f.status && BOUNDARY_COMPLEXITY_STATUSES.has(f.status)) continue;
+    const s = f.statement?.trim();
+    if (s) out.push(s);
+  }
+  for (const c of dc?.constraints ?? []) {
+    if (!(c.related_dir_ids ?? []).includes(dirId)) continue;
+    if (c.status && BOUNDARY_COMPLEXITY_STATUSES.has(c.status)) continue;
+    const s = c.statement?.trim();
+    if (s) out.push(s);
+  }
+  return out;
+}
+
+/**
+ * Complexity signals from durable decision materials — never from Blueprint DIR
+ * inventory alone (always-on DDRs would otherwise force medium+ for every session).
+ */
+export function complexitySignalsFromDecisionMaterials(input: {
+  dc?: {
+    reality_facts?: ReadonlyArray<{
+      statement?: string;
+      status?: string;
+      related_dir_ids?: string[] | null;
+    }>;
+    constraints?: ReadonlyArray<{
+      statement?: string;
+      status?: string;
+      related_dir_ids?: string[] | null;
+    }>;
+    conflicts?: ReadonlyArray<{ state?: string }>;
+  } | null;
+  /** True only when this session actually activates Page07 topic packs. */
+  page_07_emit?: boolean;
+}): DecisionIntakeComplexitySignals {
+  const dc = input.dc;
+  const optionStatements = new Set(
+    materialStatementsForDir(dc, "DIR-OPT-ON-TABLE"),
+  );
+  let option_count = 2;
+  if (optionStatements.size >= 4) option_count = 4;
+  else if (optionStatements.size >= 3) option_count = 3;
+
+  const high_stakes = materialStatementsForDir(dc, "DIR-DEF-STAKES").length > 0;
+  const irreversible =
+    materialStatementsForDir(dc, "DIR-OPT-IRREV").length > 0 ||
+    materialStatementsForDir(dc, "DIR-EXIT-CRITERIA").length > 0;
+  const open_conflicts = (dc?.conflicts ?? []).some((c) => c.state === "open");
+  const multi_topic = input.page_07_emit === true;
+
+  return {
+    option_count,
+    high_stakes,
+    irreversible,
+    multi_topic,
+    open_conflicts,
+  };
+}
+
 export function classifyDecisionIntakeComplexity(
   signals: DecisionIntakeComplexitySignals,
 ): IntakeComplexityDecision {
@@ -1365,6 +1464,23 @@ export function assertReportInformationNeedsIntegrity(): void {
       need.source_kind !== "decision_context"
     ) {
       throw new Error(`Only DC may block_when_missing: ${need.need_id}`);
+    }
+    if (
+      need.source_kind === "decision_context" &&
+      need.ask_policy === "ask_if_material" &&
+      need.dir_ids.length === 0
+    ) {
+      throw new Error(
+        `Askable DC need must bind at least one DIR collect path: ${need.need_id}`,
+      );
+    }
+    if (
+      need.readiness_effect === "block_when_page_active" &&
+      need.decision_materiality !== "decision_critical"
+    ) {
+      throw new Error(
+        `block_when_page_active requires decision_critical (freeze rule): ${need.need_id}`,
+      );
     }
 
     if (need.served_by_units.some((u) => u.startsWith("07:"))) {

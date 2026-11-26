@@ -63,6 +63,7 @@ export {
   confirmAuthorizedQuestionSend,
   finalizeClarificationClaimsForDurableCommit,
   releaseAuthorizedQuestionClaim,
+  tryCatalogFallbackForOpenBlocking,
   type AttachAuthorizedQuestionResult,
 } from "./adaptive-turn";
 export {

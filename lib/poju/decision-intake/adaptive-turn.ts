@@ -51,7 +51,10 @@ import {
   reconcileClarificationClaims,
   releaseClarification,
 } from "./budget-ledger";
-import { reportInformationNeedById } from "./report-information-needs.v1";
+import {
+  reportInformationNeedById,
+  reportInformationNeedsForDirIds,
+} from "./report-information-needs.v1";
 import { bumpBudgetAfterAsk, refundIneffectiveQuestion } from "./scope-budget";
 import { buildUnderstandingState, refreshDecisionUnderstanding } from "./understanding-state";
 import { bindPersonalAnalysisProfile } from "./personal-analysis-profile";
@@ -505,8 +508,9 @@ async function continueInvestigationAfterTerminalRefusal(input: {
  * Deterministic Catalog-scoped fallback for open blocking report needs (DIR-based).
  * Must still pass DDR association + Blueprint scope/depth/budget/NA via
  * buildAdaptiveQuestionPlan validation — never a free-form substitute.
+ * Ordinary candidates require the same SSOT need_ids binding.
  */
-function tryCatalogFallbackForOpenBlocking(input: {
+export function tryCatalogFallbackForOpenBlocking(input: {
   dc: NonNullable<POJUSessionState["decision_context"]>;
   blueprint: NonNullable<POJUSessionState["decision_blueprint"]>;
   understanding: UnderstandingState;
@@ -540,7 +544,21 @@ function tryCatalogFallbackForOpenBlocking(input: {
       last_reject = `fallback_missing_ddr:${need.dir_id}`;
       continue;
     }
+    const need_ids = reportInformationNeedsForDirIds([need.dir_id])
+      .filter(
+        (n) =>
+          n.source_kind === "decision_context" && n.ask_policy === "ask_if_material",
+      )
+      .map((n) => n.need_id);
+    if (!need_ids.length) {
+      last_reject = `fallback_missing_need_ids:${need.dir_id}`;
+      continue;
+    }
     const roles = dir.required_fact_roles ?? [];
+    if (!roles.length) {
+      last_reject = `fallback_missing_fact_roles:${need.dir_id}`;
+      continue;
+    }
     const fact_role_codes = roles.map((r) => `v1/dir/${dir.dir_id}/role/${r}`);
     const depth = (input.budget.depth_by_dir[need.dir_id] ?? 0) + 1;
     const gap =
@@ -557,6 +575,7 @@ function tryCatalogFallbackForOpenBlocking(input: {
         dir_ids: [need.dir_id],
         ddr_ids,
         fact_role_codes,
+        need_ids,
         impact: {
           decision_critical: need.priority === "P0" || need.may_affect_p5_ranking,
           may_affect_p5_ranking: need.may_affect_p5_ranking,

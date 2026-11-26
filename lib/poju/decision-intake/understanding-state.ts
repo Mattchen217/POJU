@@ -28,6 +28,7 @@ import {
 } from "./budget-ledger";
 import {
   classifyDecisionIntakeComplexity,
+  complexitySignalsFromDecisionMaterials,
   reportInformationNeedById,
 } from "./report-information-needs.v1";
 import type {
@@ -45,21 +46,10 @@ function complexitySignalsFromSession(
   session: POJUSessionState,
   blueprint: DecisionBlueprint,
 ): Parameters<typeof classifyDecisionIntakeComplexity>[0] {
-  const dc = session.decision_context;
-  const openConflicts =
-    (dc?.conflicts ?? []).some((c) => c.state === "open") ?? false;
-  const optionFacts = (dc?.reality_facts ?? []).filter((f) =>
-    (f.related_dir_ids ?? []).includes("DIR-OPT-ON-TABLE"),
-  );
-  let option_count = 2;
-  if (optionFacts.length >= 4) option_count = 4;
-  else if (optionFacts.length >= 3) option_count = 3;
-  const high_stakes = blueprint.dir_ids.includes("DIR-DEF-STAKES");
-  const irreversible =
-    blueprint.dir_ids.includes("DIR-OPT-IRREV") ||
-    blueprint.dir_ids.includes("DIR-EXIT-CRITERIA");
-  const multi_topic = blueprint.page_07_emit === true;
-  return { option_count, high_stakes, irreversible, multi_topic, open_conflicts: openConflicts };
+  return complexitySignalsFromDecisionMaterials({
+    dc: session.decision_context,
+    page_07_emit: blueprint.page_07_emit === true,
+  });
 }
 
 export function defaultBudget(

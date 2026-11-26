@@ -78,7 +78,9 @@ async function main() {
     allReportSegmentContracts,
     REPORT_INFORMATION_NEEDS,
     classifyDecisionIntakeComplexity,
+    complexitySignalsFromDecisionMaterials,
     reportInformationNeedById,
+    reportInformationNeedsForDirIds,
   } = await import("../lib/poju/decision-intake/report-information-needs.v1");
   const {
     bumpCoreAfterMaterialWrite,
@@ -107,9 +109,13 @@ async function main() {
     guardAndAttachAuthorizedQuestion,
     finalizeClarificationClaimsForDurableCommit,
     releaseAuthorizedQuestionClaim,
+    tryCatalogFallbackForOpenBlocking,
   } = await import("../lib/poju/decision-intake/adaptive-turn");
   const { buildIntakeCandidatesFromDc } = await import(
     "../lib/poju/decision-context/production-intake-ask"
+  );
+  const { resolveDdrIdsForDir } = await import(
+    "../lib/poju/decision-intake/blueprint"
   );
 
   const NOW = "2026-11-26T12:00:00.000Z";
@@ -2544,6 +2550,316 @@ async function main() {
     assert.equal(live.core_effective_answer_rounds, 1);
     assert.deepEqual(live.core_counted_source_turn_ids, ["t_attr"]);
     assert.deepEqual(live.core_counted_answer_event_ids, ["ev_live"]);
+  });
+
+  await check("closure P1-1: askable DC needs bind DIR collect paths", () => {
+    const askableEmpty = REPORT_INFORMATION_NEEDS.filter(
+      (n) =>
+        n.source_kind === "decision_context" &&
+        n.ask_policy === "ask_if_material" &&
+        n.dir_ids.length === 0,
+    );
+    assert.equal(askableEmpty.length, 0);
+
+    const pastNeeds = reportInformationNeedsForDirIds(["DIR-PAST-ATTEMPTS"]).filter(
+      (n) => n.ask_policy === "ask_if_material",
+    );
+    assert.ok(pastNeeds.some((n) => n.need_id === "need:dc:04b-user-experience"));
+
+    const optNeeds = reportInformationNeedsForDirIds(["DIR-OPT-ON-TABLE"]).filter(
+      (n) => n.ask_policy === "ask_if_material",
+    );
+    assert.ok(optNeeds.some((n) => n.need_id === "need:dc:DIR-OPT-ON-TABLE"));
+    assert.ok(optNeeds.some((n) => n.need_id === "need:dc:05c-option-conflict"));
+    assert.equal(
+      reportInformationNeedById("need:dc:05b-alternative-options")?.ask_policy,
+      "never",
+    );
+
+    const dc = draftDc({
+      dirs: [
+        {
+          dir_id: "DIR-PAST-ATTEMPTS",
+          need: "past",
+          why: "w",
+          required_fact_roles: ["past_attempt"],
+          current_state: "unknown",
+          partial_satisfaction: false,
+          agenda_item_ids: [],
+          id_lifecycle: "active",
+          may_affect_p5_ranking: false,
+        },
+        {
+          dir_id: "DIR-OPT-ON-TABLE",
+          need: "opts",
+          why: "w",
+          required_fact_roles: ["option"],
+          current_state: "unknown",
+          partial_satisfaction: false,
+          agenda_item_ids: [],
+          id_lifecycle: "active",
+          may_affect_p5_ranking: true,
+        },
+      ],
+    });
+    const bp = {
+      ...minimalBlueprint(),
+      dir_ids: ["DIR-PAST-ATTEMPTS", "DIR-OPT-ON-TABLE", ...minimalBlueprint().dir_ids],
+      ddr_ids: [
+        "DDR-01-PRIMARY",
+        "DDR-02-ATTRIBUTION",
+        "DDR-01-ANTI-PATH",
+        ...minimalBlueprint().ddr_ids,
+      ],
+    };
+    const candidates = buildIntakeCandidatesFromDc(dc, bp);
+    const pastCand = candidates.find((c) => c.dir_ids.includes("DIR-PAST-ATTEMPTS"));
+    assert.ok(pastCand, "DIR-PAST-ATTEMPTS must enter AQE candidates");
+    assert.ok(pastCand!.need_ids?.includes("need:dc:04b-user-experience"));
+    const optCand = candidates.find((c) => c.dir_ids.includes("DIR-OPT-ON-TABLE"));
+    assert.ok(optCand, "DIR-OPT-ON-TABLE must enter AQE candidates");
+    assert.ok(optCand!.need_ids?.includes("need:dc:DIR-OPT-ON-TABLE"));
+    assert.ok(optCand!.need_ids?.includes("need:dc:05c-option-conflict"));
+  });
+
+  await check("closure P1-2: catalog fallback binds SSOT need_ids and validates", () => {
+    const bp = {
+      ...minimalBlueprint(),
+      dir_ids: [...minimalBlueprint().dir_ids, "DIR-STATUS-QUO"],
+      ddr_ids: ["DDR-01-PRIMARY", ...minimalBlueprint().ddr_ids],
+      directions: [
+        ...minimalBlueprint().directions,
+        {
+          direction_id: "DIRN-STATUS",
+          priority: "P0" as const,
+          dir_ids: ["DIR-STATUS-QUO"],
+          scope_boundary: "test",
+          depth_soft_cap: 3,
+        },
+      ],
+    };
+    const ddr = resolveDdrIdsForDir("DIR-STATUS-QUO", bp);
+    assert.ok(ddr.length > 0 && !ddr.some((id) => id.startsWith("DDR_FOR_")));
+
+    const dc = draftDc({
+      dirs: [
+        {
+          dir_id: "DIR-STATUS-QUO",
+          need: "status",
+          why: "baseline",
+          required_fact_roles: ["status_quo"],
+          current_state: "unknown",
+          partial_satisfaction: false,
+          agenda_item_ids: [],
+          id_lifecycle: "active",
+          may_affect_p5_ranking: true,
+        },
+      ],
+    });
+    const understanding = {
+      need_to_understand: {
+        items: [
+          {
+            kind: "dir_based" as const,
+            dir_id: "DIR-STATUS-QUO",
+            ddr_ids: ddr,
+            direction_id: "DIRN-STATUS",
+            priority: "P0" as const,
+            why: "blocking",
+            missing_content: "status quo unknown",
+            may_affect_p5_ranking: true,
+            gap_type: "unknown" as const,
+            must_continue: true,
+            need_id: "need:dc:DIR-STATUS-QUO",
+          },
+        ],
+      },
+      last_sent_question: null,
+      budget: {
+        soft_budget_limit: 12,
+        hard_budget_limit: 15,
+        session_asked_count: 0,
+        review_cycle: 1,
+        cycle_base_asked: 0,
+        remaining_hard_budget: 15,
+        depth_by_dir: {},
+        core_effective_answer_rounds: 0,
+        core_round_hard_cap: 7,
+        clarification_allowance: 3,
+        clarification_claims: [],
+      },
+    } as UnderstandingState;
+
+    const fb = tryCatalogFallbackForOpenBlocking({
+      dc,
+      blueprint: bp,
+      understanding,
+      budget: understanding.budget,
+      now: NOW,
+      scoring_path: "test→catalog_fallback",
+    });
+    assert.ok(fb.plan, `fallback must produce plan, last_reject=${fb.last_reject}`);
+    assert.ok(fb.plan!.need_ids?.length);
+    assert.ok(
+      fb.plan!.need_ids!.every((id) => {
+        const n = reportInformationNeedById(id);
+        return (
+          n?.source_kind === "decision_context" && n.ask_policy === "ask_if_material"
+        );
+      }),
+    );
+    const scope = validateScopeDepthBudget({
+      plan: fb.plan!,
+      blueprint: bp,
+      budget: understanding.budget,
+      dc,
+    });
+    assert.equal(scope.ok, true, scope.ok ? "" : scope.reason_code);
+
+    const session = {
+      decision_understanding: {
+        budget: understanding.budget,
+        last_sent_question: null,
+      },
+    } as POJUSessionState;
+    const attached = guardAndAttachAuthorizedQuestion(
+      session,
+      fb.plan!,
+      "turn_fb",
+      NOW,
+    );
+    assert.equal(attached.attached, true, attached.block_reason);
+  });
+
+  await check("closure P1-3: complexity uses real materials not Blueprint inventory", () => {
+    const emptySignals = complexitySignalsFromDecisionMaterials({
+      dc: draftDc(),
+      page_07_emit: false,
+    });
+    assert.equal(emptySignals.high_stakes, false);
+    assert.equal(emptySignals.irreversible, false);
+    assert.equal(emptySignals.option_count, 2);
+    const emptyBand = classifyDecisionIntakeComplexity(emptySignals);
+    assert.equal(emptyBand.complexity, "simple");
+    assert.equal(emptyBand.core_round_hard_cap, 7);
+
+    // Blueprint-like inventory of stakes/irrev DIRs must not upgrade alone.
+    const noUpgrade = classifyDecisionIntakeComplexity(
+      complexitySignalsFromDecisionMaterials({
+        dc: draftDc({
+          dirs: [
+            {
+              dir_id: "DIR-DEF-STAKES",
+              need: "s",
+              why: "w",
+              required_fact_roles: ["loss"],
+              current_state: "unknown",
+              partial_satisfaction: false,
+              agenda_item_ids: [],
+              id_lifecycle: "active",
+              may_affect_p5_ranking: false,
+            },
+            {
+              dir_id: "DIR-OPT-IRREV",
+              need: "i",
+              why: "w",
+              required_fact_roles: ["cost"],
+              current_state: "unknown",
+              partial_satisfaction: false,
+              agenda_item_ids: [],
+              id_lifecycle: "active",
+              may_affect_p5_ranking: false,
+            },
+          ],
+        }),
+        page_07_emit: false,
+      }),
+    );
+    assert.equal(noUpgrade.complexity, "simple");
+
+    const withStakes = complexitySignalsFromDecisionMaterials({
+      dc: draftDc({
+        reality_facts: [
+          {
+            fact_id: "st1",
+            statement: "做错会失去住房首付",
+            status: "confirmed",
+            verification_level: "user_stated",
+            source_stage: "collecting_context",
+            source_turn_id: "t1",
+            user_confirmed: true,
+            related_dir_ids: ["DIR-DEF-STAKES"],
+          },
+        ],
+      }),
+    });
+    assert.equal(withStakes.high_stakes, true);
+    assert.equal(classifyDecisionIntakeComplexity(withStakes).complexity, "medium");
+
+    const threeOptions = complexitySignalsFromDecisionMaterials({
+      dc: draftDc({
+        reality_facts: [
+          {
+            fact_id: "o1",
+            statement: "接受 offer A",
+            status: "confirmed",
+            verification_level: "user_stated",
+            source_stage: "collecting_context",
+            source_turn_id: "t1",
+            user_confirmed: true,
+            related_dir_ids: ["DIR-OPT-ON-TABLE"],
+          },
+          {
+            fact_id: "o2",
+            statement: "接受 offer A",
+            status: "confirmed",
+            verification_level: "user_stated",
+            source_stage: "collecting_context",
+            source_turn_id: "t2",
+            user_confirmed: true,
+            related_dir_ids: ["DIR-OPT-ON-TABLE"],
+          },
+          {
+            fact_id: "o3",
+            statement: "维持现状",
+            status: "confirmed",
+            verification_level: "user_stated",
+            source_stage: "collecting_context",
+            source_turn_id: "t3",
+            user_confirmed: true,
+            related_dir_ids: ["DIR-OPT-ON-TABLE"],
+          },
+          {
+            fact_id: "o4",
+            statement: "创业",
+            status: "confirmed",
+            verification_level: "user_stated",
+            source_stage: "collecting_context",
+            source_turn_id: "t4",
+            user_confirmed: true,
+            related_dir_ids: ["DIR-OPT-ON-TABLE"],
+          },
+        ],
+      }),
+    });
+    // Duplicate statement "接受 offer A" counts once → 3 distinct options.
+    assert.equal(threeOptions.option_count, 3);
+  });
+
+  await check("closure P2: Page07 ranking needs never_block under freeze rule", () => {
+    for (const dirId of [
+      "DIR-JOB-OFFER",
+      "DIR-BIZ-MODEL",
+      "DIR-REL-DYNAMICS",
+      "DIR-LOCALE-MOVE",
+      "DIR-EDU-PATH",
+    ]) {
+      const n = reportInformationNeedById(`need:dc:${dirId}`);
+      assert.ok(n);
+      assert.equal(n!.readiness_effect, "never_block");
+      assert.notEqual(n!.decision_materiality, "decision_critical");
+    }
+    assertReportInformationNeedsIntegrity();
   });
 
   await check("ordinary guard: invalid need source or ask_policy", () => {
