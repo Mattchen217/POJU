@@ -5,6 +5,9 @@
  *
  * Does not invent a second DC store — reads the existing ledger entry and
  * copies its validated snapshot into the working Session.
+ *
+ * Same commit_version with a different entry_hash is an integrity conflict:
+ * fail closed — never silently adopt either side.
  */
 
 import {
@@ -17,6 +20,34 @@ import {
   headRefFromEntry,
 } from "@/lib/poju/decision-authority/types";
 import type { POJUSessionState } from "@/lib/poju/types";
+
+export const DC_LEDGER_HEAD_INTEGRITY_CONFLICT = "DC_LEDGER_HEAD_INTEGRITY_CONFLICT";
+
+export class LedgerHeadIntegrityError extends Error {
+  readonly code = DC_LEDGER_HEAD_INTEGRITY_CONFLICT;
+  readonly session_id: string;
+  readonly commit_version: number;
+  readonly local_entry_hash: string | null;
+  readonly ledger_entry_hash: string;
+
+  constructor(input: {
+    session_id: string;
+    commit_version: number;
+    local_entry_hash: string | null;
+    ledger_entry_hash: string;
+  }) {
+    super(
+      `ledger head integrity conflict at commit ${input.commit_version}: ` +
+        `local=${input.local_entry_hash?.slice(0, 12) ?? "none"} ` +
+        `ledger=${input.ledger_entry_hash.slice(0, 12)}`,
+    );
+    this.name = "LedgerHeadIntegrityError";
+    this.session_id = input.session_id;
+    this.commit_version = input.commit_version;
+    this.local_entry_hash = input.local_entry_hash;
+    this.ledger_entry_hash = input.ledger_entry_hash;
+  }
+}
 
 export type LedgerHeadCatchupResult = {
   session: POJUSessionState;
@@ -52,28 +83,31 @@ export async function adoptLedgerHeadIntoSessionIfAhead(
     return { session, adopted: false, head_commit_version: null };
   }
 
-  const localVersion = session.dc_ledger?.head?.commit_version ?? 0;
-  const localHash = session.dc_ledger?.head?.entry_hash ?? null;
-  if (
-    localVersion > verified.commit_version ||
-    (localVersion === verified.commit_version && localHash === verified.entry_hash)
-  ) {
-    // Mirror already current (or ahead in the rare local-only case).
-    if (
-      localVersion === verified.commit_version &&
-      localHash === verified.entry_hash &&
-      session.decision_context &&
-      verified.snapshot_hash
-    ) {
+  const localVersion = session.dc_ledger?.head?.commit_version;
+  const localHash = session.dc_ledger?.head?.entry_hash?.trim() || null;
+  const hasLocalMirror =
+    typeof localVersion === "number" && Number.isFinite(localVersion) && localVersion > 0;
+
+  if (hasLocalMirror && localVersion === verified.commit_version) {
+    if (localHash === verified.entry_hash) {
+      // Mirror already matches the durable head.
       return {
         session,
         adopted: false,
         head_commit_version: verified.commit_version,
       };
     }
+    // Same version, different hash — integrity conflict, never silent adopt.
+    throw new LedgerHeadIntegrityError({
+      session_id: sessionId,
+      commit_version: verified.commit_version,
+      local_entry_hash: localHash,
+      ledger_entry_hash: verified.entry_hash,
+    });
   }
 
-  if (verified.commit_version < localVersion) {
+  if (hasLocalMirror && localVersion! > verified.commit_version) {
+    // Local mirror is newer than durable head — do not overwrite with older ledger.
     return {
       session,
       adopted: false,
@@ -81,6 +115,7 @@ export async function adoptLedgerHeadIntoSessionIfAhead(
     };
   }
 
+  // local missing/behind (localVersion < verified, or no mirror) → catch-up.
   const headRef = headRefFromEntry(verified);
   const genesis =
     verified.commit_version === 1

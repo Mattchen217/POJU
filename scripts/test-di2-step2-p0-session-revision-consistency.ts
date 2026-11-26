@@ -40,8 +40,16 @@ import {
   mirrorAuthoritativeSessionLocally,
 } from "../lib/poju/session-manager";
 import { __resetPojuDbForTests, ensurePojuDbReady } from "../lib/db/poju-db";
-import { readLedgerHead } from "../lib/poju/decision-authority/server/ledger-store";
+import {
+  loadLedgerEntry,
+  readLedgerHead,
+} from "../lib/poju/decision-authority/server/ledger-store";
 import { dcSnapshotHash } from "../lib/poju/decision-authority/hash";
+import {
+  adoptLedgerHeadIntoSessionIfAhead,
+  LedgerHeadIntegrityError,
+} from "../lib/poju/session-authority/ledger-head-catchup";
+import { DC_LEDGER_SCHEMA_VERSION } from "../lib/poju/decision-authority/types";
 import type { POJUSessionState } from "../lib/poju/types";
 import type { AdaptiveQuestionPlan } from "../lib/poju/decision-intake/types";
 import type { POJULLMResponse } from "../lib/llm/poju-llm";
@@ -384,6 +392,66 @@ async function main() {
       });
     });
 
+    await check("catch-up: same commit_version different entry_hash fail-closed", async () => {
+      await withAuthStore(async () => {
+        const sid = await createPOJUSession({
+          payment_id: "pay_p0_integrity",
+          original_question: "要不要换岗？",
+        });
+        const s0 = (await loadPOJUSession(sid))!;
+        const t1 = "turn_p0_integrity_1";
+        const r1 = await submitAuthoritativeChatTurn({
+          session: {
+            ...s0,
+            messages: [
+              ...s0.messages,
+              {
+                role: "user",
+                content: "我在考虑要不要换岗。",
+                timestamp: new Date().toISOString(),
+                client_id: t1,
+              },
+            ],
+          },
+          user_message: "我在考虑要不要换岗。",
+          client_turn_id: t1,
+          expected_revision: s0.session_revision ?? 0,
+          locale: "zh",
+        });
+        const head = await readLedgerHead(sid);
+        assert.ok(head);
+        assert.ok(r1.session.dc_ledger?.head);
+
+        const forged: POJUSessionState = {
+          ...r1.session,
+          dc_ledger: {
+            schema_version: DC_LEDGER_SCHEMA_VERSION,
+            writer_token: r1.session.dc_ledger!.writer_token,
+            head: {
+              ...r1.session.dc_ledger!.head,
+              // Same version as durable head, different hash → integrity conflict.
+              commit_version: head!.commit_version,
+              entry_hash: "0".repeat(64),
+            },
+            synced_at: r1.session.dc_ledger!.synced_at,
+          },
+        };
+
+        await assert.rejects(
+          () => adoptLedgerHeadIntoSessionIfAhead(forged),
+          (err: unknown) =>
+            err instanceof LedgerHeadIntegrityError &&
+            err.code === "DC_LEDGER_HEAD_INTEGRITY_CONFLICT" &&
+            err.commit_version === head!.commit_version,
+        );
+
+        // Working Session must not have been silently rewritten by a failed catch-up.
+        assert.equal(forged.dc_ledger?.head.entry_hash, "0".repeat(64));
+        const durable = await readLedgerHead(sid);
+        assert.equal(durable?.entry_hash, head!.entry_hash);
+      });
+    });
+
     await check("Test C: ledger append then abort — catch-up allows next turn", async () => {
       await withAuthStore(async () => {
         const sid = await createPOJUSession({
@@ -408,6 +476,7 @@ async function main() {
         });
         const revBeforeAbort = r1.session_revision;
         const ledgerBefore = await readLedgerHead(sid);
+        assert.ok(ledgerBefore);
 
         const t2 = "turn_p0_c2";
         const msg2 = "硬约束是两年内必须有稳定收入；可选方案是全职读研或在职读研。";
@@ -453,8 +522,21 @@ async function main() {
         const ledgerAfterAbort = await readLedgerHead(sid);
         assert.ok(ledgerAfterAbort);
         assert.ok(
-          (ledgerAfterAbort!.commit_version ?? 0) >= (ledgerBefore?.commit_version ?? 0),
-          "ledger append from aborted turn must remain durable",
+          ledgerAfterAbort!.commit_version > ledgerBefore!.commit_version,
+          "abort path must have appended a new Ledger entry",
+        );
+        assert.notEqual(
+          ledgerAfterAbort!.snapshot_hash,
+          ledgerBefore!.snapshot_hash,
+          "aborted turn Ledger snapshot must differ from prior head",
+        );
+        assert.equal(
+          ledgerAfterAbort!.previous_commit_version,
+          ledgerBefore!.commit_version,
+        );
+        assert.equal(
+          ledgerAfterAbort!.previous_entry_hash,
+          ledgerBefore!.entry_hash,
         );
 
         // Replay same turn id after abort — must complete without orphan head.
@@ -506,6 +588,125 @@ async function main() {
         assert.equal(
           head!.snapshot_hash,
           dcSnapshotHash(next.session.decision_context!),
+        );
+      });
+    });
+
+    await check("Test C2: abort then new turn ID recovers from leftover Ledger head", async () => {
+      await withAuthStore(async () => {
+        const sid = await createPOJUSession({
+          payment_id: "pay_p0_c2",
+          original_question: "要不要出国？",
+        });
+        const s0 = (await loadPOJUSession(sid))!;
+        const t1 = "turn_p0_c2_1";
+        const r1 = await submitAuthoritativeChatTurn({
+          session: {
+            ...s0,
+            messages: [
+              ...s0.messages,
+              {
+                role: "user",
+                content: "我在考虑要不要出国工作。",
+                timestamp: new Date().toISOString(),
+                client_id: t1,
+              },
+            ],
+          },
+          user_message: "我在考虑要不要出国工作。",
+          client_turn_id: t1,
+          expected_revision: s0.session_revision ?? 0,
+          locale: "zh",
+        });
+        const ledgerBefore = await readLedgerHead(sid);
+        assert.ok(ledgerBefore);
+        const revBeforeAbort = r1.session_revision;
+
+        const tAbort = "turn_p0_c2_abort";
+        const msgAbort =
+          "硬约束是父母需要我留在国内；可选方案是远程工作或短期出差。";
+        const ac = new AbortController();
+        const aborted = await runWithAuthoritativeCommitTestHook(
+          async () => {
+            ac.abort();
+          },
+          () =>
+            executeAuthoritativeChatTurn(
+              {
+                session: {
+                  ...r1.session,
+                  messages: [
+                    ...r1.session.messages,
+                    {
+                      role: "user",
+                      content: msgAbort,
+                      timestamp: new Date().toISOString(),
+                      client_id: tAbort,
+                    },
+                  ],
+                },
+                user_message: msgAbort,
+                client_turn_id: tAbort,
+                expected_revision: revBeforeAbort,
+                locale: "zh",
+              },
+              { signal: ac.signal },
+            ),
+        );
+        assert.equal(aborted.aborted, true);
+
+        const orphanHead = await readLedgerHead(sid);
+        assert.ok(orphanHead);
+        assert.ok(orphanHead!.commit_version > ledgerBefore!.commit_version);
+        assert.notEqual(orphanHead!.snapshot_hash, ledgerBefore!.snapshot_hash);
+
+        const server = await requireAuthoritativeSession(sid);
+        assert.equal(server.revision, revBeforeAbort);
+        assert.notEqual(server.last_committed_turn_id, tAbort);
+
+        // Do NOT replay tAbort — submit a different turn that must catch up.
+        const tNew = "turn_p0_c2_new";
+        const msgNew = "我更在意能否兼顾家庭照护。";
+        const follow = await executeAuthoritativeChatTurn({
+          session: {
+            ...server.session_snapshot,
+            messages: [
+              ...(server.session_snapshot.messages ?? []),
+              {
+                role: "user",
+                content: msgNew,
+                timestamp: new Date().toISOString(),
+                client_id: tNew,
+              },
+            ],
+          },
+          user_message: msgNew,
+          client_turn_id: tNew,
+          expected_revision: server.revision,
+          locale: "zh",
+        });
+        assert.ok(follow.ok && !follow.aborted);
+
+        const finalHead = await readLedgerHead(sid);
+        assert.ok(finalHead);
+        assert.ok(
+          finalHead!.commit_version >= orphanHead!.commit_version,
+          "new turn must continue from leftover Ledger head",
+        );
+        if (finalHead!.commit_version > orphanHead!.commit_version) {
+          assert.equal(
+            finalHead!.previous_commit_version,
+            orphanHead!.commit_version,
+          );
+          assert.equal(finalHead!.previous_entry_hash, orphanHead!.entry_hash);
+        }
+        assert.equal(
+          finalHead!.snapshot_hash,
+          dcSnapshotHash(follow.session.decision_context!),
+        );
+        assert.equal(
+          follow.session.dc_ledger?.head?.entry_hash,
+          finalHead!.entry_hash,
         );
       });
     });
@@ -587,10 +788,13 @@ async function main() {
         );
         assert.notEqual(server.last_committed_turn_id, t2);
 
-        const ledger = await readLedgerHead(sid);
-        assert.ok(ledger, "ledger data from the lost turn must not be silently discarded");
+        const ledgerAfterConflict = await readLedgerHead(sid);
+        assert.ok(
+          ledgerAfterConflict,
+          "ledger data from the lost turn must not be silently discarded",
+        );
 
-        // Follow-up turn after conflict must proceed (catch-up / clear conflict).
+        // Follow-up turn after conflict must proceed and chain from leftover head.
         const t3 = "turn_p0_d3";
         const msg3 = "我更在意风险可控。";
         const follow = await executeAuthoritativeChatTurn({
@@ -613,6 +817,36 @@ async function main() {
         });
         assert.ok(follow.ok && !follow.aborted);
         assert.ok(follow.session.session_revision > server.revision);
+
+        const finalHead = await readLedgerHead(sid);
+        assert.ok(finalHead);
+        assert.ok(
+          finalHead!.commit_version >= ledgerAfterConflict!.commit_version,
+        );
+        if (finalHead!.commit_version > ledgerAfterConflict!.commit_version) {
+          assert.equal(
+            finalHead!.previous_commit_version,
+            ledgerAfterConflict!.commit_version,
+          );
+          assert.equal(
+            finalHead!.previous_entry_hash,
+            ledgerAfterConflict!.entry_hash,
+          );
+          const prev = await loadLedgerEntry(
+            sid,
+            ledgerAfterConflict!.commit_version,
+          );
+          assert.ok(prev);
+          assert.equal(prev!.entry_hash, ledgerAfterConflict!.entry_hash);
+        }
+        assert.equal(
+          finalHead!.snapshot_hash,
+          dcSnapshotHash(follow.session.decision_context!),
+        );
+        assert.equal(
+          follow.session.dc_ledger?.head?.snapshot_hash,
+          finalHead!.snapshot_hash,
+        );
       });
     });
   } finally {
