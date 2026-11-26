@@ -6,8 +6,9 @@
  * Does not invent a second DC store — reads the existing ledger entry and
  * copies its validated snapshot into the working Session.
  *
- * Same commit_version with a different entry_hash is an integrity conflict:
- * fail closed — never silently adopt either side.
+ * Integrity conflicts fail closed — never silently adopt either side:
+ * - same commit_version, different entry_hash
+ * - local commit_version ahead of durable ledger head (version skew)
  */
 
 import {
@@ -29,23 +30,35 @@ export class LedgerHeadIntegrityError extends Error {
   readonly commit_version: number;
   readonly local_entry_hash: string | null;
   readonly ledger_entry_hash: string;
+  readonly local_commit_version: number | null;
+  readonly ledger_commit_version: number | null;
 
   constructor(input: {
     session_id: string;
     commit_version: number;
     local_entry_hash: string | null;
     ledger_entry_hash: string;
+    local_commit_version?: number | null;
+    ledger_commit_version?: number | null;
   }) {
+    const localVer = input.local_commit_version ?? null;
+    const ledgerVer = input.ledger_commit_version ?? null;
+    const skew =
+      localVer != null && ledgerVer != null && localVer > ledgerVer;
     super(
-      `ledger head integrity conflict at commit ${input.commit_version}: ` +
-        `local=${input.local_entry_hash?.slice(0, 12) ?? "none"} ` +
-        `ledger=${input.ledger_entry_hash.slice(0, 12)}`,
+      skew
+        ? `ledger head version skew: local_commit=${localVer} durable_commit=${ledgerVer}`
+        : `ledger head integrity conflict at commit ${input.commit_version}: ` +
+            `local=${input.local_entry_hash?.slice(0, 12) ?? "none"} ` +
+            `ledger=${input.ledger_entry_hash.slice(0, 12)}`,
     );
     this.name = "LedgerHeadIntegrityError";
     this.session_id = input.session_id;
     this.commit_version = input.commit_version;
     this.local_entry_hash = input.local_entry_hash;
     this.ledger_entry_hash = input.ledger_entry_hash;
+    this.local_commit_version = localVer;
+    this.ledger_commit_version = ledgerVer;
   }
 }
 
@@ -103,16 +116,22 @@ export async function adoptLedgerHeadIntoSessionIfAhead(
       commit_version: verified.commit_version,
       local_entry_hash: localHash,
       ledger_entry_hash: verified.entry_hash,
+      local_commit_version: localVersion,
+      ledger_commit_version: verified.commit_version,
     });
   }
 
   if (hasLocalMirror && localVersion! > verified.commit_version) {
-    // Local mirror is newer than durable head — do not overwrite with older ledger.
-    return {
-      session,
-      adopted: false,
-      head_commit_version: verified.commit_version,
-    };
+    // Local mirror ahead of durable head — fail closed; do not adopt older ledger
+    // and do not let the request continue on an inconsistent pair.
+    throw new LedgerHeadIntegrityError({
+      session_id: sessionId,
+      commit_version: localVersion!,
+      local_entry_hash: localHash,
+      ledger_entry_hash: verified.entry_hash,
+      local_commit_version: localVersion!,
+      ledger_commit_version: verified.commit_version,
+    });
   }
 
   // local missing/behind (localVersion < verified, or no mirror) → catch-up.

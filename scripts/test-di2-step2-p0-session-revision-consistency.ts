@@ -452,6 +452,70 @@ async function main() {
       });
     });
 
+    await check("catch-up: local version ahead of durable Ledger head fail-closed", async () => {
+      await withAuthStore(async () => {
+        const sid = await createPOJUSession({
+          payment_id: "pay_p0_skew",
+          original_question: "要不要搬家？",
+        });
+        const s0 = (await loadPOJUSession(sid))!;
+        const t1 = "turn_p0_skew_1";
+        const r1 = await submitAuthoritativeChatTurn({
+          session: {
+            ...s0,
+            messages: [
+              ...s0.messages,
+              {
+                role: "user",
+                content: "我在考虑要不要搬家。",
+                timestamp: new Date().toISOString(),
+                client_id: t1,
+              },
+            ],
+          },
+          user_message: "我在考虑要不要搬家。",
+          client_turn_id: t1,
+          expected_revision: s0.session_revision ?? 0,
+          locale: "zh",
+        });
+        const head = await readLedgerHead(sid);
+        assert.ok(head);
+        assert.ok(r1.session.dc_ledger?.head);
+
+        const ahead: POJUSessionState = {
+          ...r1.session,
+          dc_ledger: {
+            schema_version: DC_LEDGER_SCHEMA_VERSION,
+            writer_token: r1.session.dc_ledger!.writer_token,
+            head: {
+              ...r1.session.dc_ledger!.head,
+              // Local mirror claims a newer commit than durable head.
+              commit_version: head!.commit_version + 1,
+              entry_hash: "f".repeat(64),
+            },
+            synced_at: r1.session.dc_ledger!.synced_at,
+          },
+        };
+        const beforeDc = ahead.decision_context;
+
+        await assert.rejects(
+          () => adoptLedgerHeadIntoSessionIfAhead(ahead),
+          (err: unknown) =>
+            err instanceof LedgerHeadIntegrityError &&
+            err.code === "DC_LEDGER_HEAD_INTEGRITY_CONFLICT" &&
+            err.local_commit_version === head!.commit_version + 1 &&
+            err.ledger_commit_version === head!.commit_version,
+        );
+
+        assert.equal(ahead.dc_ledger?.head.commit_version, head!.commit_version + 1);
+        assert.equal(ahead.dc_ledger?.head.entry_hash, "f".repeat(64));
+        assert.equal(ahead.decision_context, beforeDc);
+        const durable = await readLedgerHead(sid);
+        assert.equal(durable?.commit_version, head!.commit_version);
+        assert.equal(durable?.entry_hash, head!.entry_hash);
+      });
+    });
+
     await check("Test C: ledger append then abort — catch-up allows next turn", async () => {
       await withAuthStore(async () => {
         const sid = await createPOJUSession({
@@ -664,9 +728,11 @@ async function main() {
         assert.equal(server.revision, revBeforeAbort);
         assert.notEqual(server.last_committed_turn_id, tAbort);
 
-        // Do NOT replay tAbort — submit a different turn that must catch up.
+        // Do NOT replay tAbort — submit a different turn that must catch up
+        // and append a new material DC Ledger entry.
         const tNew = "turn_p0_c2_new";
-        const msgNew = "我更在意能否兼顾家庭照护。";
+        const msgNew =
+          "硬约束是每月必须给家里转账八千；可选方案是本地就业、远程协作，或者暂缓出国。";
         const follow = await executeAuthoritativeChatTurn({
           session: {
             ...server.session_snapshot,
@@ -690,16 +756,14 @@ async function main() {
         const finalHead = await readLedgerHead(sid);
         assert.ok(finalHead);
         assert.ok(
-          finalHead!.commit_version >= orphanHead!.commit_version,
-          "new turn must continue from leftover Ledger head",
+          finalHead!.commit_version > orphanHead!.commit_version,
+          "follow-up turn must append a new Ledger entry after leftover head",
         );
-        if (finalHead!.commit_version > orphanHead!.commit_version) {
-          assert.equal(
-            finalHead!.previous_commit_version,
-            orphanHead!.commit_version,
-          );
-          assert.equal(finalHead!.previous_entry_hash, orphanHead!.entry_hash);
-        }
+        assert.equal(
+          finalHead!.previous_commit_version,
+          orphanHead!.commit_version,
+        );
+        assert.equal(finalHead!.previous_entry_hash, orphanHead!.entry_hash);
         assert.equal(
           finalHead!.snapshot_hash,
           dcSnapshotHash(follow.session.decision_context!),
@@ -794,9 +858,11 @@ async function main() {
           "ledger data from the lost turn must not be silently discarded",
         );
 
-        // Follow-up turn after conflict must proceed and chain from leftover head.
+        // Follow-up turn after conflict must append a new Ledger entry chained
+        // from the leftover conflict-turn head.
         const t3 = "turn_p0_d3";
-        const msg3 = "我更在意风险可控。";
+        const msg3 =
+          "硬约束是两年内不贷款；可选方案是继续打工、合伙创业，或者先做副业验证。";
         const follow = await executeAuthoritativeChatTurn({
           session: {
             ...server.session_snapshot,
@@ -821,24 +887,23 @@ async function main() {
         const finalHead = await readLedgerHead(sid);
         assert.ok(finalHead);
         assert.ok(
-          finalHead!.commit_version >= ledgerAfterConflict!.commit_version,
+          finalHead!.commit_version > ledgerAfterConflict!.commit_version,
+          "follow-up turn must append a new Ledger entry after conflict leftover",
         );
-        if (finalHead!.commit_version > ledgerAfterConflict!.commit_version) {
-          assert.equal(
-            finalHead!.previous_commit_version,
-            ledgerAfterConflict!.commit_version,
-          );
-          assert.equal(
-            finalHead!.previous_entry_hash,
-            ledgerAfterConflict!.entry_hash,
-          );
-          const prev = await loadLedgerEntry(
-            sid,
-            ledgerAfterConflict!.commit_version,
-          );
-          assert.ok(prev);
-          assert.equal(prev!.entry_hash, ledgerAfterConflict!.entry_hash);
-        }
+        assert.equal(
+          finalHead!.previous_commit_version,
+          ledgerAfterConflict!.commit_version,
+        );
+        assert.equal(
+          finalHead!.previous_entry_hash,
+          ledgerAfterConflict!.entry_hash,
+        );
+        const prev = await loadLedgerEntry(
+          sid,
+          ledgerAfterConflict!.commit_version,
+        );
+        assert.ok(prev);
+        assert.equal(prev!.entry_hash, ledgerAfterConflict!.entry_hash);
         assert.equal(
           finalHead!.snapshot_hash,
           dcSnapshotHash(follow.session.decision_context!),
