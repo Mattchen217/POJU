@@ -25,7 +25,12 @@ const NON_MATERIAL_ANSWER: Set<AnswerClass> = new Set([
   "invalid_input",
 ]);
 
-const BOUNDARY_FACT_STATUSES = new Set(["unknown", "declined", "not_applicable"]);
+const BOUNDARY_FACT_STATUSES = new Set([
+  "unknown",
+  "declined",
+  "not_applicable",
+  "unverified",
+]);
 
 export type MaterialDcWriteInput = {
   fact_ids_written: string[];
@@ -93,14 +98,6 @@ export function isMaterialDcWrite(applied: MaterialDcWriteInput): boolean {
     return false;
   }
   if (allFactsBoundaryOnly && allCstsBoundaryOnly) return false;
-
-  const onlyUnverified =
-    fact_ids_written.length > 0 &&
-    fact_ids_written.every((id) => {
-      const f = dc.reality_facts.find((x) => x.fact_id === id);
-      return f?.status === "unverified" && !f.statement?.trim();
-    });
-  if (onlyUnverified && !constraint_ids_written.length) return false;
 
   return hasSubstance;
 }
@@ -322,22 +319,28 @@ function activeClarificationClaims(
   ).length;
 }
 
+export type ClaimClarificationResult = {
+  ok: boolean;
+  budget: SessionBudgetSnapshot;
+  reason?: "already_confirmed" | "allowance_exhausted";
+};
+
 export function claimClarification(
   budget: SessionBudgetSnapshot,
   plan_id: string,
   now: string,
-): { ok: boolean; budget: SessionBudgetSnapshot } {
+): ClaimClarificationResult {
   const claims = [...(budget.clarification_claims ?? [])];
   const existing = claims.find((c) => c.plan_id === plan_id);
-  if (
-    existing &&
-    (existing.status === "claimed" || existing.status === "confirmed")
-  ) {
+  if (existing?.status === "confirmed") {
+    return { ok: false, budget, reason: "already_confirmed" };
+  }
+  if (existing?.status === "claimed") {
     return { ok: true, budget };
   }
   const allowance = budget.clarification_allowance ?? CLARIFICATION_ALLOWANCE;
   if (activeClarificationClaims(budget) >= allowance) {
-    return { ok: false, budget };
+    return { ok: false, budget, reason: "allowance_exhausted" };
   }
   if (existing?.status === "released") {
     const idx = claims.indexOf(existing);

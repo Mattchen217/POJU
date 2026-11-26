@@ -245,7 +245,8 @@ async function main() {
     assert.match(src, /m1HasAuthorizedQuestion/);
     assert.match(src, /assertQuestionMatchesPlan/);
     assert.match(src, /guardAndAttachAuthorizedQuestion/);
-    assert.match(src, /confirmAuthorizedQuestionSend/);
+    assert.match(src, /reserveClarificationClaimCas/);
+    assert.doesNotMatch(src, /confirmAuthorizedQuestionSend/);
     const gen = readFileSync(
       join(process.cwd(), "lib/poju/decision-intake/question-generation.ts"),
       "utf8",

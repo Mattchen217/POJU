@@ -197,6 +197,13 @@ export async function executeAuthoritativeChatTurn(
   for (let attempt = 1; attempt <= COMMIT_ATTEMPTS; attempt += 1) {
     throwIfAborted(opts?.signal);
     try {
+      const { finalizeClarificationClaimsForDurableCommit } = await import(
+        "@/lib/poju/decision-intake/adaptive-turn"
+      );
+      sessionOut = finalizeClarificationClaimsForDurableCommit(
+        sessionOut,
+        new Date().toISOString(),
+      );
       committed = await commitAuthoritativeSessionUpdate({
         sessionId,
         expectedRevision: record.revision,

@@ -102,7 +102,7 @@ async function main() {
   const {
     attachAuthorizedAssistantQuestion,
     guardAndAttachAuthorizedQuestion,
-    confirmAuthorizedQuestionSend,
+    finalizeClarificationClaimsForDurableCommit,
     releaseAuthorizedQuestionClaim,
   } = await import("../lib/poju/decision-intake/adaptive-turn");
   const { buildIntakeCandidatesFromDc } = await import(
@@ -508,13 +508,13 @@ async function main() {
     );
     const claim = r1.session.decision_understanding!.budget.clarification_claims?.[0];
     assert.equal(claim?.status, "claimed");
-    const confirmed = confirmAuthorizedQuestionSend(
-      r1.session,
-      clarPlan.plan_id,
-      "t1",
-      "msg_1",
-      NOW,
-    );
+    const withMsg = {
+      ...r1.session,
+      messages: [
+        { role: "assistant" as const, content: "q?", client_id: "msg_1", timestamp: NOW },
+      ],
+    };
+    const confirmed = finalizeClarificationClaimsForDurableCommit(withMsg, NOW);
     assert.equal(
       confirmed.decision_understanding!.budget.clarification_claims?.[0]?.status,
       "confirmed",
@@ -740,6 +740,254 @@ async function main() {
     );
     assert.equal(released.decision_understanding!.last_sent_question, null);
     assert.equal(released.adaptive_ask_plan, null);
+  });
+
+  await check("claimClarification: confirmed plan_id rejects second reserve", () => {
+    let budget: SessionBudgetSnapshot = {
+      soft_budget_limit: 12,
+      hard_budget_limit: 15,
+      session_asked_count: 0,
+      review_cycle: 1,
+      cycle_base_asked: 0,
+      remaining_hard_budget: 15,
+      depth_by_dir: {},
+      clarification_allowance: 3,
+      clarification_claims: [],
+    };
+    budget = confirmClarification(budget, "plan_done", NOW, "send_1");
+    const blocked = claimClarification(budget, "plan_done", NOW);
+    assert.equal(blocked.ok, false);
+    assert.equal(blocked.reason, "already_confirmed");
+  });
+
+  await check("CAS reserve: concurrent last slot only one wins", async () => {
+    const { reserveClarificationClaimCas } = await import(
+      "../lib/poju/decision-intake/clarification-claim-cas"
+    );
+    let sharedBudget: SessionBudgetSnapshot = {
+      soft_budget_limit: 12,
+      hard_budget_limit: 15,
+      session_asked_count: 0,
+      review_cycle: 1,
+      cycle_base_asked: 0,
+      remaining_hard_budget: 15,
+      depth_by_dir: {},
+      clarification_allowance: 3,
+      clarification_claims: [
+        { plan_id: "plan_0", status: "confirmed", claimed_at: NOW, confirmed_at: NOW },
+        { plan_id: "plan_1", status: "confirmed", claimed_at: NOW, confirmed_at: NOW },
+      ],
+    };
+    let chain: Promise<void> = Promise.resolve();
+    const casReserve = async (input: {
+      session: POJUSessionState;
+      plan_id: string;
+      now: string;
+    }) => {
+      await chain;
+      let release!: () => void;
+      const gate = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      chain = gate;
+      try {
+        const claim = claimClarification(sharedBudget, input.plan_id, input.now);
+        if (!claim.ok) {
+          return {
+            ok: false,
+            session: input.session,
+            block_reason:
+              claim.reason === "already_confirmed"
+                ? "already_confirmed"
+                : "clarification_allowance_exhausted",
+          };
+        }
+        sharedBudget = claim.budget;
+        return {
+          ok: true,
+          session: {
+            ...input.session,
+            decision_understanding: {
+              ...input.session.decision_understanding!,
+              budget: sharedBudget,
+            },
+          },
+        };
+      } finally {
+        release();
+      }
+    };
+    const baseSession = {
+      decision_understanding: { budget: { ...sharedBudget }, last_sent_question: null },
+    } as POJUSessionState;
+    const [a, b] = await Promise.all([
+      reserveClarificationClaimCas({
+        session: baseSession,
+        plan_id: "plan_a",
+        now: NOW,
+        casReserve,
+      }),
+      reserveClarificationClaimCas({
+        session: baseSession,
+        plan_id: "plan_b",
+        now: NOW,
+        casReserve,
+      }),
+    ]);
+    const wins = [a, b].filter((r) => r.ok);
+    assert.equal(wins.length, 1);
+    assert.equal([a, b].filter((r) => !r.ok).length, 1);
+  });
+
+  await check("finalizeClarification: claimed until assistant message on commit", () => {
+    const clarPlan: AdaptiveQuestionPlan = {
+      plan_id: "qp_finalize",
+      candidate_id: "c1",
+      direction_id: "DIRN-DEFINITION",
+      ddr_ids: ["DDR-P05-01"],
+      dir_ids: ["DIR-DEF-QUESTION"],
+      fact_role_codes: [],
+      missing_info: "unknown",
+      decision_value: "decision_critical",
+      ask_now_reason: "test",
+      expected_info: "info",
+      depth: 1,
+      budget_cost: 1,
+      remaining_hard_budget: 14,
+      gate_class: "P0",
+      scope_boundary: "test",
+      rationale: "test",
+      question_text: "clarify?",
+      built_at: NOW,
+      scoring_path: "pending_answer_resolution",
+      collection_mode: "clarification",
+    };
+    const baseBudget: SessionBudgetSnapshot = {
+      soft_budget_limit: 12,
+      hard_budget_limit: 15,
+      session_asked_count: 0,
+      review_cycle: 1,
+      cycle_base_asked: 0,
+      remaining_hard_budget: 15,
+      depth_by_dir: {},
+      clarification_allowance: 3,
+      clarification_claims: [],
+    };
+    let session = {
+      decision_understanding: { budget: { ...baseBudget }, last_sent_question: null },
+    } as POJUSessionState;
+    const guarded = guardAndAttachAuthorizedQuestion(session, clarPlan, "t1", NOW);
+    assert.ok(guarded.attached);
+    const beforeMsg = finalizeClarificationClaimsForDurableCommit(guarded.session, NOW);
+    assert.equal(
+      beforeMsg.decision_understanding!.budget.clarification_claims?.[0]?.status,
+      "claimed",
+    );
+    const withMsg = {
+      ...guarded.session,
+      messages: [
+        { role: "assistant" as const, content: "clarify?", client_id: "asst_1", timestamp: NOW },
+      ],
+    };
+    const after = finalizeClarificationClaimsForDurableCommit(withMsg, NOW);
+    assert.equal(
+      after.decision_understanding!.budget.clarification_claims?.[0]?.status,
+      "confirmed",
+    );
+  });
+
+  await check("unverified fact + statement is non-material for core", () => {
+    const dc = draftDc({
+      reality_facts: [
+        {
+          fact_id: "uv",
+          statement: "draft only",
+          status: "unverified",
+          verification_level: "user_stated",
+          source_stage: "collecting_context",
+          source_turn_id: "t_uv",
+          user_confirmed: false,
+          fact_roles: ["situation"],
+          related_dir_ids: ["DIR-DEF-QUESTION"],
+        },
+      ],
+    });
+    const session = { decision_context: dc } as POJUSessionState;
+    assert.equal(
+      isMaterialDcWrite({
+        fact_ids_written: ["uv"],
+        constraint_ids_written: [],
+        session,
+        answer: { classification: "substantive" },
+      }),
+      false,
+    );
+    const migrated = migrateSessionBudget(
+      {
+        soft_budget_limit: 12,
+        hard_budget_limit: 15,
+        session_asked_count: 0,
+        review_cycle: 1,
+        cycle_base_asked: 0,
+        remaining_hard_budget: 15,
+        depth_by_dir: {},
+      },
+      dc,
+    );
+    assert.equal(migrated.core_effective_answer_rounds ?? 0, 0);
+  });
+
+  await check("ordinary guard: invalid need source or ask_policy", () => {
+    const badNever: AdaptiveQuestionPlan = {
+      plan_id: "qp_never",
+      candidate_id: "c1",
+      direction_id: "DIRN-DEFINITION",
+      ddr_ids: ["DDR-P05-01"],
+      dir_ids: ["DIR-DEF-QUESTION"],
+      fact_role_codes: [],
+      missing_info: "unknown",
+      decision_value: "decision_critical",
+      ask_now_reason: "test",
+      expected_info: "info",
+      depth: 1,
+      budget_cost: 1,
+      remaining_hard_budget: 14,
+      gate_class: "P0",
+      scope_boundary: "test",
+      rationale: "test",
+      question_text: "问题？",
+      built_at: NOW,
+      scoring_path: "test",
+      collection_mode: "ordinary",
+      need_ids: ["need:upstream:01b-page02-basis"],
+    };
+    const session = {
+      decision_understanding: {
+        budget: {
+          soft_budget_limit: 12,
+          hard_budget_limit: 15,
+          session_asked_count: 0,
+          review_cycle: 1,
+          cycle_base_asked: 0,
+          remaining_hard_budget: 15,
+          depth_by_dir: {},
+          core_effective_answer_rounds: 0,
+          core_round_hard_cap: 7,
+        },
+        last_sent_question: null,
+      },
+    } as POJUSessionState;
+    const rNever = guardAndAttachAuthorizedQuestion(session, badNever, "t1", NOW);
+    assert.equal(rNever.attached, false);
+    assert.equal(rNever.block_reason, "invalid_ssot_need_ids");
+    const badSource: AdaptiveQuestionPlan = {
+      ...badNever,
+      plan_id: "qp_src",
+      need_ids: ["need:local:02a-profile-relevant"],
+    };
+    const rSrc = guardAndAttachAuthorizedQuestion(session, badSource, "t1", NOW);
+    assert.equal(rSrc.attached, false);
+    assert.equal(rSrc.block_reason, "invalid_ssot_need_ids");
   });
 
   await check("soft-12: validateScopeDepthBudget blocks P2 after soft", () => {

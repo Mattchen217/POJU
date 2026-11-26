@@ -1667,13 +1667,49 @@ async function runAgentTurn(input: HandleInput, internalTurn: InternalTurn): Pro
     if (m1HasAuthorizedQuestion && m1CollectingTurn.plan) {
       const {
         guardAndAttachAuthorizedQuestion,
-        confirmAuthorizedQuestionSend,
         releaseAuthorizedQuestionClaim,
         classifyCollectionMode,
+        reserveClarificationClaimCas,
       } = await import("@/lib/poju/decision-intake");
       const plan = m1CollectingTurn.plan;
+      let sessionForGuard = sessionOut;
+      if (
+        classifyCollectionMode(plan) === "clarification" &&
+        sessionOut.decision_understanding?.last_sent_question?.plan_id !== plan.plan_id
+      ) {
+        const reserved = await reserveClarificationClaimCas({
+          session: sessionOut,
+          plan_id: plan.plan_id,
+          now: nowIso,
+        });
+        if (!reserved.ok) {
+          const released = releaseAuthorizedQuestionClaim(
+            reserved.session,
+            plan.plan_id,
+            nowIso,
+          );
+          const summary =
+            m1CollectingTurn.understanding?.current_understanding.summary?.trim() ||
+            "当前关键信息已足够。请确认以上理解是否正确；确认后进入下一阶段。";
+          finalContent = `【理解确认】${summary}
+
+如果以上理解正确，请回复确认；如需补充，请直接说明。`;
+          sessionOut = {
+            ...released,
+            adaptive_ask_plan: null,
+            messages: [
+              ...messagesWithUser,
+              { ...assistantMessage, content: finalContent },
+            ],
+          };
+          sessionOut = stampDecisionUnderstandingBoxOnLastUser(sessionOut);
+          if (input.server_invoke?.skip_delivery_pipeline) return sessionOut;
+          return sessionOut;
+        }
+        sessionForGuard = reserved.session;
+      }
       const guarded = guardAndAttachAuthorizedQuestion(
-        sessionOut,
+        sessionForGuard,
         plan,
         turnId,
         nowIso,
@@ -1706,15 +1742,6 @@ async function runAgentTurn(input: HandleInput, internalTurn: InternalTurn): Pro
             { ...assistantMessage, content: finalContent },
           ],
         };
-        if (classifyCollectionMode(plan) === "clarification") {
-          sessionOut = confirmAuthorizedQuestionSend(
-            sessionOut,
-            plan.plan_id,
-            turnId,
-            assistantMessage.client_id!,
-            nowIso,
-          );
-        }
       }
     } else {
       sessionOut = {
@@ -2172,9 +2199,9 @@ async function runAgentTurn(input: HandleInput, internalTurn: InternalTurn): Pro
     const {
       assertQuestionMatchesPlan,
       guardAndAttachAuthorizedQuestion,
-      confirmAuthorizedQuestionSend,
       releaseAuthorizedQuestionClaim,
       classifyCollectionMode,
+      reserveClarificationClaimCas,
     } = await import("@/lib/poju/decision-intake");
     const matched = assertQuestionMatchesPlan(finalContent, m1CollectingTurn.plan);
     finalContent = matched.text;
@@ -2222,43 +2249,69 @@ async function runAgentTurn(input: HandleInput, internalTurn: InternalTurn): Pro
         sessionOut.last_answer_event,
       messages: messagesWithUser,
     };
-    const guarded = guardAndAttachAuthorizedQuestion(
-      preGuard,
-      plan,
-      turnId,
-      nowIso,
-    );
-  const outboundAssistant = { ...assistantMessage, client_id: assistantMessageId };
-    if (!guarded.attached) {
-      const released = releaseAuthorizedQuestionClaim(
-        guarded.session,
-        plan.plan_id,
-        nowIso,
-      );
-      const summary =
-        m1CollectingTurn.understanding?.current_understanding.summary?.trim() ||
-        "当前关键信息已足够。请确认以上理解是否正确；确认后进入下一阶段。";
-      finalContent = `【理解确认】${summary}
-
-如果以上理解正确，请回复确认；如需补充，请直接说明。`;
-      sessionOut = {
-        ...released,
-        adaptive_ask_plan: null,
-        messages: [...messagesWithUser, { ...outboundAssistant, content: finalContent }],
-      };
-    } else {
-      sessionOut = {
-        ...guarded.session,
-        messages: [...messagesWithUser, { ...outboundAssistant, content: finalContent }],
-      };
-      if (classifyCollectionMode(plan) === "clarification") {
-        sessionOut = confirmAuthorizedQuestionSend(
-          sessionOut,
+    const outboundAssistant = { ...assistantMessage, client_id: assistantMessageId };
+    let sessionForGuard: POJUSessionState = preGuard;
+    let reserveBlocked = false;
+    if (
+      classifyCollectionMode(plan) === "clarification" &&
+      preGuard.decision_understanding?.last_sent_question?.plan_id !== plan.plan_id
+    ) {
+      const reserved = await reserveClarificationClaimCas({
+        session: preGuard,
+        plan_id: plan.plan_id,
+        now: nowIso,
+      });
+      if (!reserved.ok) {
+        const released = releaseAuthorizedQuestionClaim(
+          reserved.session,
           plan.plan_id,
-          turnId,
-          outboundAssistant.client_id!,
           nowIso,
         );
+        const summary =
+          m1CollectingTurn.understanding?.current_understanding.summary?.trim() ||
+          "当前关键信息已足够。请确认以上理解是否正确；确认后进入下一阶段。";
+        finalContent = `【理解确认】${summary}
+
+如果以上理解正确，请回复确认；如需补充，请直接说明。`;
+        sessionOut = {
+          ...released,
+          adaptive_ask_plan: null,
+          messages: [...messagesWithUser, { ...outboundAssistant, content: finalContent }],
+        };
+        reserveBlocked = true;
+      } else {
+        sessionForGuard = reserved.session;
+      }
+    }
+    if (!reserveBlocked) {
+      const guarded = guardAndAttachAuthorizedQuestion(
+        sessionForGuard,
+        plan,
+        turnId,
+        nowIso,
+      );
+      if (!guarded.attached) {
+        const released = releaseAuthorizedQuestionClaim(
+          guarded.session,
+          plan.plan_id,
+          nowIso,
+        );
+        const summary =
+          m1CollectingTurn.understanding?.current_understanding.summary?.trim() ||
+          "当前关键信息已足够。请确认以上理解是否正确；确认后进入下一阶段。";
+        finalContent = `【理解确认】${summary}
+
+如果以上理解正确，请回复确认；如需补充，请直接说明。`;
+        sessionOut = {
+          ...released,
+          adaptive_ask_plan: null,
+          messages: [...messagesWithUser, { ...outboundAssistant, content: finalContent }],
+        };
+      } else {
+        sessionOut = {
+          ...guarded.session,
+          messages: [...messagesWithUser, { ...outboundAssistant, content: finalContent }],
+        };
       }
     }
   } else if (

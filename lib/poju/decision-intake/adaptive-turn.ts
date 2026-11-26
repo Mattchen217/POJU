@@ -2157,7 +2157,11 @@ function ordinaryPlanNeedIdsValid(plan: AdaptiveQuestionPlan): boolean {
   if (!ids?.length) return false;
   return ids.every((id) => {
     const need = reportInformationNeedById(id);
-    return Boolean(need && need.ask_policy !== "never");
+    return Boolean(
+      need &&
+        need.source_kind === "decision_context" &&
+        need.ask_policy === "ask_if_material",
+    );
   });
 }
 
@@ -2221,7 +2225,10 @@ export function guardAndAttachAuthorizedQuestion(
       return {
         session,
         attached: false,
-        block_reason: "clarification_allowance_exhausted",
+        block_reason:
+          claim.reason === "already_confirmed"
+            ? "clarification_already_sent"
+            : "clarification_allowance_exhausted",
       };
     }
     // Claim reserves allowance; asked-count is charged here and refunded on release
@@ -2264,6 +2271,43 @@ export function guardAndAttachAuthorizedQuestion(
       },
     },
     attached: true,
+  };
+}
+
+/**
+ * Confirms clarification claims only when the outbound assistant message is part of
+ * a durable authoritative Session CAS commit (see finalizeClarificationClaimsForDurableCommit).
+ */
+export function finalizeClarificationClaimsForDurableCommit(
+  session: POJUSessionState,
+  now: string,
+): POJUSessionState {
+  const understanding = session.decision_understanding;
+  if (!understanding?.budget) return session;
+  const lastPlan = understanding.last_sent_question?.plan_id;
+  const claims = understanding.budget.clarification_claims ?? [];
+  const pending = claims.filter((c) => c.status === "claimed");
+  if (!pending.length) return session;
+
+  const assistantMsgs = [...(session.messages ?? [])]
+    .filter((m) => m.role === "assistant")
+    .reverse();
+  let budget = understanding.budget;
+  for (const claim of pending) {
+    if (!lastPlan || claim.plan_id !== lastPlan) continue;
+    const outbound = assistantMsgs.find((m) => m.client_id?.trim());
+    if (!outbound?.client_id?.trim()) continue;
+    budget = confirmClarification(
+      budget,
+      claim.plan_id,
+      now,
+      outbound.client_id.trim(),
+    );
+  }
+  if (budget === understanding.budget) return session;
+  return {
+    ...session,
+    decision_understanding: { ...understanding, budget },
   };
 }
 

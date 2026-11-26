@@ -61,9 +61,15 @@ export {
   attachAuthorizedAssistantQuestion,
   guardAndAttachAuthorizedQuestion,
   confirmAuthorizedQuestionSend,
+  finalizeClarificationClaimsForDurableCommit,
   releaseAuthorizedQuestionClaim,
   type AttachAuthorizedQuestionResult,
 } from "./adaptive-turn";
+export {
+  reserveClarificationClaimCas,
+  type ReserveClarificationClaimCasInput,
+  type ReserveClarificationClaimCasResult,
+} from "./clarification-claim-cas";
 export {
   bootstrapFreshSessionMainLoop,
   M1R_STARTER_DIRS,
