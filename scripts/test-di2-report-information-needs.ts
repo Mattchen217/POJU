@@ -1072,6 +1072,247 @@ async function main() {
     });
   });
 
+  await check("reserve reject: preserves this-turn core increment while keeping auth claims", async () => {
+    const { reserveClarificationClaimCas } = await import(
+      "../lib/poju/decision-intake/clarification-claim-cas"
+    );
+    const {
+      createMemorySessionAuthorityStore,
+      runWithSessionAuthorityStore,
+    } = await import("../lib/poju/session-authority/store");
+    const {
+      initializeAuthoritativeSession,
+      commitAuthoritativeSessionUpdate,
+      requireAuthoritativeSession,
+    } = await import("../lib/poju/session-authority/lifecycle");
+
+    await runWithSessionAuthorityStore(createMemorySessionAuthorityStore(), async () => {
+      const record = await initializeAuthoritativeSession({
+        original_question: "r5 core preserve",
+        device_id: "dev_r5_core",
+      });
+      const authClaims = [
+        {
+          plan_id: "plan_0",
+          status: "confirmed" as const,
+          claimed_at: NOW,
+          confirmed_at: NOW,
+        },
+        {
+          plan_id: "plan_1",
+          status: "confirmed" as const,
+          claimed_at: NOW,
+          confirmed_at: NOW,
+        },
+        {
+          plan_id: "plan_2",
+          status: "confirmed" as const,
+          claimed_at: NOW,
+          confirmed_at: NOW,
+        },
+      ];
+      const authBudget: SessionBudgetSnapshot = {
+        soft_budget_limit: 12,
+        hard_budget_limit: 15,
+        session_asked_count: 4,
+        review_cycle: 1,
+        cycle_base_asked: 0,
+        remaining_hard_budget: 11,
+        depth_by_dir: {},
+        core_effective_answer_rounds: 4,
+        core_counted_source_turn_ids: ["t1", "t2", "t3", "t4"],
+        clarification_allowance: 3,
+        clarification_rounds: 3,
+        clarification_claims: authClaims,
+      };
+      const seeded = await commitAuthoritativeSessionUpdate({
+        sessionId: record.session_id,
+        expectedRevision: record.revision,
+        expectedGeneration: record.session_generation,
+        snapshot: {
+          ...record.session_snapshot,
+          decision_understanding: {
+            budget: authBudget,
+            last_sent_question: null,
+          } as POJUSessionState["decision_understanding"],
+        },
+        last_committed_turn_id: "t4",
+      });
+
+      // This turn already applied a material DC write and bumped core to 5.
+      const working: POJUSessionState = {
+        ...seeded.session_snapshot,
+        session_revision: seeded.revision,
+        decision_understanding: {
+          ...(seeded.session_snapshot.decision_understanding as object),
+          budget: {
+            ...authBudget,
+            core_effective_answer_rounds: 5,
+            core_counted_source_turn_ids: ["t1", "t2", "t3", "t4", "t5_this_turn"],
+            // Stale empty claims in working must not win over auth.
+            clarification_claims: [],
+            clarification_rounds: 0,
+          },
+          last_sent_question: null,
+        } as POJUSessionState["decision_understanding"],
+      };
+
+      const rejected = await reserveClarificationClaimCas({
+        session: working,
+        plan_id: "plan_new",
+        now: NOW,
+      });
+      assert.equal(rejected.ok, false);
+      assert.equal(rejected.block_reason, "clarification_allowance_exhausted");
+      assert.equal(
+        rejected.session.decision_understanding?.budget.core_effective_answer_rounds,
+        5,
+      );
+      assert.deepEqual(
+        rejected.session.decision_understanding?.budget.core_counted_source_turn_ids,
+        ["t1", "t2", "t3", "t4", "t5_this_turn"],
+      );
+      assert.deepEqual(
+        rejected.session.decision_understanding?.budget.clarification_claims,
+        authClaims,
+      );
+
+      const committed = await commitAuthoritativeSessionUpdate({
+        sessionId: record.session_id,
+        expectedRevision: rejected.session.session_revision!,
+        expectedGeneration: record.session_generation,
+        snapshot: {
+          ...rejected.session,
+          messages: [
+            ...(rejected.session.messages ?? []),
+            {
+              role: "assistant",
+              content: "【理解确认】",
+              client_id: "asst_r5",
+              timestamp: NOW,
+            },
+          ],
+        },
+        last_committed_turn_id: "t5_this_turn",
+      });
+      const latest = await requireAuthoritativeSession(record.session_id);
+      assert.equal(committed.revision, seeded.revision + 1);
+      assert.equal(
+        latest.session_snapshot.decision_understanding?.budget.core_effective_answer_rounds,
+        5,
+      );
+      assert.deepEqual(
+        latest.session_snapshot.decision_understanding?.budget.clarification_claims,
+        authClaims,
+      );
+    });
+  });
+
+  await check("reserve reject: authoritative null last_sent_question clears working residue", async () => {
+    const { reserveClarificationClaimCas } = await import(
+      "../lib/poju/decision-intake/clarification-claim-cas"
+    );
+    const {
+      createMemorySessionAuthorityStore,
+      runWithSessionAuthorityStore,
+    } = await import("../lib/poju/session-authority/store");
+    const {
+      initializeAuthoritativeSession,
+      commitAuthoritativeSessionUpdate,
+    } = await import("../lib/poju/session-authority/lifecycle");
+
+    await runWithSessionAuthorityStore(createMemorySessionAuthorityStore(), async () => {
+      const record = await initializeAuthoritativeSession({
+        original_question: "r5 null last_sent",
+        device_id: "dev_r5_null",
+      });
+      const authClaims = [
+        {
+          plan_id: "plan_0",
+          status: "confirmed" as const,
+          claimed_at: NOW,
+          confirmed_at: NOW,
+        },
+        {
+          plan_id: "plan_1",
+          status: "confirmed" as const,
+          claimed_at: NOW,
+          confirmed_at: NOW,
+        },
+        {
+          plan_id: "plan_2",
+          status: "confirmed" as const,
+          claimed_at: NOW,
+          confirmed_at: NOW,
+        },
+      ];
+      const seeded = await commitAuthoritativeSessionUpdate({
+        sessionId: record.session_id,
+        expectedRevision: record.revision,
+        expectedGeneration: record.session_generation,
+        snapshot: {
+          ...record.session_snapshot,
+          decision_understanding: {
+            budget: {
+              soft_budget_limit: 12,
+              hard_budget_limit: 15,
+              session_asked_count: 3,
+              review_cycle: 1,
+              cycle_base_asked: 0,
+              remaining_hard_budget: 12,
+              depth_by_dir: {},
+              clarification_allowance: 3,
+              clarification_rounds: 3,
+              clarification_claims: authClaims,
+            },
+            last_sent_question: null,
+          } as POJUSessionState["decision_understanding"],
+        },
+        last_committed_turn_id: null,
+      });
+
+      const working: POJUSessionState = {
+        ...seeded.session_snapshot,
+        session_revision: 0,
+        decision_understanding: {
+          ...(seeded.session_snapshot.decision_understanding as object),
+          budget: {
+            soft_budget_limit: 12,
+            hard_budget_limit: 15,
+            session_asked_count: 0,
+            review_cycle: 1,
+            cycle_base_asked: 0,
+            remaining_hard_budget: 15,
+            depth_by_dir: {},
+            clarification_allowance: 3,
+            clarification_claims: [],
+          },
+          last_sent_question: {
+            question_text: "stale residue",
+            plan_id: "plan_stale",
+            direction_id: "DIRN-DEFINITION",
+            dir_ids: [],
+            ddr_ids: [],
+            fact_role_codes: [],
+            turn_id: "t_stale",
+          },
+        } as POJUSessionState["decision_understanding"],
+      };
+
+      const rejected = await reserveClarificationClaimCas({
+        session: working,
+        plan_id: "plan_new",
+        now: NOW,
+      });
+      assert.equal(rejected.ok, false);
+      assert.equal(rejected.session.decision_understanding?.last_sent_question, null);
+      assert.deepEqual(
+        rejected.session.decision_understanding?.budget.clarification_claims,
+        authClaims,
+      );
+    });
+  });
+
   await check("e2e: reserve → guard → outbound → finalize → commit uses post-reserve revision", async () => {
     const { reserveClarificationClaimCas } = await import(
       "../lib/poju/decision-intake/clarification-claim-cas"

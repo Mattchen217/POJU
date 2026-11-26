@@ -136,12 +136,52 @@ function overlayClaimOntoWorkingSession(
   };
 }
 
+type BudgetSnap = NonNullable<
+  NonNullable<POJUSessionState["decision_understanding"]>["budget"]
+>;
+
 /**
- * Business reject (allowance exhausted / already confirmed): keep the working
- * turn's in-flight fields, but never stamp current.revision onto a Session whose
- * budget/claims still reflect the pre-read working copy. Authoritative budget is
- * the sole source for ledger + claims at that revision.
+ * Business reject merge:
+ * - Clarification claims / allowance / rounds → always authoritative (concurrency).
+ * - Core ledger → keep this-turn working advances when ahead of auth; otherwise
+ *   take authoritative core so a stale working copy cannot erase concurrent counts.
+ * - last_sent_question → authoritative only (null clears stale working residue).
+ * If authoritative budget is missing, do not stamp revision (fail closed).
  */
+function mergeBudgetFieldsOnReject(work: BudgetSnap, auth: BudgetSnap): BudgetSnap {
+  const workCore = work.core_effective_answer_rounds ?? 0;
+  const authCore = auth.core_effective_answer_rounds ?? 0;
+
+  const clarificationAuthority = {
+    clarification_allowance: auth.clarification_allowance,
+    clarification_claims: auth.clarification_claims,
+    clarification_rounds: auth.clarification_rounds,
+  };
+
+  if (workCore > authCore) {
+    return {
+      ...work,
+      ...clarificationAuthority,
+    };
+  }
+
+  // Working is not ahead on core — authoritative ledger wins for core counters.
+  const workIds = work.core_counted_source_turn_ids?.length ?? 0;
+  const authIds = auth.core_counted_source_turn_ids?.length ?? 0;
+  const preferWorkTurnIds = workCore === authCore && workIds > authIds;
+
+  return {
+    ...auth,
+    ...clarificationAuthority,
+    ...(preferWorkTurnIds
+      ? {
+          core_counted_source_turn_ids: work.core_counted_source_turn_ids,
+          core_counted_answer_event_ids: work.core_counted_answer_event_ids,
+        }
+      : {}),
+  };
+}
+
 function mergeAuthoritativeBudgetOnReject(
   working: POJUSessionState,
   authoritative: POJUSessionState,
@@ -153,11 +193,14 @@ function mergeAuthoritativeBudgetOnReject(
     // Cannot safely represent current.revision without authoritative budget.
     return working;
   }
-  if (!workUnderstanding) {
+  if (!workUnderstanding?.budget) {
     return {
       ...working,
       session_revision: revision,
-      decision_understanding: authUnderstanding,
+      decision_understanding: {
+        ...authUnderstanding,
+        last_sent_question: authUnderstanding.last_sent_question ?? null,
+      },
     };
   }
   return {
@@ -165,9 +208,9 @@ function mergeAuthoritativeBudgetOnReject(
     session_revision: revision,
     decision_understanding: {
       ...workUnderstanding,
-      budget: authUnderstanding.budget,
-      last_sent_question:
-        authUnderstanding.last_sent_question ?? workUnderstanding.last_sent_question,
+      budget: mergeBudgetFieldsOnReject(workUnderstanding.budget, authUnderstanding.budget),
+      // Authoritative null must clear working residue — never `?? work`.
+      last_sent_question: authUnderstanding.last_sent_question ?? null,
     },
   };
 }
