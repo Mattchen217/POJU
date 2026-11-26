@@ -284,6 +284,27 @@ function pagesFromRecords(records: readonly DecisionReportPageRecord[]): FreezeB
 
 type FreezeRef = { freezeId: string; context_id: string; version: number; content_hash: string };
 
+/** Historical completed reports (v1) plus the current production schema (v2). */
+const SUPPORTED_DI2_REPORT_SCHEMAS = new Set([
+  "di2-eight-page-v1",
+  "di2-eight-page-v2",
+]);
+
+function isSupportedDi2ReportSchema(value: unknown): value is string {
+  return typeof value === "string" && SUPPORTED_DI2_REPORT_SCHEMAS.has(value);
+}
+
+/**
+ * Schema for a mirrored Freeze-bound row: completed payloads keep their own version
+ * (so v1 restores are not rewritten as v2); in-flight jobs without a result stay on
+ * the current default used for new generation.
+ */
+function mirroredReportSchemaVersion(payload: DecisionReportStatusPayload): string {
+  const fromResult = payload.result?.report_schema_version;
+  if (isSupportedDi2ReportSchema(fromResult)) return fromResult;
+  return DI2_REPORT_SCHEMA_VERSION;
+}
+
 function mirrorRow(session: POJUSessionState, payload: DecisionReportStatusPayload, freeze: FreezeRef): POJUSessionState {
   const report_job_id = payload.report_job_id;
   if (!report_job_id) return session;
@@ -302,7 +323,7 @@ function mirrorRow(session: POJUSessionState, payload: DecisionReportStatusPaylo
       decisionContextVersion: freeze.version,
       contentHash: freeze.content_hash,
       snapshotSchemaVersion: M22_SNAPSHOT_SCHEMA_VERSION,
-      reportSchemaVersion: DI2_REPORT_SCHEMA_VERSION,
+      reportSchemaVersion: mirroredReportSchemaVersion(payload),
       contextId: freeze.context_id,
     },
     pages: pagesFromRecords(payload.pages),
@@ -371,11 +392,18 @@ function verifyCompletedReport(
   if (payload.session_id !== expected.session_id) bindingMismatch("Report belongs to another session");
   if (typeof gen !== "number" || result.execution_generation !== gen) bindingMismatch("Report generation mismatch");
   if (result.report_job_id !== payload.report_job_id) bindingMismatch("Report row mismatch");
+  // Use the report's declared schema (v1 historical or v2 current) — never force the
+  // client's default, or restored v1 report_job_id checks fail as binding mismatches.
+  if (!isSupportedDi2ReportSchema(result.report_schema_version)) {
+    bindingMismatch("Unsupported or missing report schema version");
+  }
+  const reportSchemaVersion = result.report_schema_version;
   const expectedReportJobId = di2ReportJobId({
     session_id: expected.session_id,
     freeze_id: freeze.freezeId,
     profile_hash: expected.profile_hash ?? payload.profile_hash ?? "",
     execution_generation: gen,
+    report_schema_version: reportSchemaVersion,
   });
   if (result.report_job_id !== expectedReportJobId) bindingMismatch("Report row belongs to another report");
   if (
@@ -409,6 +437,9 @@ function verifyCompletedReport(
     }
     if (p.job_id !== payload.job_id || p.execution_generation !== gen || p.analysis_id !== result.analysis_id) {
       bindingMismatch(`Page ${id} belongs to another job or generation`);
+    }
+    if (p.report_schema_version !== reportSchemaVersion) {
+      bindingMismatch(`Page ${id} schema version mismatch`);
     }
     return {
       pageId: id,

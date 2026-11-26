@@ -990,6 +990,155 @@ async function main() {
         const reloaded = await assertDelivered(session.session_id, job_id);
         assert.equal((reloaded as unknown as { m5_other_writer?: boolean }).m5_other_writer, true, "other writer's change kept");
       });
+
+      await check("R1 historical di2-eight-page-v1 completed report restores without binding mismatch", async () => {
+        const types = await import("../lib/poju/decision-intake/decision-report-types");
+        const V1 = "di2-eight-page-v1";
+        assert.equal(types.DI2_REPORT_SCHEMA_VERSION, "di2-eight-page-v2", "current default stays v2");
+
+        const { session, job_id } = await completedButNotReceived("r1v1");
+        const v2Rec = (await store.loadCompletedReport(session.session_id, job_id))!;
+        assert.equal(v2Rec.report_schema_version, types.DI2_REPORT_SCHEMA_VERSION);
+
+        const v1ReportJobId = types.di2ReportJobId({
+          session_id: session.session_id,
+          freeze_id: v2Rec.freeze_id,
+          profile_hash: v2Rec.profile_hash,
+          execution_generation: v2Rec.execution_generation,
+          report_schema_version: V1,
+        });
+        assert.notEqual(v1ReportJobId, v2Rec.report_job_id, "v1 id must not equal v2 id");
+        assert.ok(v1ReportJobId.includes(V1) || v1ReportJobId.includes("di2-eight-page-v1"));
+
+        const chartAppendixMd =
+          "### 盘面附录\n\n**八字本题切片**\n- CFP-01: 日主偏强（历史 v1 盘面附录原文，不得被术语附录替换）";
+        const frozenFullText =
+          "# HISTORICAL_V1_FULL_TEXT_MARKER\n\n## 本题断语\nbody-01\n\n## 盘面附录\n" + chartAppendixMd;
+
+        const v1Pages = v2Rec.pages.map((p) => {
+          if (p.page_id === "03") {
+            return {
+              ...p,
+              report_schema_version: V1,
+              applicability: "applies" as const,
+              content_markdown: chartAppendixMd,
+              structured: {
+                page_id: "03",
+                title: "盘面附录",
+                blocks: [],
+                appendix: {
+                  bazi_lines: [{ ref_id: "CFP-01", text: "日主偏强（历史 v1）" }],
+                  ziwei_lines: [],
+                  contrast: "历史 v1 盘面附录",
+                },
+              },
+            };
+          }
+          return { ...p, report_schema_version: V1 };
+        });
+        const v1Draft = {
+          ...v2Rec,
+          report_job_id: v1ReportJobId,
+          report_schema_version: V1,
+          pages: v1Pages,
+          result: {
+            ...v2Rec.result,
+            report_job_id: v1ReportJobId,
+            report_schema_version: V1,
+            full_text: frozenFullText,
+          },
+        };
+        const { record_hash: _dropHash, record_version: _dropVer, ...draftBody } = v1Draft;
+        void _dropHash;
+        void _dropVer;
+        const sealed = store.sealCompletedReportRecord(draftBody);
+        store.verifyCompletedReportRecord(sealed);
+        await durableKv().set(store.di2CompletedReportKey(session.session_id, job_id), sealed);
+        // Status falls back to the durable record once the short-lived execution job is gone.
+        await kv.del(xhighJobKey(job_id));
+
+        // Device never finished local mirror: keep pending job id, drop any interim
+        // FreezeBoundReportJob rows (they still carry the pre-rewrite v2 report_job_id).
+        const pendingOnly = {
+          ...session,
+          main_delivery_done: false,
+          pending_decision_report_job_id: job_id,
+          freeze_bound_report_jobs: (session.freeze_bound_report_jobs ?? []).filter(
+            (j) => j.binding.freezeId !== freezeIdOf(session),
+          ),
+        } as POJUSessionState;
+        await sm.savePOJUSession(pendingOnly);
+
+        const calls = { a: analysisCalls, p: pageCalls.length };
+        actions.length = 0;
+        await client.runDecisionReportForSession(pendingOnly, "zh", { pollMs: 5 });
+        assert.deepEqual(actions, ["status"]);
+        assert.deepEqual({ a: analysisCalls, p: pageCalls.length }, calls, "v1 restore must not re-run models");
+
+        const delivered = (await sm.loadPOJUSession(session.session_id))!;
+        assert.equal(delivered.main_delivery_done, true);
+        assert.equal(delivered.pending_decision_report_job_id ?? null, null);
+        const row = (delivered.freeze_bound_report_jobs ?? []).find((j) => j.job_id === v1ReportJobId);
+        assert.ok(row, "v1 report row mirrored");
+        assert.equal(row!.status, "completed");
+        assert.equal(row!.binding.reportSchemaVersion, V1);
+        assert.equal(row!.job_id, v1ReportJobId);
+        const p03 = row!.pages.find((p) => p.pageId === "03")!;
+        assert.equal(p03.content, chartAppendixMd);
+        assert.ok(p03.content.includes("历史 v1 盘面附录原文"));
+        assert.ok(p03.content.includes("盘面附录"));
+        assert.ok(!p03.content.includes("本报告使用的术语"));
+
+        const deliveryMsg = (delivered.messages ?? []).find(
+          (m) => m.meta?.contains_delivery && typeof m.content === "string" && m.content.includes("HISTORICAL_V1_FULL_TEXT_MARKER"),
+        );
+        assert.ok(deliveryMsg, "historical full_text mirrored into Session delivery");
+        assert.equal(deliveryMsg!.content, frozenFullText, "full_text must not be rebuilt");
+
+        // New generation still uses v2 and must not treat v1 as the same identity.
+        const sampleInput = (schema: string): JobInput => ({
+          kind: "decision_intake_report",
+          session_id: session.session_id,
+          locale: "zh",
+          freeze_id: v2Rec.freeze_id,
+          context_id: v2Rec.context_id,
+          context_version: v2Rec.context_version,
+          context_hash: v2Rec.context_hash,
+          report_schema_version: schema,
+          analysis_schema_version: v2Rec.analysis_schema_version,
+          profile_id: v2Rec.profile_id,
+          profile_hash: v2Rec.profile_hash,
+          freeze_receipt_id: v2Rec.freeze_receipt_id,
+          frozen_at: "2026-01-01T00:00:00.000Z",
+          profile_receipt_id: v2Rec.profile_receipt_id,
+          profile_calculation_schema_version: "test",
+          analysis_key: "k",
+          report_job_id: schema === V1 ? v1ReportJobId : v2Rec.report_job_id,
+          page07_applies: false,
+          page07_topic: null,
+          regenerate: false,
+        });
+        assert.equal(
+          service.sameIdentity(sampleInput(types.DI2_REPORT_SCHEMA_VERSION), sampleInput(V1)),
+          false,
+          "v1 must not reuse as v2",
+        );
+        assert.equal(
+          service.sameIdentity(sampleInput(types.DI2_REPORT_SCHEMA_VERSION), sampleInput(types.DI2_REPORT_SCHEMA_VERSION)),
+          true,
+        );
+
+        // A fresh v2 report on another session still completes under the current schema.
+        reset();
+        const v2Session = await deviceSession("r1v2");
+        await client.runDecisionReportForSession(v2Session, "zh", { pollMs: 5 });
+        await drain();
+        const v2Delivered = (await sm.loadPOJUSession(v2Session.session_id))!;
+        assert.equal(v2Delivered.main_delivery_done, true);
+        const v2Row = client.latestDi2ReportRow(v2Delivered, freezeIdOf(v2Delivered))!;
+        assert.equal(v2Row.binding.reportSchemaVersion, types.DI2_REPORT_SCHEMA_VERSION);
+        assert.equal(v2Row.status, "completed");
+      });
     },
     { deadlineMs: 20 * 60_000 },
   );
