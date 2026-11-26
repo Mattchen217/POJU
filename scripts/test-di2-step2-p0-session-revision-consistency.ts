@@ -912,6 +912,14 @@ async function main() {
           follow.session.dc_ledger?.head?.snapshot_hash,
           finalHead!.snapshot_hash,
         );
+        assert.equal(
+          follow.session.dc_ledger?.head?.entry_hash,
+          finalHead!.entry_hash,
+        );
+        assert.equal(
+          follow.session.dc_ledger?.head?.commit_version,
+          finalHead!.commit_version,
+        );
       });
     });
   } finally {
