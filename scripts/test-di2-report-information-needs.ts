@@ -911,6 +911,167 @@ async function main() {
     });
   });
 
+  await check("reserve reject: stale working budget cannot overwrite authoritative claims", async () => {
+    const { reserveClarificationClaimCas } = await import(
+      "../lib/poju/decision-intake/clarification-claim-cas"
+    );
+    const {
+      createMemorySessionAuthorityStore,
+      runWithSessionAuthorityStore,
+    } = await import("../lib/poju/session-authority/store");
+    const {
+      initializeAuthoritativeSession,
+      commitAuthoritativeSessionUpdate,
+      requireAuthoritativeSession,
+    } = await import("../lib/poju/session-authority/lifecycle");
+
+    await runWithSessionAuthorityStore(createMemorySessionAuthorityStore(), async () => {
+      const record = await initializeAuthoritativeSession({
+        original_question: "r4 reject merge",
+        device_id: "dev_r4_reject",
+      });
+      const authClaims = [
+        {
+          plan_id: "plan_0",
+          status: "confirmed" as const,
+          claimed_at: NOW,
+          confirmed_at: NOW,
+        },
+        {
+          plan_id: "plan_1",
+          status: "confirmed" as const,
+          claimed_at: NOW,
+          confirmed_at: NOW,
+        },
+        {
+          plan_id: "plan_2",
+          status: "confirmed" as const,
+          claimed_at: NOW,
+          confirmed_at: NOW,
+        },
+      ];
+      const authBudget: SessionBudgetSnapshot = {
+        soft_budget_limit: 12,
+        hard_budget_limit: 15,
+        session_asked_count: 3,
+        review_cycle: 1,
+        cycle_base_asked: 0,
+        remaining_hard_budget: 12,
+        depth_by_dir: {},
+        clarification_allowance: 3,
+        clarification_rounds: 3,
+        clarification_claims: authClaims,
+      };
+      const seeded = await commitAuthoritativeSessionUpdate({
+        sessionId: record.session_id,
+        expectedRevision: record.revision,
+        expectedGeneration: record.session_generation,
+        snapshot: {
+          ...record.session_snapshot,
+          decision_understanding: {
+            budget: authBudget,
+            last_sent_question: {
+              question_text: "prior clarify",
+              plan_id: "plan_2",
+              direction_id: "DIRN-DEFINITION",
+              dir_ids: [],
+              ddr_ids: [],
+              fact_role_codes: [],
+              turn_id: "t_prior",
+            },
+          } as POJUSessionState["decision_understanding"],
+        },
+        last_committed_turn_id: "t_prior",
+      });
+      assert.equal(seeded.revision, 1);
+
+      // Working copy still holds the pre-concurrency empty budget.
+      const staleWorking: POJUSessionState = {
+        ...seeded.session_snapshot,
+        session_revision: 0,
+        original_question: "working-confirm-turn",
+        decision_understanding: {
+          ...(seeded.session_snapshot.decision_understanding as object),
+          budget: {
+            soft_budget_limit: 12,
+            hard_budget_limit: 15,
+            session_asked_count: 0,
+            review_cycle: 1,
+            cycle_base_asked: 0,
+            remaining_hard_budget: 15,
+            depth_by_dir: {},
+            clarification_allowance: 3,
+            clarification_claims: [],
+          },
+          last_sent_question: null,
+        } as POJUSessionState["decision_understanding"],
+        messages: [
+          {
+            role: "user",
+            content: "stale worker turn",
+            client_id: "u_stale",
+            timestamp: NOW,
+          },
+        ],
+      };
+
+      const rejected = await reserveClarificationClaimCas({
+        session: staleWorking,
+        plan_id: "plan_new",
+        now: NOW,
+      });
+      assert.equal(rejected.ok, false);
+      assert.equal(rejected.block_reason, "clarification_allowance_exhausted");
+      assert.equal(rejected.session.session_revision, 1);
+      assert.equal(rejected.session.original_question, "working-confirm-turn");
+      assert.deepEqual(
+        rejected.session.decision_understanding?.budget.clarification_claims,
+        authClaims,
+      );
+      assert.equal(
+        rejected.session.decision_understanding?.last_sent_question?.plan_id,
+        "plan_2",
+      );
+
+      // Agent-style soft confirm path must not wipe authoritative claims on commit.
+      const released = releaseAuthorizedQuestionClaim(
+        rejected.session,
+        "plan_new",
+        NOW,
+      );
+      const sessionOut: POJUSessionState = {
+        ...released,
+        adaptive_ask_plan: null,
+        messages: [
+          ...(released.messages ?? []),
+          {
+            role: "assistant",
+            content: "【理解确认】enough",
+            client_id: "asst_confirm",
+            timestamp: NOW,
+          },
+        ],
+      };
+      const committed = await commitAuthoritativeSessionUpdate({
+        sessionId: record.session_id,
+        expectedRevision: sessionOut.session_revision!,
+        expectedGeneration: record.session_generation,
+        snapshot: sessionOut,
+        last_committed_turn_id: "u_stale",
+      });
+      assert.equal(committed.revision, 2);
+      const latest = await requireAuthoritativeSession(record.session_id);
+      assert.deepEqual(
+        latest.session_snapshot.decision_understanding?.budget.clarification_claims,
+        authClaims,
+      );
+      assert.equal(
+        latest.session_snapshot.decision_understanding?.budget.clarification_rounds,
+        3,
+      );
+    });
+  });
+
   await check("e2e: reserve → guard → outbound → finalize → commit uses post-reserve revision", async () => {
     const { reserveClarificationClaimCas } = await import(
       "../lib/poju/decision-intake/clarification-claim-cas"

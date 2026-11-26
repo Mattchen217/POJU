@@ -136,6 +136,42 @@ function overlayClaimOntoWorkingSession(
   };
 }
 
+/**
+ * Business reject (allowance exhausted / already confirmed): keep the working
+ * turn's in-flight fields, but never stamp current.revision onto a Session whose
+ * budget/claims still reflect the pre-read working copy. Authoritative budget is
+ * the sole source for ledger + claims at that revision.
+ */
+function mergeAuthoritativeBudgetOnReject(
+  working: POJUSessionState,
+  authoritative: POJUSessionState,
+  revision: number,
+): POJUSessionState {
+  const authUnderstanding = authoritative.decision_understanding;
+  const workUnderstanding = working.decision_understanding;
+  if (!authUnderstanding?.budget) {
+    // Cannot safely represent current.revision without authoritative budget.
+    return working;
+  }
+  if (!workUnderstanding) {
+    return {
+      ...working,
+      session_revision: revision,
+      decision_understanding: authUnderstanding,
+    };
+  }
+  return {
+    ...working,
+    session_revision: revision,
+    decision_understanding: {
+      ...workUnderstanding,
+      budget: authUnderstanding.budget,
+      last_sent_question:
+        authUnderstanding.last_sent_question ?? workUnderstanding.last_sent_question,
+    },
+  };
+}
+
 function failClosedFromError(error: unknown, session: POJUSessionState): never {
   if (error instanceof SessionAuthorityError) {
     throw error;
@@ -196,10 +232,11 @@ async function defaultAuthoritativeReserve(
     if (!claim.ok) {
       return {
         ok: false,
-        session: {
-          ...input.session,
-          session_revision: current.revision,
-        },
+        session: mergeAuthoritativeBudgetOnReject(
+          input.session,
+          snap,
+          current.revision,
+        ),
         block_reason: authoritativeClaimBlockReason(claim.reason),
       };
     }
