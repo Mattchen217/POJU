@@ -2,7 +2,12 @@
  * CAS-atomic clarification allowance claims against the authoritative Session record.
  * Local-only / unit tests (no session_id) use in-memory claimClarification.
  * Authoritative sessions with a session_id always fail closed — never fall back to memory.
+ *
+ * Request-scoped reservation notes let the authoritative chat turn durable-release
+ * claims on definite abort / commit failure without guessing concurrent claims.
  */
+
+import { AsyncLocalStorage } from "node:async_hooks";
 
 import type { POJUSessionState } from "@/lib/poju/types";
 import {
@@ -18,9 +23,54 @@ import {
 } from "@/lib/poju/session-authority/lifecycle";
 import type { ServerSessionRecord } from "@/lib/poju/session-authority/types";
 import { noteAuthoritativeSessionCasRevision } from "@/lib/poju/session-authority/authoritative-revision-anchor";
-import { claimClarification, GLOBAL_CORE_SPENT_CEILING } from "./budget-ledger";
+import {
+  claimClarification,
+  GLOBAL_CORE_SPENT_CEILING,
+  releaseClarification,
+} from "./budget-ledger";
 
 const CAS_RETRY_MAX = 8;
+
+type ClarificationClaimRequestFrame = {
+  reserved_plan_ids: string[];
+};
+
+const clarificationClaimRequestAls =
+  new AsyncLocalStorage<ClarificationClaimRequestFrame>();
+
+export function runWithClarificationClaimRequestScope<T>(
+  fn: () => T | Promise<T>,
+): Promise<T> {
+  return Promise.resolve(
+    clarificationClaimRequestAls.run({ reserved_plan_ids: [] }, fn),
+  );
+}
+
+export function noteClarificationClaimReserved(plan_id: string): void {
+  const frame = clarificationClaimRequestAls.getStore();
+  if (!frame) return;
+  const id = plan_id.trim();
+  if (!id) return;
+  if (!frame.reserved_plan_ids.includes(id)) {
+    frame.reserved_plan_ids.push(id);
+  }
+}
+
+export function listClarificationClaimsReservedThisRequest(): string[] {
+  const frame = clarificationClaimRequestAls.getStore();
+  return frame ? [...frame.reserved_plan_ids] : [];
+}
+
+export function clearClarificationClaimsReservedThisRequest(): void {
+  const frame = clarificationClaimRequestAls.getStore();
+  if (frame) frame.reserved_plan_ids.length = 0;
+}
+
+function forgetClarificationClaimReserved(plan_id: string): void {
+  const frame = clarificationClaimRequestAls.getStore();
+  if (!frame) return;
+  frame.reserved_plan_ids = frame.reserved_plan_ids.filter((id) => id !== plan_id);
+}
 
 export type ReserveClarificationClaimCasInput = {
   session: POJUSessionState;
@@ -323,6 +373,7 @@ async function defaultAuthoritativeReserve(
     // Idempotent re-reserve of an open claim: keep current revision (no second CAS bump).
     if (existingClaim?.status === "claimed") {
       noteAuthoritativeSessionCasRevision(current.revision);
+      noteClarificationClaimReserved(input.plan_id);
       return {
         ok: true,
         session: overlayClaimOntoWorkingSession(
@@ -368,6 +419,7 @@ async function defaultAuthoritativeReserve(
     if (casResult.ok) {
       // Server Authority CAS succeeded — advance the request-scoped authoritative anchor.
       noteAuthoritativeSessionCasRevision(next.revision);
+      noteClarificationClaimReserved(input.plan_id);
       // Keep the caller's in-flight turn state; only overlay the CAS claim + new revision.
       return {
         ok: true,
@@ -398,4 +450,205 @@ export async function reserveClarificationClaimCas(
     return input.casReserve(input);
   }
   return defaultAuthoritativeReserve(input);
+}
+
+export type ReleaseClarificationClaimCasInput = {
+  session: POJUSessionState;
+  plan_id: string;
+  now: string;
+  /**
+   * When set, only release if the durable claim's send_event_id matches
+   * (or the durable claim has no send_event_id yet — pre-send reservation).
+   */
+  send_event_id?: string;
+  /** Test-only override. */
+  casRelease?: (
+    input: ReleaseClarificationClaimCasInput,
+  ) => Promise<ReleaseClarificationClaimCasResult>;
+};
+
+export type ReleaseClarificationClaimCasResult = {
+  ok: boolean;
+  session: POJUSessionState;
+  block_reason?: string;
+};
+
+function inMemoryReleaseClarificationClaim(
+  session: POJUSessionState,
+  plan_id: string,
+  now: string,
+): ReleaseClarificationClaimCasResult {
+  const understanding = session.decision_understanding;
+  if (!understanding?.budget) {
+    return { ok: false, session, block_reason: "missing_decision_understanding" };
+  }
+  const existing = understanding.budget.clarification_claims?.find(
+    (c) => c.plan_id === plan_id,
+  );
+  if (existing?.status === "confirmed") {
+    return { ok: false, session, block_reason: "already_confirmed" };
+  }
+  const budget = releaseClarification(understanding.budget, plan_id, now);
+  forgetClarificationClaimReserved(plan_id);
+  return {
+    ok: true,
+    session: {
+      ...session,
+      decision_understanding: { ...understanding, budget },
+    },
+  };
+}
+
+async function defaultAuthoritativeRelease(
+  input: ReleaseClarificationClaimCasInput,
+): Promise<ReleaseClarificationClaimCasResult> {
+  const sessionId = input.session.session_id?.trim();
+  if (!sessionId) {
+    return inMemoryReleaseClarificationClaim(input.session, input.plan_id, input.now);
+  }
+
+  const store = getSessionAuthorityStore();
+  for (let attempt = 0; attempt < CAS_RETRY_MAX; attempt += 1) {
+    let current: ServerSessionRecord;
+    try {
+      current = await requireAuthoritativeSession(sessionId);
+    } catch (error) {
+      failClosedFromError(error, input.session);
+    }
+
+    const snap = current.session_snapshot;
+    const understanding = snap.decision_understanding;
+    if (!understanding?.budget) {
+      return {
+        ok: false,
+        session: input.session,
+        block_reason: "missing_decision_understanding",
+      };
+    }
+
+    const existing = understanding.budget.clarification_claims?.find(
+      (c) => c.plan_id === input.plan_id,
+    );
+    if (!existing || existing.status === "released") {
+      noteAuthoritativeSessionCasRevision(current.revision);
+      forgetClarificationClaimReserved(input.plan_id);
+      return {
+        ok: true,
+        session: overlayClaimOntoWorkingSession(
+          input.session,
+          understanding.budget,
+          current.revision,
+        ),
+      };
+    }
+    if (existing.status === "confirmed") {
+      return {
+        ok: false,
+        session: mergeAuthoritativeBudgetOnReject(
+          input.session,
+          snap,
+          current.revision,
+        ),
+        block_reason: "already_confirmed",
+      };
+    }
+
+    if (
+      input.send_event_id &&
+      existing.send_event_id &&
+      existing.send_event_id !== input.send_event_id
+    ) {
+      return {
+        ok: false,
+        session: mergeAuthoritativeBudgetOnReject(
+          input.session,
+          snap,
+          current.revision,
+        ),
+        block_reason: "send_event_mismatch",
+      };
+    }
+
+    const releasedBudget = releaseClarification(
+      understanding.budget,
+      input.plan_id,
+      input.now,
+    );
+    const nextSnapshot: POJUSessionState = {
+      ...snap,
+      decision_understanding: {
+        ...understanding,
+        budget: releasedBudget,
+      },
+    };
+    const next = buildRecordWithSnapshot(current, nextSnapshot, input.now);
+
+    let casResult;
+    try {
+      casResult = await store.compareAndSetDetailed(sessionId, current.revision, next, {
+        intakeCommit: true,
+        nowIso: input.now,
+      });
+    } catch (error) {
+      failClosedFromError(error, input.session);
+    }
+
+    if (casResult.ok) {
+      noteAuthoritativeSessionCasRevision(next.revision);
+      forgetClarificationClaimReserved(input.plan_id);
+      return {
+        ok: true,
+        session: overlayClaimOntoWorkingSession(
+          input.session,
+          releasedBudget,
+          next.revision,
+        ),
+      };
+    }
+    if (casResult.reason === "cas_conflict" || casResult.reason === "missing") {
+      continue;
+    }
+    return {
+      ok: false,
+      session: input.session,
+      block_reason: "clarification_release_cas_exhausted",
+    };
+  }
+
+  return {
+    ok: false,
+    session: input.session,
+    block_reason: "clarification_release_cas_exhausted",
+  };
+}
+
+export async function releaseClarificationClaimCas(
+  input: ReleaseClarificationClaimCasInput,
+): Promise<ReleaseClarificationClaimCasResult> {
+  if (input.casRelease) {
+    return input.casRelease(input);
+  }
+  return defaultAuthoritativeRelease(input);
+}
+
+/**
+ * Definite failures may durable-release this-request reservations.
+ * Uncertain persistence outcomes must keep the claim for reconcile.
+ */
+export function isDefiniteClarificationReleaseFailure(error: unknown): boolean {
+  if (error === "aborted") return true;
+  if (!error) return false;
+  if (typeof error === "object" && (error as { name?: string }).name === "AbortError") {
+    return true;
+  }
+  const message = error instanceof Error ? error.message : String(error);
+  if (message.includes("abort") || message.includes("AbortError")) return true;
+  if (error instanceof SessionAuthorityError) {
+    // Timed-out / BUSY CAS: may or may not have landed — keep claim for reconcile.
+    if (error.code === "server_persistence_unavailable") return false;
+    return true;
+  }
+  if (error instanceof SessionPersistenceUnavailableError) return false;
+  // Any other definite request failure (no successful durable commit of this turn).
+  return true;
 }

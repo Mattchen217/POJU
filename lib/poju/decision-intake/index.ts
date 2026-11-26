@@ -67,8 +67,15 @@ export {
 } from "./adaptive-turn";
 export {
   reserveClarificationClaimCas,
+  releaseClarificationClaimCas,
+  runWithClarificationClaimRequestScope,
+  listClarificationClaimsReservedThisRequest,
+  clearClarificationClaimsReservedThisRequest,
+  isDefiniteClarificationReleaseFailure,
   type ReserveClarificationClaimCasInput,
   type ReserveClarificationClaimCasResult,
+  type ReleaseClarificationClaimCasInput,
+  type ReleaseClarificationClaimCasResult,
 } from "./clarification-claim-cas";
 export {
   bootstrapFreshSessionMainLoop,

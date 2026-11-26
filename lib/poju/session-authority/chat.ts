@@ -166,129 +166,194 @@ export async function executeAuthoritativeChatTurn(
       null,
   });
 
-  const capture: { current?: POJULLMResponse } = {};
-  let sessionOut: POJUSessionState;
-  // Captured before leaving the ALS frame — memory bumps must not become CAS expected.
-  let authoritativeExpectedRevision = record.revision;
-  try {
-    // Anchor starts at the turn-start Authority revision. Memory persist may
-    // bump working session_revision; only a real server CAS (e.g. clarification
-    // reserve) advances this anchor via noteAuthoritativeSessionCasRevision.
-    sessionOut = await runWithAuthoritativeRevisionAnchor(record.revision, async () => {
-      const out = await runWithInProcessDecisionAuthority(() =>
-        runWithMemorySessionPersist(boundSession, () =>
-          runWithLlmCapture(capture, () =>
-            handleUserMessage({
-              session: boundSession,
-              userMessage: incoming.content,
-              locale: String(body.locale ?? "en"),
-              userAlreadyAppended: true,
-              signal: opts?.signal,
-              attachment: body.attachment ?? null,
-              server_invoke: {
-                base_analysis: profileInputs.base_analysis,
-                profile: profileInputs.profile,
-              },
-              __testOnlyM1Hooks: getAuthoritativeChatTestHooks(),
-            }),
-          ),
-        ),
-      );
-      authoritativeExpectedRevision =
-        getAuthoritativeRevisionAnchor() ?? record.revision;
-      return out;
-    });
-  } catch (error) {
-    if (isAbortError(error) || opts?.signal?.aborted) {
-      return { ok: false, aborted: true, reason: "aborted" };
+  const {
+    runWithClarificationClaimRequestScope,
+    clearClarificationClaimsReservedThisRequest,
+    listClarificationClaimsReservedThisRequest,
+    releaseClarificationClaimCas,
+    isDefiniteClarificationReleaseFailure,
+  } = await import("@/lib/poju/decision-intake/clarification-claim-cas");
+
+  const releaseReservedClaimsIfDefinite = async (
+    working: POJUSessionState | undefined,
+    cause: unknown,
+  ): Promise<void> => {
+    if (!isDefiniteClarificationReleaseFailure(cause) && cause !== "aborted") {
+      return;
     }
-    throw error;
-  }
-
-  throwIfAborted(opts?.signal);
-
-  // Display title for a first real user turn must be CAS-committed — never
-  // invented only in the browser after a successful authoritative response.
-  sessionOut = applyAuthoritativeFirstTurnDisplayTitle(sessionOut, incoming.content);
-
-  // Understanding / adaptive models already ran above. If Redis CAS times out,
-  // retry ONLY the commit — never re-run the model (that was the user-visible
-  // failure mode: OpenRouter had a valid JSON, the page still showed 连接异常).
-  //
-  // Final CAS expectedRevision is the authoritative anchor (turn-start revision,
-  // or the head after a successful clarification reservation CAS) — never the
-  // working_session_revision produced by request-scoped memory persist.
-  const commitExpectedRevision = (): number => authoritativeExpectedRevision;
-  const COMMIT_ATTEMPTS = 3;
-  let committed: Awaited<ReturnType<typeof commitAuthoritativeSessionUpdate>> | null = null;
-  let lastCommitError: unknown = null;
-  for (let attempt = 1; attempt <= COMMIT_ATTEMPTS; attempt += 1) {
-    throwIfAborted(opts?.signal);
-    const expectedRevision = commitExpectedRevision();
-    try {
-      const { finalizeClarificationClaimsForDurableCommit } = await import(
-        "@/lib/poju/decision-intake/adaptive-turn"
-      );
-      sessionOut = finalizeClarificationClaimsForDurableCommit(
-        sessionOut,
-        new Date().toISOString(),
-      );
-      const commitHook = getAuthoritativeCommitTestHook();
-      if (commitHook) {
-        await commitHook({
+    const planIds = listClarificationClaimsReservedThisRequest();
+    if (!planIds.length) return;
+    const now = new Date().toISOString();
+    const base: POJUSessionState = working ?? {
+      ...boundSession,
+      session_id: sessionId,
+    };
+    for (const plan_id of planIds) {
+      try {
+        await releaseClarificationClaimCas({
+          session: { ...base, session_id: sessionId },
+          plan_id,
+          now,
+        });
+      } catch (releaseError) {
+        console.warn("[poju/chat] clarification claim durable release failed", {
           sessionId,
-          expectedRevision,
-          session: sessionOut,
+          plan_id,
+          error:
+            releaseError instanceof Error ? releaseError.message : String(releaseError),
         });
       }
-      throwIfAborted(opts?.signal);
-      committed = await commitAuthoritativeSessionUpdate({
-        sessionId,
-        expectedRevision,
-        expectedGeneration: record.session_generation,
-        snapshot: sessionOut,
-        last_committed_turn_id: incoming.client_turn_id,
+    }
+  };
+
+  return runWithClarificationClaimRequestScope(async () => {
+    const capture: { current?: POJULLMResponse } = {};
+    let sessionOut: POJUSessionState | undefined;
+    // Captured before leaving the ALS frame — memory bumps must not become CAS expected.
+    let authoritativeExpectedRevision = record.revision;
+    try {
+      // Anchor starts at the turn-start Authority revision. Memory persist may
+      // bump working session_revision; only a real server CAS (e.g. clarification
+      // reserve) advances this anchor via noteAuthoritativeSessionCasRevision.
+      sessionOut = await runWithAuthoritativeRevisionAnchor(record.revision, async () => {
+        const out = await runWithInProcessDecisionAuthority(() =>
+          runWithMemorySessionPersist(boundSession, () =>
+            runWithLlmCapture(capture, () =>
+              handleUserMessage({
+                session: boundSession,
+                userMessage: incoming.content,
+                locale: String(body.locale ?? "en"),
+                userAlreadyAppended: true,
+                signal: opts?.signal,
+                attachment: body.attachment ?? null,
+                server_invoke: {
+                  base_analysis: profileInputs.base_analysis,
+                  profile: profileInputs.profile,
+                },
+                __testOnlyM1Hooks: getAuthoritativeChatTestHooks(),
+              }),
+            ),
+          ),
+        );
+        authoritativeExpectedRevision =
+          getAuthoritativeRevisionAnchor() ?? record.revision;
+        return out;
       });
-      lastCommitError = null;
-      break;
     } catch (error) {
-      lastCommitError = error;
       if (isAbortError(error) || opts?.signal?.aborted) {
+        await releaseReservedClaimsIfDefinite(sessionOut, "aborted");
         return { ok: false, aborted: true, reason: "aborted" };
       }
-      const timedOut =
-        error instanceof SessionAuthorityError &&
-        error.code === "server_persistence_unavailable" &&
-        /timed out|BUSY|SCRIPT/i.test(error.message);
-      if (!timedOut || attempt >= COMMIT_ATTEMPTS) {
-        throw error;
+      if (isDefiniteClarificationReleaseFailure(error)) {
+        await releaseReservedClaimsIfDefinite(sessionOut, error);
       }
-      console.warn(
-        `[poju/chat] session CAS timed out after model success — commit-only retry ${attempt}/${COMMIT_ATTEMPTS}`,
-        { sessionId, revision: expectedRevision },
-      );
-      await new Promise<void>((resolve) => setTimeout(resolve, 80 * attempt));
+      throw error;
     }
-  }
-  if (!committed) {
-    throw lastCommitError instanceof Error
-      ? lastCommitError
-      : new SessionAuthorityError(
-          "server_persistence_unavailable",
-          "session CAS failed after model success",
-          { session_id: sessionId, expected_revision: commitExpectedRevision() },
-        );
-  }
 
-  const llm = capture.current ?? llmFromCommittedSession(committed.session_snapshot);
-  return {
-    ok: true,
-    idempotent: false,
-    llm,
-    session: committed.session_snapshot,
-    envelope: toAuthoritativeEnvelope(committed),
-    aborted: false,
-  };
+    try {
+      throwIfAborted(opts?.signal);
+    } catch (error) {
+      await releaseReservedClaimsIfDefinite(sessionOut, "aborted");
+      return { ok: false, aborted: true, reason: "aborted" };
+    }
+
+    // Display title for a first real user turn must be CAS-committed — never
+    // invented only in the browser after a successful authoritative response.
+    sessionOut = applyAuthoritativeFirstTurnDisplayTitle(sessionOut, incoming.content);
+
+    // Understanding / adaptive models already ran above. If Redis CAS times out,
+    // retry ONLY the commit — never re-run the model (that was the user-visible
+    // failure mode: OpenRouter had a valid JSON, the page still showed 连接异常).
+    //
+    // Final CAS expectedRevision is the authoritative anchor (turn-start revision,
+    // or the head after a successful clarification reservation CAS) — never the
+    // working_session_revision produced by request-scoped memory persist.
+    const commitExpectedRevision = (): number => authoritativeExpectedRevision;
+    const COMMIT_ATTEMPTS = 3;
+    let committed: Awaited<ReturnType<typeof commitAuthoritativeSessionUpdate>> | null =
+      null;
+    let lastCommitError: unknown = null;
+    for (let attempt = 1; attempt <= COMMIT_ATTEMPTS; attempt += 1) {
+      try {
+        throwIfAborted(opts?.signal);
+      } catch {
+        await releaseReservedClaimsIfDefinite(sessionOut, "aborted");
+        return { ok: false, aborted: true, reason: "aborted" };
+      }
+      const expectedRevision = commitExpectedRevision();
+      try {
+        const { finalizeClarificationClaimsForDurableCommit } = await import(
+          "@/lib/poju/decision-intake/adaptive-turn"
+        );
+        sessionOut = finalizeClarificationClaimsForDurableCommit(
+          sessionOut,
+          new Date().toISOString(),
+        );
+        const commitHook = getAuthoritativeCommitTestHook();
+        if (commitHook) {
+          await commitHook({
+            sessionId,
+            expectedRevision,
+            session: sessionOut,
+          });
+        }
+        throwIfAborted(opts?.signal);
+        committed = await commitAuthoritativeSessionUpdate({
+          sessionId,
+          expectedRevision,
+          expectedGeneration: record.session_generation,
+          snapshot: sessionOut,
+          last_committed_turn_id: incoming.client_turn_id,
+        });
+        lastCommitError = null;
+        break;
+      } catch (error) {
+        lastCommitError = error;
+        if (isAbortError(error) || opts?.signal?.aborted) {
+          await releaseReservedClaimsIfDefinite(sessionOut, "aborted");
+          return { ok: false, aborted: true, reason: "aborted" };
+        }
+        const timedOut =
+          error instanceof SessionAuthorityError &&
+          error.code === "server_persistence_unavailable" &&
+          /timed out|BUSY|SCRIPT/i.test(error.message);
+        if (!timedOut || attempt >= COMMIT_ATTEMPTS) {
+          break;
+        }
+        console.warn(
+          `[poju/chat] session CAS timed out after model success — commit-only retry ${attempt}/${COMMIT_ATTEMPTS}`,
+          { sessionId, revision: expectedRevision },
+        );
+        await new Promise<void>((resolve) => setTimeout(resolve, 80 * attempt));
+      }
+    }
+    if (!committed) {
+      const err =
+        lastCommitError instanceof Error
+          ? lastCommitError
+          : new SessionAuthorityError(
+              "server_persistence_unavailable",
+              "session CAS failed after model success",
+              { session_id: sessionId, expected_revision: commitExpectedRevision() },
+            );
+      // Uncertain persistence: keep claim for reconcile. Definite CAS/abort: release.
+      if (isDefiniteClarificationReleaseFailure(err)) {
+        await releaseReservedClaimsIfDefinite(sessionOut, err);
+      }
+      throw err;
+    }
+
+    clearClarificationClaimsReservedThisRequest();
+    const llm = capture.current ?? llmFromCommittedSession(committed.session_snapshot);
+    return {
+      ok: true,
+      idempotent: false,
+      llm,
+      session: committed.session_snapshot,
+      envelope: toAuthoritativeEnvelope(committed),
+      aborted: false,
+    };
+  });
 }
 
 function llmFromCommittedSession(session: POJUSessionState): POJULLMResponse {

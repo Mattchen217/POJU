@@ -375,6 +375,10 @@ export function confirmClarification(
 ): SessionBudgetSnapshot {
   const claims = [...(budget.clarification_claims ?? [])];
   const idx = claims.findIndex((c) => c.plan_id === plan_id);
+  if (idx >= 0 && claims[idx]!.status === "released") {
+    // Stale confirm must not revive a released claim.
+    return budget;
+  }
   if (idx < 0) {
     claims.push({
       plan_id,
@@ -383,6 +387,13 @@ export function confirmClarification(
       confirmed_at: now,
       send_event_id,
     });
+  } else if (claims[idx]!.status === "confirmed") {
+    // Idempotent re-confirm: keep status; fill send_event_id if newly provided.
+    if (send_event_id && !claims[idx]!.send_event_id) {
+      claims[idx] = { ...claims[idx]!, send_event_id, confirmed_at: claims[idx]!.confirmed_at ?? now };
+    } else {
+      return budget;
+    }
   } else {
     claims[idx] = {
       ...claims[idx]!,
@@ -406,6 +417,14 @@ export function releaseClarification(
 ): SessionBudgetSnapshot {
   const claims = [...(budget.clarification_claims ?? [])];
   const idx = claims.findIndex((c) => c.plan_id === plan_id);
+  if (idx >= 0 && claims[idx]!.status === "confirmed") {
+    // Confirmed claims must not be released (allowance stays consumed).
+    return budget;
+  }
+  if (idx >= 0 && claims[idx]!.status === "released") {
+    // Idempotent release — do not mutate timestamps or recount.
+    return budget;
+  }
   if (idx < 0) {
     claims.push({
       plan_id,

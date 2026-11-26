@@ -1670,9 +1670,11 @@ async function runAgentTurn(input: HandleInput, internalTurn: InternalTurn): Pro
         releaseAuthorizedQuestionClaim,
         classifyCollectionMode,
         reserveClarificationClaimCas,
+        releaseClarificationClaimCas,
       } = await import("@/lib/poju/decision-intake");
       const plan = m1CollectingTurn.plan;
       let sessionForGuard = sessionOut;
+      let clarificationReservedDurable = false;
       const alreadySentPlan =
         sessionOut.decision_understanding?.last_sent_question?.plan_id === plan.plan_id;
       if (alreadySentPlan) {
@@ -1701,6 +1703,7 @@ async function runAgentTurn(input: HandleInput, internalTurn: InternalTurn): Pro
           now: nowIso,
         });
         if (!reserved.ok) {
+          // Reserve failed — do not durable-release a concurrent holder's claim.
           const released = releaseAuthorizedQuestionClaim(
             reserved.session,
             plan.plan_id,
@@ -1724,6 +1727,7 @@ async function runAgentTurn(input: HandleInput, internalTurn: InternalTurn): Pro
           if (input.server_invoke?.skip_delivery_pipeline) return sessionOut;
           return sessionOut;
         }
+        clarificationReservedDurable = true;
         sessionForGuard = reserved.session;
       }
       const guarded = guardAndAttachAuthorizedQuestion(
@@ -1733,10 +1737,22 @@ async function runAgentTurn(input: HandleInput, internalTurn: InternalTurn): Pro
         nowIso,
       );
       if (!guarded.attached) {
-        const afterBlock =
-          guarded.block_reason === "plan_already_sent"
-            ? guarded.session
-            : releaseAuthorizedQuestionClaim(guarded.session, plan.plan_id, nowIso);
+        let afterBlock = guarded.session;
+        if (guarded.block_reason !== "plan_already_sent") {
+          if (clarificationReservedDurable) {
+            const durable = await releaseClarificationClaimCas({
+              session: guarded.session,
+              plan_id: plan.plan_id,
+              now: nowIso,
+            });
+            afterBlock = durable.session;
+          }
+          afterBlock = releaseAuthorizedQuestionClaim(
+            afterBlock,
+            plan.plan_id,
+            nowIso,
+          );
+        }
         const summary =
           m1CollectingTurn.understanding?.current_understanding.summary?.trim() ||
           "当前关键信息已足够。请确认以上理解是否正确；确认后进入下一阶段。";
@@ -2219,6 +2235,7 @@ async function runAgentTurn(input: HandleInput, internalTurn: InternalTurn): Pro
       releaseAuthorizedQuestionClaim,
       classifyCollectionMode,
       reserveClarificationClaimCas,
+      releaseClarificationClaimCas,
     } = await import("@/lib/poju/decision-intake");
     const matched = assertQuestionMatchesPlan(finalContent, m1CollectingTurn.plan);
     finalContent = matched.text;
@@ -2269,6 +2286,7 @@ async function runAgentTurn(input: HandleInput, internalTurn: InternalTurn): Pro
     const outboundAssistant = { ...assistantMessage, client_id: assistantMessageId };
     let sessionForGuard: POJUSessionState = preGuard;
     let reserveBlocked = false;
+    let clarificationReservedDurable = false;
     if (preGuard.decision_understanding?.last_sent_question?.plan_id === plan.plan_id) {
       const summary =
         m1CollectingTurn.understanding?.current_understanding.summary?.trim() ||
@@ -2289,6 +2307,7 @@ async function runAgentTurn(input: HandleInput, internalTurn: InternalTurn): Pro
         now: nowIso,
       });
       if (!reserved.ok) {
+        // Reserve failed — do not durable-release a concurrent holder's claim.
         const released = releaseAuthorizedQuestionClaim(
           reserved.session,
           plan.plan_id,
@@ -2307,6 +2326,7 @@ async function runAgentTurn(input: HandleInput, internalTurn: InternalTurn): Pro
         };
         reserveBlocked = true;
       } else {
+        clarificationReservedDurable = true;
         sessionForGuard = reserved.session;
       }
     }
@@ -2318,10 +2338,22 @@ async function runAgentTurn(input: HandleInput, internalTurn: InternalTurn): Pro
         nowIso,
       );
       if (!guarded.attached) {
-        const afterBlock =
-          guarded.block_reason === "plan_already_sent"
-            ? guarded.session
-            : releaseAuthorizedQuestionClaim(guarded.session, plan.plan_id, nowIso);
+        let afterBlock = guarded.session;
+        if (guarded.block_reason !== "plan_already_sent") {
+          if (clarificationReservedDurable) {
+            const durable = await releaseClarificationClaimCas({
+              session: guarded.session,
+              plan_id: plan.plan_id,
+              now: nowIso,
+            });
+            afterBlock = durable.session;
+          }
+          afterBlock = releaseAuthorizedQuestionClaim(
+            afterBlock,
+            plan.plan_id,
+            nowIso,
+          );
+        }
         const summary =
           m1CollectingTurn.understanding?.current_understanding.summary?.trim() ||
           "当前关键信息已足够。请确认以上理解是否正确；确认后进入下一阶段。";
