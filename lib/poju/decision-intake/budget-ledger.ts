@@ -62,7 +62,8 @@ export function isMaterialDcWrite(applied: MaterialDcWriteInput): boolean {
     for (const cId of constraint_ids_written) {
       const cst = dc.constraints.find((c) => c.constraint_id === cId);
       if (!cst) continue;
-      if (cst.status === "declined" || cst.status === "unknown") continue;
+      // Same core-round eligibility as RealityFact: unverified-only is non-material.
+      if (BOUNDARY_FACT_STATUSES.has(cst.status)) continue;
       if (cst.statement?.trim()) {
         hasSubstance = true;
         break;
@@ -81,7 +82,7 @@ export function isMaterialDcWrite(applied: MaterialDcWriteInput): boolean {
     constraint_ids_written.length > 0 &&
     constraint_ids_written.every((id) => {
       const c = dc.constraints.find((x) => x.constraint_id === id);
-      return !c || c.status === "declined" || c.status === "unknown";
+      return !c || BOUNDARY_FACT_STATUSES.has(c.status);
     });
   if (
     fact_ids_written.length > 0 &&
@@ -128,7 +129,9 @@ function materialTurnIdsFromDc(dc: DecisionContext): string[] {
   }
   for (const c of dc.constraints) {
     if (!c.source_turn_id) continue;
-    if (c.status === "declined" || c.status === "unknown") continue;
+    // Align with RealityFact: unverified / unknown / declined / not_applicable
+    // do not reconstruct a material core turn.
+    if (BOUNDARY_FACT_STATUSES.has(c.status)) continue;
     if (!c.statement?.trim()) continue;
     ids.add(c.source_turn_id);
   }
@@ -145,8 +148,7 @@ function orphanMaterialWithoutTurnIds(dc: DecisionContext): boolean {
   const hasOrphanCst = dc.constraints.some(
     (c) =>
       !c.source_turn_id &&
-      c.status !== "declined" &&
-      c.status !== "unknown" &&
+      !BOUNDARY_FACT_STATUSES.has(c.status) &&
       Boolean(c.statement?.trim()),
   );
   return hasOrphanFact || hasOrphanCst;

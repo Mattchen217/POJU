@@ -85,6 +85,7 @@ async function main() {
     GLOBAL_CORE_SPENT_CEILING,
     isMaterialDcWrite,
     migrateSessionBudget,
+    repairCoreLedgerFromDc,
     canAskOrdinary,
   } = await import("../lib/poju/decision-intake/budget-ledger");
   const { isDirBlockingNeedActive, computeReportSectionCoverage } = await import(
@@ -1926,6 +1927,440 @@ async function main() {
       dc,
     );
     assert.equal(migrated.core_effective_answer_rounds ?? 0, 0);
+  });
+
+  await check("P1-A: unverified-only Constraint does not consume core rounds", () => {
+    const turnId = "t_cst_uv";
+    const dc = draftDc({
+      constraints: [
+        {
+          constraint_id: "cst_uv",
+          statement: "预算暂定 50 万",
+          category: "financial",
+          status: "unverified",
+          verification_level: "user_asserted",
+          source_stage: "collecting_context",
+          source_turn_id: turnId,
+          rigidity: "hard",
+          user_confirmed: false,
+          related_dir_ids: ["DIR-DEF-QUESTION"],
+        },
+      ],
+    });
+    const session = { decision_context: dc } as POJUSessionState;
+    assert.equal(
+      isMaterialDcWrite({
+        fact_ids_written: [],
+        constraint_ids_written: ["cst_uv"],
+        session,
+        answer: { classification: "substantive" },
+      }),
+      false,
+    );
+    let budget: SessionBudgetSnapshot = {
+      soft_budget_limit: 12,
+      hard_budget_limit: 15,
+      session_asked_count: 0,
+      review_cycle: 1,
+      cycle_base_asked: 0,
+      remaining_hard_budget: 15,
+      depth_by_dir: {},
+      core_effective_answer_rounds: 0,
+      core_counted_source_turn_ids: [],
+    };
+    // Production path only bumps after isMaterialDcWrite; still prove bump alone
+    // is not invoked for this delta by asserting materiality false above.
+    assert.equal(budget.core_effective_answer_rounds, 0);
+    const migrated = migrateSessionBudget(
+      {
+        soft_budget_limit: 12,
+        hard_budget_limit: 15,
+        session_asked_count: 0,
+        review_cycle: 1,
+        cycle_base_asked: 0,
+        remaining_hard_budget: 15,
+        depth_by_dir: {},
+      },
+      dc,
+    );
+    assert.equal(migrated.core_effective_answer_rounds ?? 0, 0);
+    assert.ok(!(migrated.core_counted_source_turn_ids ?? []).includes(turnId));
+  });
+
+  await check("P1-A: confirmed Constraint still counts as material core round", () => {
+    const turnId = "t_cst_ok";
+    const dc = draftDc({
+      constraints: [
+        {
+          constraint_id: "cst_ok",
+          statement: "不能接受降薪",
+          category: "financial",
+          status: "confirmed",
+          verification_level: "user_asserted",
+          source_stage: "collecting_context",
+          source_turn_id: turnId,
+          rigidity: "hard",
+          user_confirmed: true,
+          related_dir_ids: ["DIR-DEF-QUESTION"],
+        },
+      ],
+    });
+    const session = { decision_context: dc } as POJUSessionState;
+    assert.equal(
+      isMaterialDcWrite({
+        fact_ids_written: [],
+        constraint_ids_written: ["cst_ok"],
+        session,
+        answer: { classification: "substantive" },
+      }),
+      true,
+    );
+    let budget: SessionBudgetSnapshot = {
+      soft_budget_limit: 12,
+      hard_budget_limit: 15,
+      session_asked_count: 0,
+      review_cycle: 1,
+      cycle_base_asked: 0,
+      remaining_hard_budget: 15,
+      depth_by_dir: {},
+      core_effective_answer_rounds: 0,
+      core_counted_source_turn_ids: [],
+    };
+    budget = bumpCoreAfterMaterialWrite(budget, {
+      source_turn_id: turnId,
+      answer_event_id: "e_cst_ok",
+    });
+    assert.equal(budget.core_effective_answer_rounds, 1);
+    assert.deepEqual(budget.core_counted_source_turn_ids, [turnId]);
+    const migrated = migrateSessionBudget(
+      {
+        soft_budget_limit: 12,
+        hard_budget_limit: 15,
+        session_asked_count: 0,
+        review_cycle: 1,
+        cycle_base_asked: 0,
+        remaining_hard_budget: 15,
+        depth_by_dir: {},
+      },
+      dc,
+    );
+    assert.equal(migrated.core_effective_answer_rounds, 1);
+    assert.deepEqual(migrated.core_counted_source_turn_ids, [turnId]);
+  });
+
+  await check("P1-A: mixed unverified Constraint + confirmed Fact counts once", () => {
+    const turnId = "t_mix_a";
+    const dc = draftDc({
+      reality_facts: [
+        {
+          fact_id: "f_ok",
+          statement: "已有 offer",
+          status: "confirmed",
+          verification_level: "user_stated",
+          source_stage: "collecting_context",
+          source_turn_id: turnId,
+          user_confirmed: true,
+          fact_roles: ["situation"],
+          related_dir_ids: ["DIR-DEF-QUESTION"],
+        },
+      ],
+      constraints: [
+        {
+          constraint_id: "cst_uv",
+          statement: "预算未核实",
+          category: "financial",
+          status: "unverified",
+          verification_level: "user_asserted",
+          source_stage: "collecting_context",
+          source_turn_id: turnId,
+          rigidity: "soft",
+          user_confirmed: false,
+          related_dir_ids: ["DIR-DEF-QUESTION"],
+        },
+      ],
+    });
+    const session = { decision_context: dc } as POJUSessionState;
+    assert.equal(
+      isMaterialDcWrite({
+        fact_ids_written: ["f_ok"],
+        constraint_ids_written: ["cst_uv"],
+        session,
+        answer: { classification: "substantive" },
+      }),
+      true,
+    );
+    let budget: SessionBudgetSnapshot = {
+      soft_budget_limit: 12,
+      hard_budget_limit: 15,
+      session_asked_count: 0,
+      review_cycle: 1,
+      cycle_base_asked: 0,
+      remaining_hard_budget: 15,
+      depth_by_dir: {},
+      core_effective_answer_rounds: 0,
+      core_counted_source_turn_ids: [],
+    };
+    budget = bumpCoreAfterMaterialWrite(budget, {
+      source_turn_id: turnId,
+      answer_event_id: "e_mix_a",
+    });
+    assert.equal(budget.core_effective_answer_rounds, 1);
+    const migrated = migrateSessionBudget(
+      {
+        soft_budget_limit: 12,
+        hard_budget_limit: 15,
+        session_asked_count: 0,
+        review_cycle: 1,
+        cycle_base_asked: 0,
+        remaining_hard_budget: 15,
+        depth_by_dir: {},
+      },
+      dc,
+    );
+    assert.equal(migrated.core_effective_answer_rounds, 1);
+    assert.deepEqual(migrated.core_counted_source_turn_ids, [turnId]);
+  });
+
+  await check("P1-A: mixed unverified Fact + confirmed Constraint counts once", () => {
+    const turnId = "t_mix_b";
+    const dc = draftDc({
+      reality_facts: [
+        {
+          fact_id: "f_uv",
+          statement: "草稿事实",
+          status: "unverified",
+          verification_level: "user_stated",
+          source_stage: "collecting_context",
+          source_turn_id: turnId,
+          user_confirmed: false,
+          fact_roles: ["situation"],
+          related_dir_ids: ["DIR-DEF-QUESTION"],
+        },
+      ],
+      constraints: [
+        {
+          constraint_id: "cst_ok",
+          statement: "三个月内必须决定",
+          category: "time",
+          status: "confirmed",
+          verification_level: "user_asserted",
+          source_stage: "collecting_context",
+          source_turn_id: turnId,
+          rigidity: "hard",
+          user_confirmed: true,
+          related_dir_ids: ["DIR-DEF-QUESTION"],
+        },
+      ],
+    });
+    const session = { decision_context: dc } as POJUSessionState;
+    assert.equal(
+      isMaterialDcWrite({
+        fact_ids_written: ["f_uv"],
+        constraint_ids_written: ["cst_ok"],
+        session,
+        answer: { classification: "substantive" },
+      }),
+      true,
+    );
+    let budget: SessionBudgetSnapshot = {
+      soft_budget_limit: 12,
+      hard_budget_limit: 15,
+      session_asked_count: 0,
+      review_cycle: 1,
+      cycle_base_asked: 0,
+      remaining_hard_budget: 15,
+      depth_by_dir: {},
+      core_effective_answer_rounds: 0,
+      core_counted_source_turn_ids: [],
+    };
+    budget = bumpCoreAfterMaterialWrite(budget, {
+      source_turn_id: turnId,
+      answer_event_id: "e_mix_b",
+    });
+    assert.equal(budget.core_effective_answer_rounds, 1);
+    const migrated = migrateSessionBudget(
+      {
+        soft_budget_limit: 12,
+        hard_budget_limit: 15,
+        session_asked_count: 0,
+        review_cycle: 1,
+        cycle_base_asked: 0,
+        remaining_hard_budget: 15,
+        depth_by_dir: {},
+      },
+      dc,
+    );
+    assert.equal(migrated.core_effective_answer_rounds, 1);
+    assert.deepEqual(migrated.core_counted_source_turn_ids, [turnId]);
+  });
+
+  await check("P1-A: migration/reconstruction excludes unverified Constraint, keeps confirmed", () => {
+    const uvTurn = "t_mig_uv";
+    const okTurn = "t_mig_ok";
+    const dcUvOnly = draftDc({
+      constraints: [
+        {
+          constraint_id: "cst_mig_uv",
+          statement: "历史未核实约束",
+          category: "financial",
+          status: "unverified",
+          verification_level: "user_asserted",
+          source_stage: "collecting_context",
+          source_turn_id: uvTurn,
+          rigidity: "hard",
+          user_confirmed: false,
+          related_dir_ids: ["DIR-DEF-QUESTION"],
+        },
+      ],
+    });
+    const migratedUv = migrateSessionBudget(
+      {
+        soft_budget_limit: 12,
+        hard_budget_limit: 15,
+        session_asked_count: 0,
+        review_cycle: 1,
+        cycle_base_asked: 0,
+        remaining_hard_budget: 15,
+        depth_by_dir: {},
+      },
+      dcUvOnly,
+    );
+    assert.equal(migratedUv.core_effective_answer_rounds ?? 0, 0);
+    assert.ok(!(migratedUv.core_counted_source_turn_ids ?? []).includes(uvTurn));
+    assert.equal(migratedUv.budget_migration_evidence, "material_source_turn_ids");
+
+    const dcOk = draftDc({
+      constraints: [
+        {
+          constraint_id: "cst_mig_ok",
+          statement: "历史已确认约束",
+          category: "time",
+          status: "confirmed",
+          verification_level: "user_asserted",
+          source_stage: "collecting_context",
+          source_turn_id: okTurn,
+          rigidity: "hard",
+          user_confirmed: true,
+          related_dir_ids: ["DIR-DEF-QUESTION"],
+        },
+      ],
+    });
+    const migratedOk = migrateSessionBudget(
+      {
+        soft_budget_limit: 12,
+        hard_budget_limit: 15,
+        session_asked_count: 0,
+        review_cycle: 1,
+        cycle_base_asked: 0,
+        remaining_hard_budget: 15,
+        depth_by_dir: {},
+      },
+      dcOk,
+    );
+    assert.equal(migratedOk.core_effective_answer_rounds, 1);
+    assert.deepEqual(migratedOk.core_counted_source_turn_ids, [okTurn]);
+
+    const repaired = repairCoreLedgerFromDc(
+      {
+        soft_budget_limit: 12,
+        hard_budget_limit: 15,
+        session_asked_count: 0,
+        review_cycle: 1,
+        cycle_base_asked: 0,
+        remaining_hard_budget: 15,
+        depth_by_dir: {},
+        core_effective_answer_rounds: 1,
+        core_counted_source_turn_ids: [okTurn],
+      },
+      dcOk,
+    );
+    assert.equal(repaired.core_effective_answer_rounds, 1);
+    assert.deepEqual(repaired.core_counted_source_turn_ids, [okTurn]);
+
+    const repairedUv = repairCoreLedgerFromDc(
+      {
+        soft_budget_limit: 12,
+        hard_budget_limit: 15,
+        session_asked_count: 0,
+        review_cycle: 1,
+        cycle_base_asked: 0,
+        remaining_hard_budget: 15,
+        depth_by_dir: {},
+        core_effective_answer_rounds: 0,
+        core_counted_source_turn_ids: [],
+      },
+      dcUvOnly,
+    );
+    assert.equal(repairedUv.core_effective_answer_rounds, 0);
+    assert.deepEqual(repairedUv.core_counted_source_turn_ids, []);
+  });
+
+  await check("P1-A: confirmed Constraint does not bypass non-material / empty statement", () => {
+    const emptyDc = draftDc({
+      constraints: [
+        {
+          constraint_id: "cst_empty",
+          statement: "   ",
+          category: "financial",
+          status: "confirmed",
+          verification_level: "user_asserted",
+          source_stage: "collecting_context",
+          source_turn_id: "t_empty",
+          rigidity: "hard",
+          user_confirmed: true,
+          related_dir_ids: ["DIR-DEF-QUESTION"],
+        },
+      ],
+    });
+    assert.equal(
+      isMaterialDcWrite({
+        fact_ids_written: [],
+        constraint_ids_written: ["cst_empty"],
+        session: { decision_context: emptyDc } as POJUSessionState,
+        answer: { classification: "substantive" },
+      }),
+      false,
+    );
+    const migratedEmpty = migrateSessionBudget(
+      {
+        soft_budget_limit: 12,
+        hard_budget_limit: 15,
+        session_asked_count: 0,
+        review_cycle: 1,
+        cycle_base_asked: 0,
+        remaining_hard_budget: 15,
+        depth_by_dir: {},
+      },
+      emptyDc,
+    );
+    assert.equal(migratedEmpty.core_effective_answer_rounds ?? 0, 0);
+    assert.ok(!(migratedEmpty.core_counted_source_turn_ids ?? []).includes("t_empty"));
+
+    const okDc = draftDc({
+      constraints: [
+        {
+          constraint_id: "cst_cls",
+          statement: "硬约束",
+          category: "financial",
+          status: "confirmed",
+          verification_level: "user_asserted",
+          source_stage: "collecting_context",
+          source_turn_id: "t_cls",
+          rigidity: "hard",
+          user_confirmed: true,
+          related_dir_ids: ["DIR-DEF-QUESTION"],
+        },
+      ],
+    });
+    assert.equal(
+      isMaterialDcWrite({
+        fact_ids_written: [],
+        constraint_ids_written: ["cst_cls"],
+        session: { decision_context: okDc } as POJUSessionState,
+        answer: { classification: "unknown" },
+      }),
+      false,
+    );
   });
 
   await check("ordinary guard: invalid need source or ask_policy", () => {
