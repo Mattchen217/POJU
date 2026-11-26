@@ -1674,7 +1674,8 @@ async function runAgentTurn(input: HandleInput, internalTurn: InternalTurn): Pro
       } = await import("@/lib/poju/decision-intake");
       const plan = m1CollectingTurn.plan;
       let sessionForGuard = sessionOut;
-      let clarificationReservedDurable = false;
+      let clarificationReservation: { plan_id: string; claimed_at: string } | null =
+        null;
       const alreadySentPlan =
         sessionOut.decision_understanding?.last_sent_question?.plan_id === plan.plan_id;
       if (alreadySentPlan) {
@@ -1702,8 +1703,8 @@ async function runAgentTurn(input: HandleInput, internalTurn: InternalTurn): Pro
           plan_id: plan.plan_id,
           now: nowIso,
         });
-        if (!reserved.ok) {
-          // Reserve failed — do not durable-release a concurrent holder's claim.
+        if (!reserved.ok || !reserved.reservation) {
+          // Reserve failed / foreign hold — do not durable-release another's claim.
           const released = releaseAuthorizedQuestionClaim(
             reserved.session,
             plan.plan_id,
@@ -1727,7 +1728,7 @@ async function runAgentTurn(input: HandleInput, internalTurn: InternalTurn): Pro
           if (input.server_invoke?.skip_delivery_pipeline) return sessionOut;
           return sessionOut;
         }
-        clarificationReservedDurable = true;
+        clarificationReservation = reserved.reservation;
         sessionForGuard = reserved.session;
       }
       const guarded = guardAndAttachAuthorizedQuestion(
@@ -1739,10 +1740,11 @@ async function runAgentTurn(input: HandleInput, internalTurn: InternalTurn): Pro
       if (!guarded.attached) {
         let afterBlock = guarded.session;
         if (guarded.block_reason !== "plan_already_sent") {
-          if (clarificationReservedDurable) {
+          if (clarificationReservation) {
             const durable = await releaseClarificationClaimCas({
               session: guarded.session,
-              plan_id: plan.plan_id,
+              plan_id: clarificationReservation.plan_id,
+              claimed_at: clarificationReservation.claimed_at,
               now: nowIso,
             });
             afterBlock = durable.session;
@@ -2286,7 +2288,8 @@ async function runAgentTurn(input: HandleInput, internalTurn: InternalTurn): Pro
     const outboundAssistant = { ...assistantMessage, client_id: assistantMessageId };
     let sessionForGuard: POJUSessionState = preGuard;
     let reserveBlocked = false;
-    let clarificationReservedDurable = false;
+    let clarificationReservation: { plan_id: string; claimed_at: string } | null =
+      null;
     if (preGuard.decision_understanding?.last_sent_question?.plan_id === plan.plan_id) {
       const summary =
         m1CollectingTurn.understanding?.current_understanding.summary?.trim() ||
@@ -2306,8 +2309,8 @@ async function runAgentTurn(input: HandleInput, internalTurn: InternalTurn): Pro
         plan_id: plan.plan_id,
         now: nowIso,
       });
-      if (!reserved.ok) {
-        // Reserve failed — do not durable-release a concurrent holder's claim.
+      if (!reserved.ok || !reserved.reservation) {
+        // Reserve failed / foreign hold — do not durable-release another's claim.
         const released = releaseAuthorizedQuestionClaim(
           reserved.session,
           plan.plan_id,
@@ -2326,7 +2329,7 @@ async function runAgentTurn(input: HandleInput, internalTurn: InternalTurn): Pro
         };
         reserveBlocked = true;
       } else {
-        clarificationReservedDurable = true;
+        clarificationReservation = reserved.reservation;
         sessionForGuard = reserved.session;
       }
     }
@@ -2340,10 +2343,11 @@ async function runAgentTurn(input: HandleInput, internalTurn: InternalTurn): Pro
       if (!guarded.attached) {
         let afterBlock = guarded.session;
         if (guarded.block_reason !== "plan_already_sent") {
-          if (clarificationReservedDurable) {
+          if (clarificationReservation) {
             const durable = await releaseClarificationClaimCas({
               session: guarded.session,
-              plan_id: plan.plan_id,
+              plan_id: clarificationReservation.plan_id,
+              claimed_at: clarificationReservation.claimed_at,
               now: nowIso,
             });
             afterBlock = durable.session;

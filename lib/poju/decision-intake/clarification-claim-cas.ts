@@ -31,8 +31,14 @@ import {
 
 const CAS_RETRY_MAX = 8;
 
+/** Ownership proof for a claim this request newly acquired (plan_id + claimed_at). */
+export type ClarificationClaimReservation = {
+  plan_id: string;
+  claimed_at: string;
+};
+
 type ClarificationClaimRequestFrame = {
-  reserved_plan_ids: string[];
+  reservations: ClarificationClaimReservation[];
 };
 
 const clarificationClaimRequestAls =
@@ -42,34 +48,64 @@ export function runWithClarificationClaimRequestScope<T>(
   fn: () => T | Promise<T>,
 ): Promise<T> {
   return Promise.resolve(
-    clarificationClaimRequestAls.run({ reserved_plan_ids: [] }, fn),
+    clarificationClaimRequestAls.run({ reservations: [] }, fn),
   );
 }
 
-export function noteClarificationClaimReserved(plan_id: string): void {
+export function noteClarificationClaimReserved(
+  reservation: ClarificationClaimReservation,
+): void {
   const frame = clarificationClaimRequestAls.getStore();
   if (!frame) return;
-  const id = plan_id.trim();
-  if (!id) return;
-  if (!frame.reserved_plan_ids.includes(id)) {
-    frame.reserved_plan_ids.push(id);
+  const plan_id = reservation.plan_id.trim();
+  const claimed_at = reservation.claimed_at.trim();
+  if (!plan_id || !claimed_at) return;
+  const existing = frame.reservations.find((r) => r.plan_id === plan_id);
+  if (existing) {
+    existing.claimed_at = claimed_at;
+    return;
   }
+  frame.reservations.push({ plan_id, claimed_at });
 }
 
-export function listClarificationClaimsReservedThisRequest(): string[] {
+export function listClarificationClaimReservationsThisRequest(): ClarificationClaimReservation[] {
   const frame = clarificationClaimRequestAls.getStore();
-  return frame ? [...frame.reserved_plan_ids] : [];
+  return frame ? frame.reservations.map((r) => ({ ...r })) : [];
+}
+
+/** @deprecated Use listClarificationClaimReservationsThisRequest — plan_id alone is not ownership. */
+export function listClarificationClaimsReservedThisRequest(): string[] {
+  return listClarificationClaimReservationsThisRequest().map((r) => r.plan_id);
 }
 
 export function clearClarificationClaimsReservedThisRequest(): void {
   const frame = clarificationClaimRequestAls.getStore();
-  if (frame) frame.reserved_plan_ids.length = 0;
+  if (frame) frame.reservations.length = 0;
+}
+
+function thisRequestOwnsClaim(plan_id: string, claimed_at: string): boolean {
+  const frame = clarificationClaimRequestAls.getStore();
+  if (!frame) return false;
+  return frame.reservations.some(
+    (r) => r.plan_id === plan_id && r.claimed_at === claimed_at,
+  );
 }
 
 function forgetClarificationClaimReserved(plan_id: string): void {
   const frame = clarificationClaimRequestAls.getStore();
   if (!frame) return;
-  frame.reserved_plan_ids = frame.reserved_plan_ids.filter((id) => id !== plan_id);
+  frame.reservations = frame.reservations.filter((r) => r.plan_id !== plan_id);
+}
+
+function claimedAtFromBudget(
+  budget: NonNullable<
+    NonNullable<POJUSessionState["decision_understanding"]>["budget"]
+  >,
+  plan_id: string,
+): string | null {
+  const claim = budget.clarification_claims?.find((c) => c.plan_id === plan_id);
+  const at = claim?.claimed_at?.trim();
+  return at || null;
 }
 
 export type ReserveClarificationClaimCasInput = {
@@ -84,6 +120,8 @@ export type ReserveClarificationClaimCasResult = {
   ok: boolean;
   session: POJUSessionState;
   block_reason?: string;
+  /** Present only when this request newly owns (or already owns) the reservation. */
+  reservation?: ClarificationClaimReservation;
 };
 
 function inMemoryReserveClarificationClaim(
@@ -99,6 +137,20 @@ function inMemoryReserveClarificationClaim(
       block_reason: "missing_decision_understanding",
     };
   }
+  const existing = understanding.budget.clarification_claims?.find(
+    (c) => c.plan_id === plan_id,
+  );
+  if (existing?.status === "claimed") {
+    if (thisRequestOwnsClaim(plan_id, existing.claimed_at)) {
+      const reservation = { plan_id, claimed_at: existing.claimed_at };
+      return { ok: true, session, reservation };
+    }
+    return {
+      ok: false,
+      session,
+      block_reason: "clarification_claim_held",
+    };
+  }
   const claim = claimClarification(understanding.budget, plan_id, now);
   if (!claim.ok) {
     return {
@@ -110,8 +162,19 @@ function inMemoryReserveClarificationClaim(
           : "clarification_allowance_exhausted",
     };
   }
+  const claimed_at = claimedAtFromBudget(claim.budget, plan_id);
+  if (!claimed_at) {
+    return {
+      ok: false,
+      session,
+      block_reason: "missing_claim_provenance",
+    };
+  }
+  const reservation = { plan_id, claimed_at };
+  noteClarificationClaimReserved(reservation);
   return {
     ok: true,
+    reservation,
     session: {
       ...session,
       decision_understanding: {
@@ -370,17 +433,33 @@ async function defaultAuthoritativeReserve(
     const existingClaim = understanding.budget.clarification_claims?.find(
       (c) => c.plan_id === input.plan_id,
     );
-    // Idempotent re-reserve of an open claim: keep current revision (no second CAS bump).
+    // Already claimed: only the owning request may treat this as idempotent success.
+    // A concurrent request that merely observes the claim must NOT gain ownership.
     if (existingClaim?.status === "claimed") {
       noteAuthoritativeSessionCasRevision(current.revision);
-      noteClarificationClaimReserved(input.plan_id);
+      if (thisRequestOwnsClaim(input.plan_id, existingClaim.claimed_at)) {
+        const reservation = {
+          plan_id: input.plan_id,
+          claimed_at: existingClaim.claimed_at,
+        };
+        return {
+          ok: true,
+          reservation,
+          session: overlayClaimOntoWorkingSession(
+            input.session,
+            understanding.budget,
+            current.revision,
+          ),
+        };
+      }
       return {
-        ok: true,
-        session: overlayClaimOntoWorkingSession(
+        ok: false,
+        session: mergeAuthoritativeBudgetOnReject(
           input.session,
-          understanding.budget,
+          snap,
           current.revision,
         ),
+        block_reason: "clarification_claim_held",
       };
     }
 
@@ -419,10 +498,20 @@ async function defaultAuthoritativeReserve(
     if (casResult.ok) {
       // Server Authority CAS succeeded — advance the request-scoped authoritative anchor.
       noteAuthoritativeSessionCasRevision(next.revision);
-      noteClarificationClaimReserved(input.plan_id);
+      const claimed_at = claimedAtFromBudget(claim.budget, input.plan_id);
+      if (!claimed_at) {
+        return {
+          ok: false,
+          session: input.session,
+          block_reason: "missing_claim_provenance",
+        };
+      }
+      const reservation = { plan_id: input.plan_id, claimed_at };
+      noteClarificationClaimReserved(reservation);
       // Keep the caller's in-flight turn state; only overlay the CAS claim + new revision.
       return {
         ok: true,
+        reservation,
         session: overlayClaimOntoWorkingSession(input.session, claim.budget, next.revision),
       };
     }
@@ -457,6 +546,11 @@ export type ReleaseClarificationClaimCasInput = {
   plan_id: string;
   now: string;
   /**
+   * Ownership proof from the successful reserve (must match durable claim.claimed_at).
+   * Required for authoritative release — plan_id alone is not sufficient.
+   */
+  claimed_at: string;
+  /**
    * When set, only release if the durable claim's send_event_id matches
    * (or the durable claim has no send_event_id yet — pre-send reservation).
    */
@@ -477,6 +571,7 @@ function inMemoryReleaseClarificationClaim(
   session: POJUSessionState,
   plan_id: string,
   now: string,
+  claimed_at: string,
 ): ReleaseClarificationClaimCasResult {
   const understanding = session.decision_understanding;
   if (!understanding?.budget) {
@@ -487,6 +582,17 @@ function inMemoryReleaseClarificationClaim(
   );
   if (existing?.status === "confirmed") {
     return { ok: false, session, block_reason: "already_confirmed" };
+  }
+  if (existing && existing.claimed_at !== claimed_at) {
+    return { ok: false, session, block_reason: "reservation_ownership_mismatch" };
+  }
+  const requestFrame = clarificationClaimRequestAls.getStore();
+  if (requestFrame && !thisRequestOwnsClaim(plan_id, claimed_at)) {
+    return { ok: false, session, block_reason: "reservation_ownership_mismatch" };
+  }
+  if (existing?.status === "released") {
+    forgetClarificationClaimReserved(plan_id);
+    return { ok: true, session };
   }
   const budget = releaseClarification(understanding.budget, plan_id, now);
   forgetClarificationClaimReserved(plan_id);
@@ -502,9 +608,23 @@ function inMemoryReleaseClarificationClaim(
 async function defaultAuthoritativeRelease(
   input: ReleaseClarificationClaimCasInput,
 ): Promise<ReleaseClarificationClaimCasResult> {
+  const claimedAt = input.claimed_at?.trim();
+  if (!claimedAt) {
+    return {
+      ok: false,
+      session: input.session,
+      block_reason: "missing_reservation_ownership",
+    };
+  }
+
   const sessionId = input.session.session_id?.trim();
   if (!sessionId) {
-    return inMemoryReleaseClarificationClaim(input.session, input.plan_id, input.now);
+    return inMemoryReleaseClarificationClaim(
+      input.session,
+      input.plan_id,
+      input.now,
+      claimedAt,
+    );
   }
 
   const store = getSessionAuthorityStore();
@@ -529,7 +649,47 @@ async function defaultAuthoritativeRelease(
     const existing = understanding.budget.clarification_claims?.find(
       (c) => c.plan_id === input.plan_id,
     );
-    if (!existing || existing.status === "released") {
+    if (!existing) {
+      noteAuthoritativeSessionCasRevision(current.revision);
+      forgetClarificationClaimReserved(input.plan_id);
+      return {
+        ok: true,
+        session: overlayClaimOntoWorkingSession(
+          input.session,
+          understanding.budget,
+          current.revision,
+        ),
+      };
+    }
+
+    // Ownership: durable claimed_at must match the reservation proof from reserve.
+    if (existing.claimed_at !== claimedAt) {
+      return {
+        ok: false,
+        session: mergeAuthoritativeBudgetOnReject(
+          input.session,
+          snap,
+          current.revision,
+        ),
+        block_reason: "reservation_ownership_mismatch",
+      };
+    }
+    // Inside a chat request scope, only the reserving request may release —
+    // observing claimed_at on the authoritative snapshot is not ownership.
+    const requestFrame = clarificationClaimRequestAls.getStore();
+    if (requestFrame && !thisRequestOwnsClaim(input.plan_id, claimedAt)) {
+      return {
+        ok: false,
+        session: mergeAuthoritativeBudgetOnReject(
+          input.session,
+          snap,
+          current.revision,
+        ),
+        block_reason: "reservation_ownership_mismatch",
+      };
+    }
+
+    if (existing.status === "released") {
       noteAuthoritativeSessionCasRevision(current.revision);
       forgetClarificationClaimReserved(input.plan_id);
       return {

@@ -169,7 +169,7 @@ export async function executeAuthoritativeChatTurn(
   const {
     runWithClarificationClaimRequestScope,
     clearClarificationClaimsReservedThisRequest,
-    listClarificationClaimsReservedThisRequest,
+    listClarificationClaimReservationsThisRequest,
     releaseClarificationClaimCas,
     isDefiniteClarificationReleaseFailure,
   } = await import("@/lib/poju/decision-intake/clarification-claim-cas");
@@ -181,24 +181,25 @@ export async function executeAuthoritativeChatTurn(
     if (!isDefiniteClarificationReleaseFailure(cause) && cause !== "aborted") {
       return;
     }
-    const planIds = listClarificationClaimsReservedThisRequest();
-    if (!planIds.length) return;
+    const reservations = listClarificationClaimReservationsThisRequest();
+    if (!reservations.length) return;
     const now = new Date().toISOString();
     const base: POJUSessionState = working ?? {
       ...boundSession,
       session_id: sessionId,
     };
-    for (const plan_id of planIds) {
+    for (const reservation of reservations) {
       try {
         await releaseClarificationClaimCas({
           session: { ...base, session_id: sessionId },
-          plan_id,
+          plan_id: reservation.plan_id,
+          claimed_at: reservation.claimed_at,
           now,
         });
       } catch (releaseError) {
         console.warn("[poju/chat] clarification claim durable release failed", {
           sessionId,
-          plan_id,
+          plan_id: reservation.plan_id,
           error:
             releaseError instanceof Error ? releaseError.message : String(releaseError),
         });

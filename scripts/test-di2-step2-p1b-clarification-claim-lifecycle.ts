@@ -466,10 +466,11 @@ async function main() {
       assert.equal(again.ok, false);
       assert.equal(again.block_reason, "already_confirmed");
 
-      // Release must not undo confirmed.
+      // Release must not undo confirmed (even with matching claimed_at).
       const releaseDenied = await releaseClarificationClaimCas({
         session: server.session_snapshot,
         plan_id: seeded.plan.plan_id,
+        claimed_at: claim!.claimed_at,
         now: new Date().toISOString(),
       });
       assert.equal(releaseDenied.ok, false);
@@ -535,16 +536,9 @@ async function main() {
       assert.equal(losses[0]!.block_reason, "clarification_allowance_exhausted");
 
       const winnerPlan = a.ok ? "plan_winner" : "plan_loser";
-      const loserPlan = a.ok ? "plan_loser" : "plan_winner";
+      assert.ok(wins[0]!.reservation);
+      assert.equal(losses[0]!.reservation, undefined);
       assert.equal(claimOf(wins[0]!.session, winnerPlan)?.status, "claimed");
-
-      // Production loser path only touches its own plan_id (never the winner's).
-      const loserSelf = await releaseClarificationClaimCas({
-        session: losses[0]!.session,
-        plan_id: loserPlan,
-        now,
-      });
-      assert.equal(loserSelf.ok, true);
 
       const after = await requireAuthoritativeSession(record.session_id);
       assert.equal(
@@ -578,6 +572,7 @@ async function main() {
       const deny = await releaseClarificationClaimCas({
         session: confirmedSnap,
         plan_id: winnerPlan,
+        claimed_at: claimOf(confirmedSnap, winnerPlan)!.claimed_at,
         now,
       });
       assert.equal(deny.ok, false);
@@ -630,12 +625,15 @@ async function main() {
         }),
       );
       assert.equal(reserved.ok, true);
+      assert.ok(reserved.reservation);
+      const ownedAt = reserved.reservation!.claimed_at;
       live = await requireAuthoritativeSession(record.session_id);
       assert.equal(activeClaimCount(live.session_snapshot), 1);
 
       const r1 = await releaseClarificationClaimCas({
         session: live.session_snapshot,
         plan_id: "plan_f",
+        claimed_at: ownedAt,
         now,
       });
       assert.equal(r1.ok, true);
@@ -646,6 +644,7 @@ async function main() {
       const r2 = await releaseClarificationClaimCas({
         session: live.session_snapshot,
         plan_id: "plan_f",
+        claimed_at: ownedAt,
         now,
       });
       assert.equal(r2.ok, true, "repeat release is idempotent");
@@ -682,6 +681,137 @@ async function main() {
         stillConfirmed.clarification_claims?.find((c) => c.plan_id === "plan_f2")?.status,
         "confirmed",
       );
+    });
+  });
+
+  await check("Test G: same plan_id concurrent reserve — B cannot release A", async () => {
+    await withAuthStore(async () => {
+      const record = await initializeAuthoritativeSession({
+        original_question: "p1b same plan ownership",
+        device_id: "dev_p1b_g",
+      });
+      const now = new Date().toISOString();
+      const baseSnap: POJUSessionState = {
+        ...record.session_snapshot,
+        decision_understanding: {
+          ...(record.session_snapshot.decision_understanding as NonNullable<
+            POJUSessionState["decision_understanding"]
+          >),
+          budget: {
+            soft_budget_limit: 12,
+            hard_budget_limit: 15,
+            session_asked_count: 0,
+            review_cycle: 1,
+            cycle_base_asked: 0,
+            remaining_hard_budget: 15,
+            depth_by_dir: {},
+            clarification_allowance: 3,
+            clarification_rounds: 0,
+            clarification_claims: [],
+          },
+          last_sent_question: null,
+        },
+      };
+      await commitAuthoritativeSessionUpdate({
+        sessionId: record.session_id,
+        expectedRevision: record.revision,
+        expectedGeneration: record.session_generation,
+        snapshot: baseSnap,
+        last_committed_turn_id: "seed_g",
+      });
+      const live = await requireAuthoritativeSession(record.session_id);
+      const planId = "plan_shared_g";
+
+      const a = await runWithClarificationClaimRequestScope(async () => {
+        const reserved = await reserveClarificationClaimCas({
+          session: live.session_snapshot,
+          plan_id: planId,
+          now,
+        });
+        assert.equal(reserved.ok, true);
+        assert.ok(reserved.reservation);
+        return reserved;
+      });
+
+      const b = await runWithClarificationClaimRequestScope(async () => {
+        const held = await reserveClarificationClaimCas({
+          session: live.session_snapshot,
+          plan_id: planId,
+          now,
+        });
+        assert.equal(held.ok, false);
+        assert.equal(held.block_reason, "clarification_claim_held");
+        assert.equal(held.reservation, undefined);
+
+        // B observes A's claimed_at on authoritative snapshot but must not release.
+        const server = await requireAuthoritativeSession(record.session_id);
+        const observedAt = claimOf(server.session_snapshot, planId)!.claimed_at;
+        const stolen = await releaseClarificationClaimCas({
+          session: server.session_snapshot,
+          plan_id: planId,
+          claimed_at: observedAt,
+          now,
+        });
+        assert.equal(stolen.ok, false);
+        assert.equal(stolen.block_reason, "reservation_ownership_mismatch");
+        return held;
+      });
+      assert.equal(b.ok, false);
+
+      // A still holds the claim.
+      let server = await requireAuthoritativeSession(record.session_id);
+      assert.equal(claimOf(server.session_snapshot, planId)?.status, "claimed");
+
+      // Empty request scope without a noted reservation cannot release A's claim.
+      await runWithClarificationClaimRequestScope(async () => {
+        const blocked = await releaseClarificationClaimCas({
+          session: server.session_snapshot,
+          plan_id: planId,
+          claimed_at: a.reservation!.claimed_at,
+          now,
+        });
+        assert.equal(blocked.ok, false);
+        assert.equal(blocked.block_reason, "reservation_ownership_mismatch");
+      });
+      server = await requireAuthoritativeSession(record.session_id);
+      assert.equal(claimOf(server.session_snapshot, planId)?.status, "claimed");
+
+      // A releases using the reservation proof returned from its successful reserve
+      // (no foreign request-scope frame).
+      const releasedByA = await releaseClarificationClaimCas({
+        session: server.session_snapshot,
+        plan_id: planId,
+        claimed_at: a.reservation!.claimed_at,
+        now,
+      });
+      assert.equal(releasedByA.ok, true);
+
+      server = await requireAuthoritativeSession(record.session_id);
+      assert.equal(claimOf(server.session_snapshot, planId)?.status, "released");
+
+      // After A released, B still cannot confirm the old claim.
+      const noConfirm = confirmClarification(
+        server.session_snapshot.decision_understanding!.budget,
+        planId,
+        now,
+        "stale_b_send",
+      );
+      assert.equal(
+        noConfirm.clarification_claims?.find((c) => c.plan_id === planId)?.status,
+        "released",
+      );
+
+      // B also cannot release again with the old claimed_at inside its scope.
+      await runWithClarificationClaimRequestScope(async () => {
+        const again = await releaseClarificationClaimCas({
+          session: server.session_snapshot,
+          plan_id: planId,
+          claimed_at: a.reservation!.claimed_at,
+          now,
+        });
+        assert.equal(again.ok, false);
+        assert.equal(again.block_reason, "reservation_ownership_mismatch");
+      });
     });
   });
 
