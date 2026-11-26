@@ -17,7 +17,7 @@ import {
   requireAuthoritativeSession,
 } from "@/lib/poju/session-authority/lifecycle";
 import type { ServerSessionRecord } from "@/lib/poju/session-authority/types";
-import { claimClarification } from "./budget-ledger";
+import { claimClarification, GLOBAL_CORE_SPENT_CEILING } from "./budget-ledger";
 
 const CAS_RETRY_MAX = 8;
 
@@ -141,12 +141,31 @@ type BudgetSnap = NonNullable<
 >;
 
 /**
- * Business reject merge:
- * - Clarification claims / allowance / rounds → always authoritative (concurrency).
- * - Core ledger → keep this-turn working advances when ahead of auth; otherwise
- *   take authoritative core so a stale working copy cannot erase concurrent counts.
- * - last_sent_question → authoritative only (null clears stale working residue).
- * If authoritative budget is missing, do not stamp revision (fail closed).
+ * Same ledger rule as budget-ledger counterLedgerConsistent:
+ * core_effective_answer_rounds === min(turnIds.length, GLOBAL_CORE_SPENT_CEILING).
+ */
+function coreLedgerConsistent(budget: BudgetSnap): boolean {
+  const core = budget.core_effective_answer_rounds ?? 0;
+  const turns = budget.core_counted_source_turn_ids ?? [];
+  return core === Math.min(turns.length, GLOBAL_CORE_SPENT_CEILING);
+}
+
+function authTurnIdsPreservedInWork(work: BudgetSnap, auth: BudgetSnap): boolean {
+  const authIds = auth.core_counted_source_turn_ids ?? [];
+  if (!authIds.length) return true;
+  const workIds = new Set(work.core_counted_source_turn_ids ?? []);
+  return authIds.every((id) => workIds.has(id));
+}
+
+/**
+ * Business reject merge (field-scoped):
+ * - Base budget → authoritative (asked/remaining/depth/complexity stay concurrent-safe).
+ * - Clarification claims / allowance / rounds → authoritative.
+ * - Core ledger only → overlay working when workCore > authCore and the working
+ *   ledger is consistent and extends authoritative turn ids; otherwise keep auth.
+ * - Equal core: prefer longer working turn-id lists only when both ledgers are
+ *   consistent with the shared core count.
+ * - last_sent_question handled by caller (authoritative, including null).
  */
 function mergeBudgetFieldsOnReject(work: BudgetSnap, auth: BudgetSnap): BudgetSnap {
   const workCore = work.core_effective_answer_rounds ?? 0;
@@ -158,27 +177,38 @@ function mergeBudgetFieldsOnReject(work: BudgetSnap, auth: BudgetSnap): BudgetSn
     clarification_rounds: auth.clarification_rounds,
   };
 
+  const base: BudgetSnap = {
+    ...auth,
+    ...clarificationAuthority,
+  };
+
   if (workCore > authCore) {
+    if (!coreLedgerConsistent(work) || !authTurnIdsPreservedInWork(work, auth)) {
+      // Unproven this-turn core — do not guess; keep authoritative budget.
+      return base;
+    }
     return {
-      ...work,
-      ...clarificationAuthority,
+      ...base,
+      core_effective_answer_rounds: work.core_effective_answer_rounds,
+      core_counted_source_turn_ids: work.core_counted_source_turn_ids,
+      core_counted_answer_event_ids: work.core_counted_answer_event_ids,
     };
   }
 
-  // Working is not ahead on core — authoritative ledger wins for core counters.
-  const workIds = work.core_counted_source_turn_ids?.length ?? 0;
-  const authIds = auth.core_counted_source_turn_ids?.length ?? 0;
-  const preferWorkTurnIds = workCore === authCore && workIds > authIds;
+  const workIds = work.core_counted_source_turn_ids ?? [];
+  const authIds = auth.core_counted_source_turn_ids ?? [];
+  const preferWorkTurnIds =
+    workCore === authCore &&
+    workIds.length > authIds.length &&
+    coreLedgerConsistent(work) &&
+    coreLedgerConsistent(auth);
+
+  if (!preferWorkTurnIds) return base;
 
   return {
-    ...auth,
-    ...clarificationAuthority,
-    ...(preferWorkTurnIds
-      ? {
-          core_counted_source_turn_ids: work.core_counted_source_turn_ids,
-          core_counted_answer_event_ids: work.core_counted_answer_event_ids,
-        }
-      : {}),
+    ...base,
+    core_counted_source_turn_ids: work.core_counted_source_turn_ids,
+    core_counted_answer_event_ids: work.core_counted_answer_event_ids,
   };
 }
 
