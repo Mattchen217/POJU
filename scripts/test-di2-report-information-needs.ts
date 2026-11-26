@@ -6,6 +6,8 @@
  * Pure / in-memory only — no OpenRouter.
  */
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import type { DecisionContext } from "../lib/poju/decision-context/types";
 import type {
   AdaptiveQuestionPlan,
@@ -2361,6 +2363,187 @@ async function main() {
       }),
       false,
     );
+  });
+
+  await check("P1-A: confirmed Constraint without source_turn_id is orphan fail-closed", () => {
+    const dc = draftDc({
+      constraints: [
+        {
+          constraint_id: "cst_no_turn",
+          statement: "不能降薪",
+          category: "financial",
+          status: "confirmed",
+          verification_level: "user_asserted",
+          source_stage: "collecting_context",
+          source_turn_id: null,
+          rigidity: "hard",
+          user_confirmed: true,
+          related_dir_ids: ["DIR-DEF-QUESTION"],
+        },
+      ],
+    });
+    // Live materiality looks at status/statement of written ids, not turn attribution.
+    assert.equal(
+      isMaterialDcWrite({
+        fact_ids_written: [],
+        constraint_ids_written: ["cst_no_turn"],
+        session: { decision_context: dc } as POJUSessionState,
+        answer: { classification: "substantive" },
+      }),
+      true,
+    );
+    const migrated = migrateSessionBudget(
+      {
+        soft_budget_limit: 12,
+        hard_budget_limit: 15,
+        session_asked_count: 0,
+        review_cycle: 1,
+        cycle_base_asked: 0,
+        remaining_hard_budget: 15,
+        depth_by_dir: {},
+      },
+      dc,
+    );
+    assert.equal(
+      migrated.budget_migration_evidence,
+      "uncertain_orphan_facts_fail_closed",
+    );
+    assert.equal(migrated.core_effective_answer_rounds, GLOBAL_CORE_SPENT_CEILING);
+    // Not a normal attributed material turn — reconstruction yields no turn ids.
+    assert.deepEqual(migrated.core_counted_source_turn_ids, []);
+
+    const repaired = repairCoreLedgerFromDc(
+      {
+        soft_budget_limit: 12,
+        hard_budget_limit: 15,
+        session_asked_count: 0,
+        review_cycle: 1,
+        cycle_base_asked: 0,
+        remaining_hard_budget: 15,
+        depth_by_dir: {},
+        core_effective_answer_rounds: 0,
+        core_counted_source_turn_ids: [],
+      },
+      dc,
+    );
+    assert.equal(repaired.core_effective_answer_rounds, 0);
+    assert.deepEqual(repaired.core_counted_source_turn_ids, []);
+  });
+
+  await check("P1-A: live core path requires source_turn_id; answer_event_id alone is not DC attribution", () => {
+    const adaptiveSrc = readFileSync(
+      join(process.cwd(), "lib/poju/decision-intake/adaptive-turn.ts"),
+      "utf8",
+    );
+    const wrapperMatch = adaptiveSrc.match(
+      /function sessionWithCoreBudgetAfterMaterialWrite\(([\s\S]*?)\): POJUSessionState \{/,
+    );
+    assert.ok(wrapperMatch, "sessionWithCoreBudgetAfterMaterialWrite must exist");
+    assert.match(
+      wrapperMatch![1],
+      /source_turn_id:\s*string/,
+      "production wrapper requires source_turn_id: string",
+    );
+    assert.match(
+      adaptiveSrc,
+      /bumpCoreAfterMaterialWrite\(u\.budget,\s*\{\s*source_turn_id,\s*answer_event_id:\s*answer_event\.event_id,\s*\}\)/,
+    );
+    const callSites = [
+      ...adaptiveSrc.matchAll(
+        /sessionWithCoreBudgetAfterMaterialWrite\(\s*[\w.]+\s*,\s*[\w.]+\s*,\s*[\w.]+\s*,\s*([\w.]+)\s*,?\s*\)/g,
+      ),
+    ];
+    assert.equal(callSites.length, 3, "expected three production call sites");
+    for (const m of callSites) {
+      assert.match(
+        m[1],
+        /source_turn_id$/,
+        `call site must forward a source_turn_id, got ${m[1]}`,
+      );
+    }
+
+    const applySrc = readFileSync(
+      join(process.cwd(), "lib/poju/decision-intake/apply-answer-to-dc.ts"),
+      "utf8",
+    );
+    assert.match(
+      applySrc,
+      /const c: Constraint = \{[\s\S]*?source_turn_id:\s*turnId,/,
+      "new Constraints are attributed to the apply turnId",
+    );
+
+    // Low-level bump can accept answer_event_id alone, but that does not create
+    // a DC-attributable material turn id for reconstruction.
+    let eventOnly = bumpCoreAfterMaterialWrite(
+      {
+        soft_budget_limit: 12,
+        hard_budget_limit: 15,
+        session_asked_count: 0,
+        review_cycle: 1,
+        cycle_base_asked: 0,
+        remaining_hard_budget: 15,
+        depth_by_dir: {},
+        core_effective_answer_rounds: 0,
+        core_counted_source_turn_ids: [],
+      },
+      { answer_event_id: "ev_only_no_turn" },
+    );
+    assert.equal(eventOnly.core_effective_answer_rounds, 1);
+    assert.deepEqual(eventOnly.core_counted_source_turn_ids, []);
+    assert.deepEqual(eventOnly.core_counted_answer_event_ids, ["ev_only_no_turn"]);
+
+    const attributedDc = draftDc({
+      constraints: [
+        {
+          constraint_id: "cst_attr",
+          statement: "有 turn 的确认约束",
+          category: "time",
+          status: "confirmed",
+          verification_level: "user_asserted",
+          source_stage: "collecting_context",
+          source_turn_id: "t_attr",
+          rigidity: "hard",
+          user_confirmed: true,
+          related_dir_ids: ["DIR-DEF-QUESTION"],
+        },
+      ],
+    });
+    const reconstructed = migrateSessionBudget(
+      {
+        soft_budget_limit: 12,
+        hard_budget_limit: 15,
+        session_asked_count: 0,
+        review_cycle: 1,
+        cycle_base_asked: 0,
+        remaining_hard_budget: 15,
+        depth_by_dir: {},
+      },
+      attributedDc,
+    );
+    assert.equal(reconstructed.core_effective_answer_rounds, 1);
+    assert.deepEqual(reconstructed.core_counted_source_turn_ids, ["t_attr"]);
+    assert.ok(
+      !(reconstructed.core_counted_source_turn_ids ?? []).includes("ev_only_no_turn"),
+    );
+
+    // Production-shaped live bump: wrapper always pairs turn id + event id.
+    let live = bumpCoreAfterMaterialWrite(
+      {
+        soft_budget_limit: 12,
+        hard_budget_limit: 15,
+        session_asked_count: 0,
+        review_cycle: 1,
+        cycle_base_asked: 0,
+        remaining_hard_budget: 15,
+        depth_by_dir: {},
+        core_effective_answer_rounds: 0,
+        core_counted_source_turn_ids: [],
+      },
+      { source_turn_id: "t_attr", answer_event_id: "ev_live" },
+    );
+    assert.equal(live.core_effective_answer_rounds, 1);
+    assert.deepEqual(live.core_counted_source_turn_ids, ["t_attr"]);
+    assert.deepEqual(live.core_counted_answer_event_ids, ["ev_live"]);
   });
 
   await check("ordinary guard: invalid need source or ask_policy", () => {
