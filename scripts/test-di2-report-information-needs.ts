@@ -430,7 +430,7 @@ async function main() {
     assert.notEqual(u.readiness.verdict, "ready_for_delivery");
   });
 
-  await check("same plan_id resend: asked/core/clarification unchanged", () => {
+  await check("same plan_id second attach rejected; budget unchanged", () => {
     const plan: AdaptiveQuestionPlan = {
       plan_id: "qp_resend_test",
       candidate_id: "c1",
@@ -473,18 +473,20 @@ async function main() {
         last_sent_question: null,
       },
     } as POJUSessionState;
-    session = attachAuthorizedAssistantQuestion(session, plan, "ask_1", NOW).session;
+    const first = attachAuthorizedAssistantQuestion(session, plan, "ask_1", NOW);
+    assert.ok(first.attached);
+    session = first.session;
     const afterFirst = session.decision_understanding!.budget;
-    session = attachAuthorizedAssistantQuestion(session, plan, "ask_2", NOW).session;
-    const afterSecond = session.decision_understanding!.budget;
-    assert.equal(afterSecond.session_asked_count, afterFirst.session_asked_count);
+    const second = attachAuthorizedAssistantQuestion(session, plan, "ask_2", NOW);
+    assert.equal(second.attached, false);
+    assert.equal(second.block_reason, "plan_already_sent");
     assert.equal(
-      afterSecond.core_effective_answer_rounds,
-      afterFirst.core_effective_answer_rounds,
+      second.session.decision_understanding!.budget.session_asked_count,
+      afterFirst.session_asked_count,
     );
-    assert.deepEqual(
-      afterSecond.clarification_claims,
-      afterFirst.clarification_claims,
+    assert.equal(
+      second.session.decision_understanding!.last_sent_question?.plan_id,
+      plan.plan_id,
     );
     const clarPlan: AdaptiveQuestionPlan = {
       ...plan,
@@ -501,7 +503,8 @@ async function main() {
     const r1 = guardAndAttachAuthorizedQuestion(session, clarPlan, "t1", NOW);
     assert.ok(r1.attached);
     const r2 = guardAndAttachAuthorizedQuestion(r1.session, clarPlan, "t2", NOW);
-    assert.ok(r2.attached);
+    assert.equal(r2.attached, false);
+    assert.equal(r2.block_reason, "plan_already_sent");
     assert.equal(
       r2.session.decision_understanding!.budget.session_asked_count,
       r1.session.decision_understanding!.budget.session_asked_count,
@@ -760,83 +763,313 @@ async function main() {
     assert.equal(blocked.reason, "already_confirmed");
   });
 
-  await check("CAS reserve: concurrent last slot only one wins", async () => {
+  await check("CAS reserve: real MemorySessionAuthorityStore concurrent last slot", async () => {
     const { reserveClarificationClaimCas } = await import(
       "../lib/poju/decision-intake/clarification-claim-cas"
     );
-    let sharedBudget: SessionBudgetSnapshot = {
-      soft_budget_limit: 12,
-      hard_budget_limit: 15,
-      session_asked_count: 0,
-      review_cycle: 1,
-      cycle_base_asked: 0,
-      remaining_hard_budget: 15,
-      depth_by_dir: {},
-      clarification_allowance: 3,
-      clarification_claims: [
-        { plan_id: "plan_0", status: "confirmed", claimed_at: NOW, confirmed_at: NOW },
-        { plan_id: "plan_1", status: "confirmed", claimed_at: NOW, confirmed_at: NOW },
-      ],
-    };
-    let chain: Promise<void> = Promise.resolve();
-    const casReserve = async (input: {
-      session: POJUSessionState;
-      plan_id: string;
-      now: string;
-    }) => {
-      await chain;
-      let release!: () => void;
-      const gate = new Promise<void>((resolve) => {
-        release = resolve;
+    const {
+      createMemorySessionAuthorityStore,
+      runWithSessionAuthorityStore,
+    } = await import("../lib/poju/session-authority/store");
+    const {
+      initializeAuthoritativeSession,
+      commitAuthoritativeSessionUpdate,
+      requireAuthoritativeSession,
+    } = await import("../lib/poju/session-authority/lifecycle");
+
+    await runWithSessionAuthorityStore(createMemorySessionAuthorityStore(), async () => {
+      const record = await initializeAuthoritativeSession({
+        original_question: "clarification cas race",
+        device_id: "dev_r3_cas",
       });
-      chain = gate;
-      try {
-        const claim = claimClarification(sharedBudget, input.plan_id, input.now);
-        if (!claim.ok) {
-          return {
-            ok: false,
-            session: input.session,
-            block_reason:
-              claim.reason === "already_confirmed"
-                ? "already_confirmed"
-                : "clarification_allowance_exhausted",
-          };
-        }
-        sharedBudget = claim.budget;
-        return {
-          ok: true,
-          session: {
-            ...input.session,
-            decision_understanding: {
-              ...input.session.decision_understanding!,
-              budget: sharedBudget,
-            },
+      const budget: SessionBudgetSnapshot = {
+        soft_budget_limit: 12,
+        hard_budget_limit: 15,
+        session_asked_count: 1,
+        review_cycle: 1,
+        cycle_base_asked: 0,
+        remaining_hard_budget: 14,
+        depth_by_dir: {},
+        clarification_allowance: 3,
+        clarification_rounds: 2,
+        clarification_claims: [
+          {
+            plan_id: "plan_0",
+            status: "confirmed",
+            claimed_at: NOW,
+            confirmed_at: NOW,
           },
-        };
-      } finally {
-        release();
-      }
-    };
-    const baseSession = {
-      decision_understanding: { budget: { ...sharedBudget }, last_sent_question: null },
-    } as POJUSessionState;
-    const [a, b] = await Promise.all([
-      reserveClarificationClaimCas({
-        session: baseSession,
-        plan_id: "plan_a",
+          {
+            plan_id: "plan_1",
+            status: "confirmed",
+            claimed_at: NOW,
+            confirmed_at: NOW,
+          },
+        ],
+      };
+      const seededSnap: POJUSessionState = {
+        ...record.session_snapshot,
+        decision_understanding: {
+          ...(record.session_snapshot.decision_understanding as object),
+          budget,
+          last_sent_question: null,
+        } as POJUSessionState["decision_understanding"],
+      };
+      const afterSeed = await commitAuthoritativeSessionUpdate({
+        sessionId: record.session_id,
+        expectedRevision: record.revision,
+        expectedGeneration: record.session_generation,
+        snapshot: seededSnap,
+        last_committed_turn_id: null,
+      });
+      assert.equal(afterSeed.revision, 1);
+
+      const working: POJUSessionState = {
+        ...afterSeed.session_snapshot,
+        session_revision: afterSeed.revision,
+        // Marker that working-turn state must survive overlay.
+        original_question: "working-turn-marker",
+      };
+
+      const [a, b] = await Promise.all([
+        reserveClarificationClaimCas({
+          session: working,
+          plan_id: "plan_a",
+          now: NOW,
+        }),
+        reserveClarificationClaimCas({
+          session: working,
+          plan_id: "plan_b",
+          now: NOW,
+        }),
+      ]);
+      const wins = [a, b].filter((r) => r.ok);
+      const losses = [a, b].filter((r) => !r.ok);
+      assert.equal(wins.length, 1, "exactly one concurrent claim must win");
+      assert.equal(losses.length, 1);
+      assert.equal(wins[0]!.session.original_question, "working-turn-marker");
+      assert.equal(wins[0]!.session.session_revision, 2);
+      assert.equal(
+        losses[0]!.block_reason,
+        "clarification_allowance_exhausted",
+      );
+
+      const latest = await requireAuthoritativeSession(record.session_id);
+      assert.equal(latest.revision, 2);
+      const claims =
+        latest.session_snapshot.decision_understanding?.budget.clarification_claims ?? [];
+      const active = claims.filter(
+        (c) => c.status === "claimed" || c.status === "confirmed",
+      );
+      assert.equal(active.length, 3);
+    });
+  });
+
+  await check("CAS reserve: authoritative persistence fail-closed (no memory fallback)", async () => {
+    const { reserveClarificationClaimCas } = await import(
+      "../lib/poju/decision-intake/clarification-claim-cas"
+    );
+    const {
+      createUnavailableSessionAuthorityStore,
+      runWithSessionAuthorityStore,
+    } = await import("../lib/poju/session-authority/store");
+    const { SessionAuthorityError } = await import(
+      "../lib/poju/session-authority/lifecycle"
+    );
+
+    await runWithSessionAuthorityStore(createUnavailableSessionAuthorityStore(), async () => {
+      const session = {
+        session_id: "sess_r3_fail_closed",
+        session_revision: 0,
+        decision_understanding: {
+          budget: {
+            soft_budget_limit: 12,
+            hard_budget_limit: 15,
+            session_asked_count: 0,
+            review_cycle: 1,
+            cycle_base_asked: 0,
+            remaining_hard_budget: 15,
+            depth_by_dir: {},
+            clarification_allowance: 3,
+            clarification_claims: [],
+          },
+          last_sent_question: null,
+        },
+      } as POJUSessionState;
+      await assert.rejects(
+        () =>
+          reserveClarificationClaimCas({
+            session,
+            plan_id: "plan_x",
+            now: NOW,
+          }),
+        (err: unknown) =>
+          err instanceof SessionAuthorityError &&
+          (err.code === "server_persistence_unavailable" ||
+            err.code === "session_not_found"),
+      );
+    });
+  });
+
+  await check("e2e: reserve → guard → outbound → finalize → commit uses post-reserve revision", async () => {
+    const { reserveClarificationClaimCas } = await import(
+      "../lib/poju/decision-intake/clarification-claim-cas"
+    );
+    const {
+      createMemorySessionAuthorityStore,
+      runWithSessionAuthorityStore,
+    } = await import("../lib/poju/session-authority/store");
+    const {
+      initializeAuthoritativeSession,
+      commitAuthoritativeSessionUpdate,
+      requireAuthoritativeSession,
+    } = await import("../lib/poju/session-authority/lifecycle");
+
+    await runWithSessionAuthorityStore(createMemorySessionAuthorityStore(), async () => {
+      const record = await initializeAuthoritativeSession({
+        original_question: "e2e clarification commit",
+        device_id: "dev_r3_e2e",
+      });
+      const budget: SessionBudgetSnapshot = {
+        soft_budget_limit: 12,
+        hard_budget_limit: 15,
+        session_asked_count: 0,
+        review_cycle: 1,
+        cycle_base_asked: 0,
+        remaining_hard_budget: 15,
+        depth_by_dir: {},
+        clarification_allowance: 3,
+        clarification_claims: [],
+      };
+      const seeded = await commitAuthoritativeSessionUpdate({
+        sessionId: record.session_id,
+        expectedRevision: record.revision,
+        expectedGeneration: record.session_generation,
+        snapshot: {
+          ...record.session_snapshot,
+          decision_understanding: {
+            budget,
+            last_sent_question: null,
+          } as POJUSessionState["decision_understanding"],
+        },
+        last_committed_turn_id: null,
+      });
+      assert.equal(seeded.revision, 1);
+
+      const clarPlan: AdaptiveQuestionPlan = {
+        plan_id: "qp_e2e_clar",
+        candidate_id: "c1",
+        direction_id: "DIRN-DEFINITION",
+        ddr_ids: ["DDR-P05-01"],
+        dir_ids: ["DIR-DEF-QUESTION"],
+        fact_role_codes: [],
+        missing_info: "unknown",
+        decision_value: "decision_critical",
+        ask_now_reason: "test",
+        expected_info: "info",
+        depth: 1,
+        budget_cost: 1,
+        remaining_hard_budget: 14,
+        gate_class: "P0",
+        scope_boundary: "test",
+        rationale: "test",
+        question_text: "clarify e2e?",
+        built_at: NOW,
+        scoring_path: "pending_answer_resolution",
+        collection_mode: "clarification",
+      };
+
+      const working: POJUSessionState = {
+        ...seeded.session_snapshot,
+        session_revision: seeded.revision,
+        messages: [
+          {
+            role: "user",
+            content: "need clarify",
+            client_id: "u_e2e",
+            timestamp: NOW,
+          },
+        ],
+      };
+      const reserved = await reserveClarificationClaimCas({
+        session: working,
+        plan_id: clarPlan.plan_id,
         now: NOW,
-        casReserve,
-      }),
-      reserveClarificationClaimCas({
-        session: baseSession,
-        plan_id: "plan_b",
-        now: NOW,
-        casReserve,
-      }),
-    ]);
-    const wins = [a, b].filter((r) => r.ok);
-    assert.equal(wins.length, 1);
-    assert.equal([a, b].filter((r) => !r.ok).length, 1);
+      });
+      assert.ok(reserved.ok);
+      assert.equal(reserved.session.session_revision, 2);
+
+      const guarded = guardAndAttachAuthorizedQuestion(
+        reserved.session,
+        clarPlan,
+        "u_e2e",
+        NOW,
+      );
+      assert.ok(guarded.attached);
+
+      let sessionOut: POJUSessionState = {
+        ...guarded.session,
+        messages: [
+          ...(guarded.session.messages ?? []),
+          {
+            role: "assistant",
+            content: clarPlan.question_text,
+            client_id: "asst_e2e",
+            timestamp: NOW,
+          },
+        ],
+      };
+
+      // Stale start revision must fail (the R2 P0).
+      await assert.rejects(
+        () =>
+          commitAuthoritativeSessionUpdate({
+            sessionId: record.session_id,
+            expectedRevision: seeded.revision,
+            expectedGeneration: record.session_generation,
+            snapshot: sessionOut,
+            last_committed_turn_id: "u_e2e",
+          }),
+        (err: unknown) =>
+          err instanceof Error && /stale revision|CAS/i.test(err.message),
+      );
+
+      sessionOut = finalizeClarificationClaimsForDurableCommit(sessionOut, NOW);
+      assert.equal(
+        sessionOut.decision_understanding!.budget.clarification_claims?.[0]?.status,
+        "confirmed",
+      );
+
+      const committed = await commitAuthoritativeSessionUpdate({
+        sessionId: record.session_id,
+        expectedRevision: sessionOut.session_revision!,
+        expectedGeneration: record.session_generation,
+        snapshot: sessionOut,
+        last_committed_turn_id: "u_e2e",
+      });
+      assert.equal(committed.revision, 3);
+
+      const latest = await requireAuthoritativeSession(record.session_id);
+      assert.equal(
+        latest.session_snapshot.decision_understanding?.budget.clarification_claims?.[0]
+          ?.status,
+        "confirmed",
+      );
+      const assistantQs = (latest.session_snapshot.messages ?? []).filter(
+        (m) => m.role === "assistant" && m.content.includes("clarify e2e"),
+      );
+      assert.equal(assistantQs.length, 1);
+
+      // Duplicate plan_id attach after durable send must be rejected.
+      const dup = guardAndAttachAuthorizedQuestion(
+        latest.session_snapshot,
+        clarPlan,
+        "u_e2e_2",
+        NOW,
+      );
+      assert.equal(dup.attached, false);
+      assert.equal(dup.block_reason, "plan_already_sent");
+    });
   });
 
   await check("finalizeClarification: claimed until assistant message on commit", () => {

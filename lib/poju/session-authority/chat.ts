@@ -191,11 +191,23 @@ export async function executeAuthoritativeChatTurn(
   // Understanding / adaptive models already ran above. If Redis CAS times out,
   // retry ONLY the commit — never re-run the model (that was the user-visible
   // failure mode: OpenRouter had a valid JSON, the page still showed 连接异常).
+  //
+  // Clarification claim reservation may have already CAS-bumped the server
+  // revision; final commit must use sessionOut.session_revision (post-reserve),
+  // not the revision captured at turn start.
+  const commitExpectedRevision = (): number => {
+    const fromSession = sessionOut.session_revision;
+    if (typeof fromSession === "number" && Number.isFinite(fromSession)) {
+      return fromSession;
+    }
+    return record.revision;
+  };
   const COMMIT_ATTEMPTS = 3;
   let committed: Awaited<ReturnType<typeof commitAuthoritativeSessionUpdate>> | null = null;
   let lastCommitError: unknown = null;
   for (let attempt = 1; attempt <= COMMIT_ATTEMPTS; attempt += 1) {
     throwIfAborted(opts?.signal);
+    const expectedRevision = commitExpectedRevision();
     try {
       const { finalizeClarificationClaimsForDurableCommit } = await import(
         "@/lib/poju/decision-intake/adaptive-turn"
@@ -206,7 +218,7 @@ export async function executeAuthoritativeChatTurn(
       );
       committed = await commitAuthoritativeSessionUpdate({
         sessionId,
-        expectedRevision: record.revision,
+        expectedRevision,
         expectedGeneration: record.session_generation,
         snapshot: sessionOut,
         last_committed_turn_id: incoming.client_turn_id,
@@ -224,7 +236,7 @@ export async function executeAuthoritativeChatTurn(
       }
       console.warn(
         `[poju/chat] session CAS timed out after model success — commit-only retry ${attempt}/${COMMIT_ATTEMPTS}`,
-        { sessionId, revision: record.revision },
+        { sessionId, revision: expectedRevision },
       );
       await new Promise<void>((resolve) => setTimeout(resolve, 80 * attempt));
     }
@@ -235,7 +247,7 @@ export async function executeAuthoritativeChatTurn(
       : new SessionAuthorityError(
           "server_persistence_unavailable",
           "session CAS failed after model success",
-          { session_id: sessionId, expected_revision: record.revision },
+          { session_id: sessionId, expected_revision: commitExpectedRevision() },
         );
   }
 

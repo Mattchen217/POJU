@@ -2185,19 +2185,15 @@ export function guardAndAttachAuthorizedQuestion(
       block_reason: "missing_decision_understanding",
     };
   }
+  // Same plan_id was already attached/sent — never produce a second successful send.
+  // Idempotent client turn replay is handled upstream (authoritative chat turn id).
   const already =
     understanding.last_sent_question?.plan_id === planWithMode.plan_id;
   if (already) {
     return {
-      session: {
-        ...session,
-        adaptive_ask_plan: planWithMode,
-        decision_understanding: {
-          ...understanding,
-          next_question_plan: planWithMode,
-        },
-      },
-      attached: true,
+      session,
+      attached: false,
+      block_reason: "plan_already_sent",
     };
   }
 

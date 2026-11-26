@@ -1673,10 +1673,28 @@ async function runAgentTurn(input: HandleInput, internalTurn: InternalTurn): Pro
       } = await import("@/lib/poju/decision-intake");
       const plan = m1CollectingTurn.plan;
       let sessionForGuard = sessionOut;
-      if (
-        classifyCollectionMode(plan) === "clarification" &&
-        sessionOut.decision_understanding?.last_sent_question?.plan_id !== plan.plan_id
-      ) {
+      const alreadySentPlan =
+        sessionOut.decision_understanding?.last_sent_question?.plan_id === plan.plan_id;
+      if (alreadySentPlan) {
+        const summary =
+          m1CollectingTurn.understanding?.current_understanding.summary?.trim() ||
+          "当前关键信息已足够。请确认以上理解是否正确；确认后进入下一阶段。";
+        finalContent = `【理解确认】${summary}
+
+如果以上理解正确，请回复确认；如需补充，请直接说明。`;
+        sessionOut = {
+          ...sessionOut,
+          adaptive_ask_plan: null,
+          messages: [
+            ...messagesWithUser,
+            { ...assistantMessage, content: finalContent },
+          ],
+        };
+        sessionOut = stampDecisionUnderstandingBoxOnLastUser(sessionOut);
+        if (input.server_invoke?.skip_delivery_pipeline) return sessionOut;
+        return sessionOut;
+      }
+      if (classifyCollectionMode(plan) === "clarification") {
         const reserved = await reserveClarificationClaimCas({
           session: sessionOut,
           plan_id: plan.plan_id,
@@ -1715,11 +1733,10 @@ async function runAgentTurn(input: HandleInput, internalTurn: InternalTurn): Pro
         nowIso,
       );
       if (!guarded.attached) {
-        const released = releaseAuthorizedQuestionClaim(
-          guarded.session,
-          plan.plan_id,
-          nowIso,
-        );
+        const afterBlock =
+          guarded.block_reason === "plan_already_sent"
+            ? guarded.session
+            : releaseAuthorizedQuestionClaim(guarded.session, plan.plan_id, nowIso);
         const summary =
           m1CollectingTurn.understanding?.current_understanding.summary?.trim() ||
           "当前关键信息已足够。请确认以上理解是否正确；确认后进入下一阶段。";
@@ -1727,7 +1744,7 @@ async function runAgentTurn(input: HandleInput, internalTurn: InternalTurn): Pro
 
 如果以上理解正确，请回复确认；如需补充，请直接说明。`;
         sessionOut = {
-          ...released,
+          ...afterBlock,
           adaptive_ask_plan: null,
           messages: [
             ...messagesWithUser,
@@ -2252,10 +2269,20 @@ async function runAgentTurn(input: HandleInput, internalTurn: InternalTurn): Pro
     const outboundAssistant = { ...assistantMessage, client_id: assistantMessageId };
     let sessionForGuard: POJUSessionState = preGuard;
     let reserveBlocked = false;
-    if (
-      classifyCollectionMode(plan) === "clarification" &&
-      preGuard.decision_understanding?.last_sent_question?.plan_id !== plan.plan_id
-    ) {
+    if (preGuard.decision_understanding?.last_sent_question?.plan_id === plan.plan_id) {
+      const summary =
+        m1CollectingTurn.understanding?.current_understanding.summary?.trim() ||
+        "当前关键信息已足够。请确认以上理解是否正确；确认后进入下一阶段。";
+      finalContent = `【理解确认】${summary}
+
+如果以上理解正确，请回复确认；如需补充，请直接说明。`;
+      sessionOut = {
+        ...preGuard,
+        adaptive_ask_plan: null,
+        messages: [...messagesWithUser, { ...outboundAssistant, content: finalContent }],
+      };
+      reserveBlocked = true;
+    } else if (classifyCollectionMode(plan) === "clarification") {
       const reserved = await reserveClarificationClaimCas({
         session: preGuard,
         plan_id: plan.plan_id,
@@ -2291,11 +2318,10 @@ async function runAgentTurn(input: HandleInput, internalTurn: InternalTurn): Pro
         nowIso,
       );
       if (!guarded.attached) {
-        const released = releaseAuthorizedQuestionClaim(
-          guarded.session,
-          plan.plan_id,
-          nowIso,
-        );
+        const afterBlock =
+          guarded.block_reason === "plan_already_sent"
+            ? guarded.session
+            : releaseAuthorizedQuestionClaim(guarded.session, plan.plan_id, nowIso);
         const summary =
           m1CollectingTurn.understanding?.current_understanding.summary?.trim() ||
           "当前关键信息已足够。请确认以上理解是否正确；确认后进入下一阶段。";
@@ -2303,7 +2329,7 @@ async function runAgentTurn(input: HandleInput, internalTurn: InternalTurn): Pro
 
 如果以上理解正确，请回复确认；如需补充，请直接说明。`;
         sessionOut = {
-          ...released,
+          ...afterBlock,
           adaptive_ask_plan: null,
           messages: [...messagesWithUser, { ...outboundAssistant, content: finalContent }],
         };

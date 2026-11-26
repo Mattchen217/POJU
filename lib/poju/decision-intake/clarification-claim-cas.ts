@@ -1,7 +1,7 @@
 /**
  * CAS-atomic clarification allowance claims against the authoritative Session record.
- * When no server session / store is available, falls back to in-memory claimClarification
- * on the passed session (unit tests and local-only runs).
+ * Local-only / unit tests (no session_id) use in-memory claimClarification.
+ * Authoritative sessions with a session_id always fail closed — never fall back to memory.
  */
 
 import type { POJUSessionState } from "@/lib/poju/types";
@@ -25,6 +25,7 @@ export type ReserveClarificationClaimCasInput = {
   session: POJUSessionState;
   plan_id: string;
   now: string;
+  /** Test-only override of the reserve path (real store tests leave this unset). */
   casReserve?: (input: ReserveClarificationClaimCasInput) => Promise<ReserveClarificationClaimCasResult>;
 };
 
@@ -106,18 +107,53 @@ function buildRecordWithSnapshot(
   };
 }
 
-function shouldFallbackToInMemory(error: unknown): boolean {
-  if (error instanceof SessionPersistenceUnavailableError) return true;
-  if (error instanceof SessionAuthorityError) {
-    return error.code === "session_not_found" || error.code === "server_persistence_unavailable";
+function overlayClaimOntoWorkingSession(
+  working: POJUSessionState,
+  claimedBudget: NonNullable<
+    NonNullable<POJUSessionState["decision_understanding"]>["budget"]
+  >,
+  revision: number,
+): POJUSessionState {
+  const understanding = working.decision_understanding;
+  if (!understanding?.budget) {
+    return {
+      ...working,
+      session_revision: revision,
+    };
   }
-  return false;
+  return {
+    ...working,
+    session_revision: revision,
+    decision_understanding: {
+      ...understanding,
+      budget: {
+        ...understanding.budget,
+        clarification_allowance: claimedBudget.clarification_allowance,
+        clarification_claims: claimedBudget.clarification_claims,
+        clarification_rounds: claimedBudget.clarification_rounds,
+      },
+    },
+  };
+}
+
+function failClosedFromError(error: unknown, session: POJUSessionState): never {
+  if (error instanceof SessionAuthorityError) {
+    throw error;
+  }
+  if (error instanceof SessionPersistenceUnavailableError) {
+    throw new SessionAuthorityError("server_persistence_unavailable", error.message, {
+      session_id: session.session_id,
+      recoverable: /timed out|BUSY|SCRIPT/i.test(error.message),
+    });
+  }
+  throw error;
 }
 
 async function defaultAuthoritativeReserve(
   input: ReserveClarificationClaimCasInput,
 ): Promise<ReserveClarificationClaimCasResult> {
   const sessionId = input.session.session_id?.trim();
+  // Local-only / unit tests: no authoritative session id → in-memory claim only.
   if (!sessionId) {
     return inMemoryReserveClarificationClaim(input.session, input.plan_id, input.now);
   }
@@ -128,10 +164,7 @@ async function defaultAuthoritativeReserve(
     try {
       current = await requireAuthoritativeSession(sessionId);
     } catch (error) {
-      if (shouldFallbackToInMemory(error)) {
-        return inMemoryReserveClarificationClaim(input.session, input.plan_id, input.now);
-      }
-      throw error;
+      failClosedFromError(error, input.session);
     }
 
     const snap = current.session_snapshot;
@@ -144,11 +177,29 @@ async function defaultAuthoritativeReserve(
       };
     }
 
+    const existingClaim = understanding.budget.clarification_claims?.find(
+      (c) => c.plan_id === input.plan_id,
+    );
+    // Idempotent re-reserve of an open claim: keep current revision (no second CAS bump).
+    if (existingClaim?.status === "claimed") {
+      return {
+        ok: true,
+        session: overlayClaimOntoWorkingSession(
+          input.session,
+          understanding.budget,
+          current.revision,
+        ),
+      };
+    }
+
     const claim = claimClarification(understanding.budget, input.plan_id, input.now);
     if (!claim.ok) {
       return {
         ok: false,
-        session: snap,
+        session: {
+          ...input.session,
+          session_revision: current.revision,
+        },
         block_reason: authoritativeClaimBlockReason(claim.reason),
       };
     }
@@ -169,19 +220,14 @@ async function defaultAuthoritativeReserve(
         nowIso: input.now,
       });
     } catch (error) {
-      if (shouldFallbackToInMemory(error)) {
-        return inMemoryReserveClarificationClaim(input.session, input.plan_id, input.now);
-      }
-      throw error;
+      failClosedFromError(error, input.session);
     }
 
     if (casResult.ok) {
+      // Keep the caller's in-flight turn state; only overlay the CAS claim + new revision.
       return {
         ok: true,
-        session: {
-          ...nextSnapshot,
-          session_revision: next.revision,
-        },
+        session: overlayClaimOntoWorkingSession(input.session, claim.budget, next.revision),
       };
     }
     if (casResult.reason === "cas_conflict" || casResult.reason === "missing") {
