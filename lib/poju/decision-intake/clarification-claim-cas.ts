@@ -150,11 +150,37 @@ function coreLedgerConsistent(budget: BudgetSnap): boolean {
   return core === Math.min(turns.length, GLOBAL_CORE_SPENT_CEILING);
 }
 
+function authIdListPreservedInWork(
+  workIds: string[] | undefined,
+  authIds: string[] | undefined,
+): boolean {
+  const auth = authIds ?? [];
+  if (!auth.length) return true;
+  const work = new Set(workIds ?? []);
+  return auth.every((id) => work.has(id));
+}
+
 function authTurnIdsPreservedInWork(work: BudgetSnap, auth: BudgetSnap): boolean {
-  const authIds = auth.core_counted_source_turn_ids ?? [];
-  if (!authIds.length) return true;
-  const workIds = new Set(work.core_counted_source_turn_ids ?? []);
-  return authIds.every((id) => workIds.has(id));
+  return authIdListPreservedInWork(
+    work.core_counted_source_turn_ids,
+    auth.core_counted_source_turn_ids,
+  );
+}
+
+function authEventIdsPreservedInWork(work: BudgetSnap, auth: BudgetSnap): boolean {
+  return authIdListPreservedInWork(
+    work.core_counted_answer_event_ids,
+    auth.core_counted_answer_event_ids,
+  );
+}
+
+function workingLedgerPreservesAuthProvenance(
+  work: BudgetSnap,
+  auth: BudgetSnap,
+): boolean {
+  return (
+    authTurnIdsPreservedInWork(work, auth) && authEventIdsPreservedInWork(work, auth)
+  );
 }
 
 /**
@@ -162,9 +188,9 @@ function authTurnIdsPreservedInWork(work: BudgetSnap, auth: BudgetSnap): boolean
  * - Base budget → authoritative (asked/remaining/depth/complexity stay concurrent-safe).
  * - Clarification claims / allowance / rounds → authoritative.
  * - Core ledger only → overlay working when workCore > authCore and the working
- *   ledger is consistent and extends authoritative turn ids; otherwise keep auth.
+ *   ledger is consistent and preserves authoritative turn + event provenance.
  * - Equal core: prefer longer working turn-id lists only when both ledgers are
- *   consistent with the shared core count.
+ *   consistent and working retains every authoritative turn/event id.
  * - last_sent_question handled by caller (authoritative, including null).
  */
 function mergeBudgetFieldsOnReject(work: BudgetSnap, auth: BudgetSnap): BudgetSnap {
@@ -183,8 +209,11 @@ function mergeBudgetFieldsOnReject(work: BudgetSnap, auth: BudgetSnap): BudgetSn
   };
 
   if (workCore > authCore) {
-    if (!coreLedgerConsistent(work) || !authTurnIdsPreservedInWork(work, auth)) {
-      // Unproven this-turn core — do not guess; keep authoritative budget.
+    if (
+      !coreLedgerConsistent(work) ||
+      !workingLedgerPreservesAuthProvenance(work, auth)
+    ) {
+      // Unproven / provenance-breaking this-turn core — keep authoritative budget.
       return base;
     }
     return {
@@ -197,13 +226,14 @@ function mergeBudgetFieldsOnReject(work: BudgetSnap, auth: BudgetSnap): BudgetSn
 
   const workIds = work.core_counted_source_turn_ids ?? [];
   const authIds = auth.core_counted_source_turn_ids ?? [];
-  const preferWorkTurnIds =
+  const preferWorkLedger =
     workCore === authCore &&
     workIds.length > authIds.length &&
     coreLedgerConsistent(work) &&
-    coreLedgerConsistent(auth);
+    coreLedgerConsistent(auth) &&
+    workingLedgerPreservesAuthProvenance(work, auth);
 
-  if (!preferWorkTurnIds) return base;
+  if (!preferWorkLedger) return base;
 
   return {
     ...base,
