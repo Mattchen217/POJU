@@ -112,6 +112,7 @@ import {
   buildBatch2AuthoritativeDecisionReportStatus,
   di2JobHasBatch2IdentityBindingField,
 } from "./decision-report-batch2-status";
+import { attemptDi2Batch2FinalDelivery } from "./decision-report-batch2-final-delivery";
 
 /** Older than one invoke budget with no live lease → the worker died. */
 const STALE_NO_LEASE_MS = 6 * 60_000;
@@ -932,6 +933,8 @@ export async function buildDecisionReportStatus(input: {
   // uses the Batch2-authoritative Status branch. Never fall back to legacy DI2
   // lease stale-fail or decisionReportWorkerState for these jobs.
   // R3: Delivery Authorization must pass before exposing Batch2 page outcomes.
+  // Unit E: when Batch2/3 is ready_for_delivery, Status may trigger Final Delivery;
+  // Batch2 completed alone never counts as DI2 completed.
   if (di2JobHasBatch2IdentityBindingField(job)) {
     const delivery = await (__statusDeliveryVerifyForTests
       ? __statusDeliveryVerifyForTests(job)
@@ -939,7 +942,43 @@ export async function buildDecisionReportStatus(input: {
     if (!delivery.ok) {
       return deliveryDeniedPayload(input, jobBinding, delivery);
     }
-    return buildBatch2AuthoritativeDecisionReportStatus(job);
+    const batch2Status = await buildBatch2AuthoritativeDecisionReportStatus(job);
+    if (batch2Status.ok && batch2Status.current_stage === "ready_for_delivery") {
+      const delivered = await attemptDi2Batch2FinalDelivery(job);
+      if (delivered.ok) {
+        return statusFromRecord(delivered.record);
+      }
+      if (delivered.delivery_denied) {
+        return deliveryDeniedPayload(input, jobBinding, {
+          ok: false,
+          reason: delivered.detail,
+          revoked: delivered.code === "delivery_denied",
+          unreadable: Boolean(delivered.retryable && delivered.unconfirmed),
+        });
+      }
+      if (delivered.unconfirmed) {
+        return {
+          ...batch2Status,
+          status: "running",
+          current_stage: "delivery_unconfirmed",
+          result: null,
+          pages: [],
+          analysis: {
+            status: "missing",
+            analysis_id: null,
+            attempts: 0,
+            error: null,
+            record: null,
+          },
+          retryable: true,
+          failure_reason: "report_persist_unconfirmed",
+          error: delivered.detail,
+        };
+      }
+      // Pages incomplete / Authority invalid / identity mismatch — stay ready_for_delivery
+      // (or surface the Batch2 failure already in batch2Status). Never claim DI2 completed.
+    }
+    return batch2Status;
   }
 
   if (job.status === "pending" || job.status === "running") {

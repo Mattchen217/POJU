@@ -3,7 +3,9 @@
  *
  * Resumes the persisted Batch2 Generation / Job for a DI2 decision_report job.
  * Does NOT: allocate identity, create Generation, send full ORCHESTRATE,
- * write DI2 Report Store, or fall back to the legacy DI2 eight-page runner.
+ * or fall back to the legacy DI2 eight-page runner.
+ * Unit E: when Batch2/3 production is already complete, Continue resumes only
+ * Final Delivery (DI2 Report Store) — never regenerates pages or reallocates.
  *
  * Reuses Unit B binding + Unit C Session Lock / lease (holder "start").
  * R1: recomputes di2ReportJobId / generation_id; verifies Freeze/Profile/Context
@@ -55,11 +57,13 @@ import {
 } from "@/lib/poju/decision-intake/decision-report-lock";
 import { getXhighJob } from "@/lib/poju/xhigh-job-store";
 import type { PojuXhighJob } from "@/lib/poju/xhigh-job-types";
+import { attemptDi2Batch2FinalDelivery } from "./decision-report-batch2-final-delivery";
 
 export type Di2Batch2ContinueOutcome =
   | "observing"
   | "recovered"
   | "ready_for_delivery"
+  | "delivered"
   | "job_running";
 
 export type Di2Batch2ContinueErrorCode =
@@ -80,7 +84,10 @@ export type Di2Batch2ContinueErrorCode =
   | "session_lock_required"
   | "session_lock_lost"
   | "dispatch_uncertain"
-  | "cas_failed";
+  | "cas_failed"
+  | "final_delivery_denied"
+  | "final_delivery_unconfirmed"
+  | "final_delivery_failed";
 
 export type Di2Batch2ContinueResult =
   | {
@@ -232,6 +239,11 @@ export function __setDi2Batch2ContinueAuthoritySnapshotForTests(
   snapshot: typeof __authoritySnapshotForTests,
 ): void {
   __authoritySnapshotForTests = snapshot;
+}
+
+/** @internal tests only — Final Delivery reuses Continue's MemoryKv authority snapshot. */
+export function __peekDi2Batch2ContinueAuthoritySnapshotForTests(): typeof __authoritySnapshotForTests {
+  return __authoritySnapshotForTests;
 }
 
 /**
@@ -589,6 +601,86 @@ export async function continueDi2Batch2Production(input: {
   });
 }
 
+/**
+ * Unit E — Batch2/3 production complete: attempt DI2 Final Delivery only.
+ * Incomplete Authority pages stay at ready_for_delivery (not DI2 completed).
+ */
+async function finalizeReadyForDelivery(input: {
+  binding: Di2Batch2IdentityBinding;
+  job: PojuXhighJob;
+  batch2_status: string;
+}): Promise<Di2Batch2ContinueResult> {
+  const contSnap = __authoritySnapshotForTests;
+  const delivered = await attemptDi2Batch2FinalDelivery(input.job, {
+    authority_snapshot: contSnap
+      ? {
+          freeze: {
+            session_id: contSnap.freeze.session_id,
+            freeze_id: contSnap.freeze.freeze_id,
+            context_id: contSnap.freeze.context_id,
+            context_version: contSnap.freeze.context_version,
+            context_hash: contSnap.freeze.context_hash,
+            decision_question: null,
+          },
+          profile: {
+            session_id: contSnap.profile.session_id,
+            freeze_id: contSnap.profile.freeze_id,
+            profile_id: contSnap.profile.profile_id,
+            profile_hash: contSnap.profile.profile_hash,
+          },
+        }
+      : undefined,
+  });
+  if (delivered.ok) {
+    return {
+      ok: true,
+      outcome: "delivered",
+      binding: input.binding,
+      job: delivered.job,
+      batch2_status: input.batch2_status,
+      recover_sent: false,
+    };
+  }
+  if (delivered.delivery_denied) {
+    return {
+      ok: false,
+      code: "final_delivery_denied",
+      detail: delivered.detail,
+    };
+  }
+  if (delivered.unconfirmed) {
+    return {
+      ok: false,
+      code: "final_delivery_unconfirmed",
+      detail: delivered.detail,
+    };
+  }
+  // Not yet Authority-complete (or other fail-closed page/identity issues):
+  // remain ready_for_delivery without claiming DI2 Store success.
+  if (
+    delivered.code === "page_incomplete" ||
+    delivered.code === "authority_invalid" ||
+    delivered.code === "authority_unavailable" ||
+    delivered.code === "batch2_job_missing" ||
+    delivered.code === "page_map_failed" ||
+    delivered.code === "page_fingerprint_mismatch"
+  ) {
+    return {
+      ok: true,
+      outcome: "ready_for_delivery",
+      binding: input.binding,
+      job: input.job,
+      batch2_status: input.batch2_status,
+      recover_sent: false,
+    };
+  }
+  return {
+    ok: false,
+    code: "final_delivery_failed",
+    detail: `${delivered.code}: ${delivered.detail}`,
+  };
+}
+
 async function runContinueUnderLease(
   job_id: string,
   lock_owner: ReportLockOwner,
@@ -669,15 +761,8 @@ async function runContinueUnderLease(
     gen.value.status === "finalizing" ||
     gen.value.status === "delivery_failed"
   ) {
-    // Ready for Unit E Final Delivery Adapter — do not regenerate pages or write Report Store.
-    return {
-      ok: true,
-      outcome: "ready_for_delivery",
-      binding,
-      job,
-      batch2_status: gen.value.status,
-      recover_sent: false,
-    };
+    // Unit E: resume Final Delivery only — never regenerate pages / allocate Generation.
+    return finalizeReadyForDelivery({ binding, job, batch2_status: gen.value.status });
   }
 
   if (
@@ -752,14 +837,7 @@ async function runContinueUnderLease(
   }
 
   if (meta.status === "completed") {
-    return {
-      ok: true,
-      outcome: "ready_for_delivery",
-      binding,
-      job,
-      batch2_status: meta.status,
-      recover_sent: false,
-    };
+    return finalizeReadyForDelivery({ binding, job, batch2_status: meta.status });
   }
 
   if (meta.status === "failed") {

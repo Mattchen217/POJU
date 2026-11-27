@@ -311,17 +311,21 @@ async function continueAction(job_id: string, session_id: string, deps: Decision
       ok: true,
       job_id,
       status:
-        continued.outcome === "ready_for_delivery"
-          ? "completed_batch2"
-          : continued.job.status === "pending"
-            ? "pending"
-            : continued.job.status,
+        continued.outcome === "delivered"
+          ? "completed"
+          : continued.outcome === "ready_for_delivery"
+            ? "completed_batch2"
+            : continued.job.status === "pending"
+              ? "pending"
+              : continued.job.status,
       worker:
-        continued.outcome === "ready_for_delivery"
-          ? "batch2_ready_for_delivery"
-          : continued.recover_sent
-            ? "batch2_recovered"
-            : "batch2_observing",
+        continued.outcome === "delivered"
+          ? "di2_final_delivery"
+          : continued.outcome === "ready_for_delivery"
+            ? "batch2_ready_for_delivery"
+            : continued.recover_sent
+              ? "batch2_recovered"
+              : "batch2_observing",
       outcome: continued.outcome,
       batch2_report_id: continued.binding.report_id,
       batch2_generation_id: continued.binding.generation_id,
