@@ -8,7 +8,8 @@
  * Reuses Unit B binding + Unit C Session Lock / lease (holder "start").
  * R1: recomputes di2ReportJobId / generation_id; verifies Freeze/Profile/Context
  * against authority (or test snapshot). Status must not use legacy DI2 lease
- * to interrupt Batch2-bound jobs (see buildDecisionReportStatus).
+ * to interrupt Batch2-bound jobs. Status for bound jobs is Batch2-authoritative
+ * (see decision-report-batch2-status / buildDecisionReportStatus).
  */
 
 import {

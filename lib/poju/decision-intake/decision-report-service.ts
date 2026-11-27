@@ -108,6 +108,10 @@ import {
   resetDecisionReportBudgets,
 } from "./decision-report-runner";
 import { decisionReportWorkerState } from "./decision-report-dispatch";
+import {
+  buildBatch2AuthoritativeDecisionReportStatus,
+  di2JobHasBatch2IdentityBindingField,
+} from "./decision-report-batch2-status";
 
 /** Older than one invoke budget with no live lease → the worker died. */
 const STALE_NO_LEASE_MS = 6 * 60_000;
@@ -912,27 +916,25 @@ export async function buildDecisionReportStatus(input: {
     }
   }
 
+  // Unit D R2: any job that carries batch2_identity_binding (valid or corrupted)
+  // uses the Batch2-authoritative Status branch. Never fall back to legacy DI2
+  // lease stale-fail or decisionReportWorkerState for these jobs.
+  if (di2JobHasBatch2IdentityBindingField(job)) {
+    return buildBatch2AuthoritativeDecisionReportStatus(job);
+  }
+
   if (job.status === "pending" || job.status === "running") {
-    // Unit D R1: Batch2-bound jobs must not be judged by the legacy DI2
-    // delivery-stage continue lease. Batch2 workers do not hold that lease;
-    // using it marks healthy Batch2 production as interrupted.
-    const batch2Bound =
-      job.batch2_identity_binding != null &&
-      typeof job.batch2_identity_binding === "object" &&
-      (job.batch2_identity_binding as { status?: unknown }).status === "bound";
-    if (!batch2Bound) {
-      const lease = await loadDeliveryContinueLease(job.job_id).catch(() => null);
-      const leaseLive = Boolean(lease && lease.expires_at > Date.now());
-      if (!leaseLive && Date.now() - job.updated_at > STALE_NO_LEASE_MS) {
-        await failXhighJob(job.job_id, "STOP: report worker stopped without a live lease", {
-          retryable: true,
-          failure_reason: "interrupted",
-          current_stage: job.current_stage,
-          accumulated_content: "failed:stale_no_lease",
-        }).catch(() => undefined);
-        await releaseReportJobLock(job.session_id, job.job_id).catch(() => undefined);
-        job = (await getXhighJob(job.job_id)) ?? job;
-      }
+    const lease = await loadDeliveryContinueLease(job.job_id).catch(() => null);
+    const leaseLive = Boolean(lease && lease.expires_at > Date.now());
+    if (!leaseLive && Date.now() - job.updated_at > STALE_NO_LEASE_MS) {
+      await failXhighJob(job.job_id, "STOP: report worker stopped without a live lease", {
+        retryable: true,
+        failure_reason: "interrupted",
+        current_stage: job.current_stage,
+        accumulated_content: "failed:stale_no_lease",
+      }).catch(() => undefined);
+      await releaseReportJobLock(job.session_id, job.job_id).catch(() => undefined);
+      job = (await getXhighJob(job.job_id)) ?? job;
     }
   }
 

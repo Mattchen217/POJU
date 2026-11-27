@@ -306,6 +306,25 @@ export function isDecisionReportJobResult(result: unknown): result is DecisionRe
   );
 }
 
+/**
+ * Optional Batch2/Batch3 production snapshot on Status (Unit D R2).
+ * Present only when the DI2 job carries batch2_identity_binding and Status
+ * resolved the bound Generation / Job (or failed closed with null).
+ */
+export type DecisionReportBatch2ProductionSnapshot = {
+  source: "batch2";
+  report_id: string;
+  generation_id: string;
+  generation_epoch: number;
+  generation_status: string;
+  batch2_job_status: string | null;
+  page_outcomes: Array<{
+    page_id: string;
+    outcome: string;
+    output_fingerprint?: string | null;
+  }>;
+};
+
 /** Status payload returned by /api/poju/decision-report (status / start / continue). */
 export type DecisionReportStatusPayload = {
   ok: boolean;
@@ -332,4 +351,9 @@ export type DecisionReportStatusPayload = {
   error: string | null;
   /** M5 — pending/running only: lease held (live), hand-off in flight (dispatching), or nobody (none). */
   worker?: "live" | "dispatching" | "none" | null;
+  /**
+   * Unit D R2 — when set, Status was resolved from Batch2/Batch3 (not legacy DI2 Runner).
+   * Consumers that ignore this field remain compatible via status / current_stage / pages.
+   */
+  batch2_production?: DecisionReportBatch2ProductionSnapshot | null;
 };

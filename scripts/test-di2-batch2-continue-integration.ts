@@ -374,7 +374,7 @@ async function continueWithLock(ctx: {
 }
 
 async function main() {
-  console.log("Unit D / R1 — DI2 Continue / Recovery → Batch2/3");
+  console.log("Unit D / R2 — DI2 Continue / Recovery + Batch2-authoritative Status");
   installEventSender();
   __resetDi2Batch2ContinueSideEffectCountsForTests();
   __setDi2Batch2ContinueLeaseProbeForTests(null);
@@ -735,13 +735,283 @@ async function main() {
     if (!cont.ok) assert.equal(cont.code, "job_revoked");
   });
 
-  await check("R1: Status with Batch2 binding + no DI2 lease + aged updated_at → not interrupted", async () => {
+  await check("R2: Status Batch2 active + aged DI2 + no lease → Batch2 running, no mutate", async () => {
+    installEventSender();
+    const ctx = await createDi2Job();
+    const started = await startThen(ctx);
+    assert.equal(started.ok, true);
+    if (!started.ok) return;
+    const job = await getXhighJob(ctx.job_id);
+    assert.ok(job?.batch2_identity_binding);
+    const beforeJson = JSON.stringify(job);
+    const aged = {
+      ...job!,
+      status: "running" as const,
+      updated_at: Date.now() - 7 * 60_000,
+    };
+    await kv.set(xhighJobKey(ctx.job_id), aged, { ex: 60 * 60 });
+    sentEvents = [];
+    const status = await buildDecisionReportStatus({
+      job_id: ctx.job_id,
+      session_id: ctx.session_id,
+    });
+    assert.equal(status.ok, true);
+    assert.equal(status.status, "running");
+    assert.notEqual(status.failure_reason, "interrupted");
+    assert.ok(status.batch2_production);
+    assert.equal(status.batch2_production!.source, "batch2");
+    assert.equal(status.batch2_production!.generation_id, started.binding.generation_id);
+    assert.equal(status.batch2_production!.generation_status, "active");
+    assert.ok(
+      status.current_stage === "batch2_producing" ||
+        status.current_stage === "batch2_pending" ||
+        status.current_stage === "batch2_orchestrating",
+    );
+    assert.equal(status.worker, null);
+    assert.equal(sentEvents.length, 0);
+    const again = await getXhighJob(ctx.job_id);
+    assert.ok(again);
+    assert.notEqual(again!.failure_reason, "interrupted");
+    assert.ok(again!.status === "pending" || again!.status === "running");
+    // Status must not mutate DI2 job fields beyond the aged write we did.
+    assert.equal(again!.batch2_identity_binding?.generation_id, job!.batch2_identity_binding!.generation_id);
+    assert.equal(again!.execution_generation, job!.execution_generation);
+    void beforeJson;
+  });
+
+  await check("R2: Status partial pages → real Batch2 page outcomes, no events", async () => {
+    installEventSender();
+    const ctx = await createDi2Job();
+    const started = await startThen(ctx);
+    assert.equal(started.ok, true);
+    if (!started.ok) return;
+    const gid = started.binding.generation_id;
+    const gen = await readGeneration(ctx.report_job_id, gid);
+    assert.equal(gen.ok && Boolean(gen.value), true);
+    if (!gen.ok || !gen.value) return;
+    const generation_epoch = gen.value.generation_epoch;
+    const page_id = "01" as const;
+    const def = reportPageDefinition(page_id);
+    const input_fingerprint = "fp_r2_status_page01";
+    await ensurePageFence({
+      report_id: ctx.report_job_id,
+      generation_id: gid,
+      generation_epoch,
+      page_id,
+    });
+    const claimed = await fenceAndClaimPageTask({
+      report_id: ctx.report_job_id,
+      generation_id: gid,
+      generation_epoch,
+      page_id,
+      task_type: "generate",
+      input_fingerprint,
+      upstream_output_fingerprints: {},
+      worker_id: "w_unit_d_r2_status",
+    });
+    assert.equal(claimed.ok, true, JSON.stringify(claimed));
+    if (!claimed.ok) return;
+    const out = { page: "01", body: "r2_status_partial" };
+    const output_fingerprint = hashCanonicalPayload(out);
+    const committed = await commitPageResult({
+      report_id: ctx.report_job_id,
+      generation_id: gid,
+      generation_epoch,
+      page_id,
+      attempt_id: claimed.value.attempt_id,
+      task_key: claimed.value.task_key,
+      output: out,
+      output_fingerprint,
+      state_patch: { outcome: "completed", input_fingerprint },
+      provenance: {
+        report_id: ctx.report_job_id,
+        generation_id: gid,
+        generation_epoch,
+        page_id,
+        input_fingerprint,
+        upstream_output_fingerprints: {},
+        page_contract_version: def.production_version,
+        prompt_version: def.prompt_version,
+        validator_version: def.validator_version,
+        output_fingerprint,
+        attempt_id: claimed.value.attempt_id,
+        task_key: claimed.value.task_key,
+        validity_rev: claimed.value.validity_rev,
+      },
+    });
+    assert.equal(committed.ok, true, JSON.stringify(committed));
+
+    sentEvents = [];
+    const status = await buildDecisionReportStatus({
+      job_id: ctx.job_id,
+      session_id: ctx.session_id,
+    });
+    assert.equal(status.ok, true);
+    assert.equal(status.status, "running");
+    assert.ok(status.batch2_production);
+    const page01 = status.batch2_production!.page_outcomes.find((p) => p.page_id === "01");
+    assert.equal(page01?.outcome, "completed");
+    assert.equal(page01?.output_fingerprint, output_fingerprint);
+    assert.equal(
+      status.pages.find((p) => p.page_id === "01")?.status,
+      "completed",
+    );
+    const page02 = status.batch2_production!.page_outcomes.find((p) => p.page_id === "02");
+    assert.notEqual(page02?.outcome, "completed");
+    assert.equal(sentEvents.length, 0);
+  });
+
+  await check("R2: Status Generation completed → ready_for_delivery, no gen / no report store", async () => {
+    installEventSender();
+    const ctx = await createDi2Job();
+    const started = await startThen(ctx);
+    assert.equal(started.ok, true);
+    if (!started.ok) return;
+    const b = started.binding;
+    assert.equal(
+      (
+        await transitionGenerationStatus({
+          report_id: b.report_id,
+          generation_id: b.generation_id,
+          generation_epoch: b.batch3_generation_epoch,
+          to: "finalizing",
+        })
+      ).ok,
+      true,
+    );
+    assert.equal(
+      (
+        await transitionGenerationStatus({
+          report_id: b.report_id,
+          generation_id: b.generation_id,
+          generation_epoch: b.batch3_generation_epoch,
+          to: "completed",
+        })
+      ).ok,
+      true,
+    );
+    sentEvents = [];
+    const status = await buildDecisionReportStatus({
+      job_id: ctx.job_id,
+      session_id: ctx.session_id,
+    });
+    assert.equal(status.ok, true);
+    assert.equal(status.status, "running");
+    assert.equal(status.current_stage, "ready_for_delivery");
+    assert.equal(status.result, null);
+    assert.ok(status.batch2_production);
+    assert.equal(status.batch2_production!.generation_status, "completed");
+    assert.equal(sentEvents.length, 0);
+    const di2 = await getXhighJob(ctx.job_id);
+    assert.ok(di2);
+    assert.notEqual(di2!.status, "completed");
+  });
+
+  await check("R2: Status corrupted binding → identity error, no stale fail / no mutate", async () => {
+    installEventSender();
+    const ctx = await createDi2Job();
+    await startThen(ctx);
+    const job = await getXhighJob(ctx.job_id);
+    assert.ok(job);
+    const corrupted = {
+      ...job!,
+      status: "running" as const,
+      updated_at: Date.now() - 7 * 60_000,
+      batch2_identity_binding: {
+        status: "bound",
+        report_id: "wrong_report_id",
+        generation_id: "wrong_gid",
+        di2_execution_generation: job!.execution_generation!,
+        created_at: new Date().toISOString(),
+        batch3_generation_epoch: 1,
+      },
+    };
+    await kv.set(xhighJobKey(ctx.job_id), corrupted, { ex: 60 * 60 });
+    sentEvents = [];
+    const status = await buildDecisionReportStatus({
+      job_id: ctx.job_id,
+      session_id: ctx.session_id,
+    });
+    assert.equal(status.ok, false);
+    assert.equal(status.status, "failed");
+    assert.equal(status.failure_reason, "batch2_identity_error");
+    assert.notEqual(status.failure_reason, "interrupted");
+    assert.equal(status.worker, null);
+    assert.equal(sentEvents.length, 0);
+    const again = await getXhighJob(ctx.job_id);
+    assert.ok(again);
+    assert.notEqual(again!.failure_reason, "interrupted");
+    assert.ok(again!.status === "pending" || again!.status === "running");
+  });
+
+  await check("R2: Status Generation missing → error, no allocate", async () => {
+    installEventSender();
+    __resetDi2Batch2ContinueSideEffectCountsForTests();
+    const ctx = await createDi2Job();
+    await startThen(ctx);
+    await resetBatch3KeysForTests();
+    sentEvents = [];
+    const status = await buildDecisionReportStatus({
+      job_id: ctx.job_id,
+      session_id: ctx.session_id,
+    });
+    assert.equal(status.ok, false);
+    assert.equal(status.failure_reason, "batch2_generation_missing");
+    assert.equal(__di2Batch2ContinueSideEffectCountsForTests.allocate_generation, 0);
+    assert.equal(sentEvents.length, 0);
+  });
+
+  await check("R2: Status Batch2 Job missing → error, no rebuild", async () => {
+    installEventSender();
+    __resetDi2Batch2ContinueSideEffectCountsForTests();
+    const ctx = await createDi2Job();
+    await startThen(ctx);
+    await resetBatch2JobStoreForTests();
+    sentEvents = [];
+    const status = await buildDecisionReportStatus({
+      job_id: ctx.job_id,
+      session_id: ctx.session_id,
+    });
+    assert.equal(status.ok, false);
+    assert.equal(status.failure_reason, "batch2_job_missing");
+    assert.equal(__di2Batch2ContinueSideEffectCountsForTests.create_job, 0);
+    assert.equal(sentEvents.length, 0);
+  });
+
+  await check("R2: Status generation_epoch mismatch → fail closed, no mutate", async () => {
+    installEventSender();
     const ctx = await createDi2Job();
     await startThen(ctx);
     const job = await getXhighJob(ctx.job_id);
     assert.ok(job?.batch2_identity_binding);
-    // Age the DI2 job past the legacy 6-minute stale-no-lease window while
-    // leaving Batch2 production healthy and without a DI2 continue lease.
+    const drifted = {
+      ...job!,
+      batch2_identity_binding: {
+        ...job!.batch2_identity_binding!,
+        batch3_generation_epoch: job!.batch2_identity_binding!.batch3_generation_epoch + 99,
+      },
+    };
+    await kv.set(xhighJobKey(ctx.job_id), drifted, { ex: 60 * 60 });
+    sentEvents = [];
+    const status = await buildDecisionReportStatus({
+      job_id: ctx.job_id,
+      session_id: ctx.session_id,
+    });
+    assert.equal(status.ok, false);
+    assert.equal(status.failure_reason, "batch2_identity_error");
+    assert.match(String(status.error), /generation_epoch mismatch/i);
+    assert.equal(sentEvents.length, 0);
+    const again = await getXhighJob(ctx.job_id);
+    assert.equal(again!.status, drifted.status);
+    assert.notEqual(again!.failure_reason, "interrupted");
+  });
+
+  await check("R2: legacy Status without Batch2 binding still uses DI2 lease stale fail", async () => {
+    const ctx = await createDi2Job();
+    // No Start → no binding. Age past stale window with no lease.
+    const job = await getXhighJob(ctx.job_id);
+    assert.ok(job);
+    assert.equal(job!.batch2_identity_binding, undefined);
     const aged = {
       ...job!,
       status: "running" as const,
@@ -752,12 +1022,11 @@ async function main() {
       job_id: ctx.job_id,
       session_id: ctx.session_id,
     });
-    assert.notEqual(status.status, "failed");
-    assert.notEqual(status.failure_reason, "interrupted");
+    assert.equal(status.status, "failed");
+    assert.equal(status.failure_reason, "interrupted");
     const again = await getXhighJob(ctx.job_id);
-    assert.ok(again);
-    assert.notEqual(again!.failure_reason, "interrupted");
-    assert.ok(again!.status === "pending" || again!.status === "running");
+    assert.equal(again!.status, "failed");
+    assert.equal(again!.failure_reason, "interrupted");
   });
 
   await check("R1: recomputed report_job_id mismatch → no RECOVER", async () => {
