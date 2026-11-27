@@ -1,5 +1,5 @@
 /**
- * Unit A / R1 — DI2 → Batch 2 input adapter (no Start wiring, no model calls).
+ * Unit A / R2 — DI2 → Batch 2 input adapter (no Start wiring, no model calls).
  *
  *   pnpm exec tsx scripts/test-di2-batch2-input-adapter.ts
  */
@@ -24,6 +24,7 @@ import {
 } from "../lib/poju/decision-intake/decision-report-batch2-adapter";
 import type { BookJudgmentPack } from "../lib/llm/pro/delivery/book-judgment/schema";
 import type { ZiweiFactPack } from "../lib/ziwei/fact-pack";
+import { ZIWEI_RUNTIME_PALACES } from "../lib/ziwei/token-disposition";
 
 let passed = 0;
 let failed = 0;
@@ -89,24 +90,14 @@ function validZiweiFactPack(
         palaces: ["命宫"],
       },
     ],
-    palaces: [
-      {
-        name: "命宫",
-        heavenlyStem: "甲",
-        earthlyBranch: "子",
-        majorStars: ["紫微"],
-        isBodyPalace: false,
-        decadalRange: [2, 11],
-      },
-      {
-        name: "兄弟",
-        heavenlyStem: "乙",
-        earthlyBranch: "丑",
-        majorStars: [],
-        isBodyPalace: false,
-        decadalRange: [12, 21],
-      },
-    ],
+    palaces: ZIWEI_RUNTIME_PALACES.map((name, i) => ({
+      name,
+      heavenlyStem: "甲",
+      earthlyBranch: "子",
+      majorStars: name === "命宫" ? (["紫微"] as string[]) : ([] as string[]),
+      isBodyPalace: name === "迁移",
+      decadalRange: [i * 10 + 2, i * 10 + 11] as [number, number],
+    })),
     source: {
       library: "iztro",
       version: "1.0.0-test",
@@ -303,7 +294,7 @@ function minimalValidPack(): BookJudgmentPack {
 }
 
 function main() {
-  console.log("Unit A / R1 — DI2 → Batch2 input adapter");
+  console.log("Unit A / R2 — DI2 → Batch2 input adapter");
 
   check("dc+profile with day_master → ok; pack null; chart mapped", () => {
     const res = buildBatch2InputsFromDI2(baseSource());
@@ -504,6 +495,144 @@ function main() {
     assert.equal(structure.ok, false);
     const res = buildBatch2InputsFromDI2(
       baseSource({ ziwei_fact_pack: broken }),
+    );
+    assert.equal(res.ok, false);
+    if (res.ok) return;
+    assert.equal(res.code, "ziwei_fact_pack_invalid");
+  });
+
+  // R2 — tighter type / enum / finite-number gates
+  check("ZFP invalid mutagen enum rejected", () => {
+    const broken = validZiweiFactPack({
+      sihua: [{ mutagen: "化禄" as never, star: "紫微", palace: "命宫" }],
+    });
+    const structure = assertZiweiFactPackStructure(broken);
+    assert.equal(structure.ok, false);
+    if (structure.ok) return;
+    assert.match(structure.detail, /mutagen/);
+  });
+
+  check("ZFP topicPalace non-string field rejected", () => {
+    const raw = validZiweiFactPack();
+    const broken = {
+      ...raw,
+      topicPalace: { ...raw.topicPalace, palace: 123 },
+    };
+    const structure = assertZiweiFactPackStructure(broken);
+    assert.equal(structure.ok, false);
+    if (structure.ok) return;
+    assert.match(structure.detail, /topicPalace\.palace/);
+  });
+
+  check("ZFP patternHits invalid level rejected", () => {
+    const broken = validZiweiFactPack({
+      patternHits: [
+        { name: "x", level: "strong" as never, palaces: ["命宫"] },
+      ],
+    });
+    const structure = assertZiweiFactPackStructure(broken);
+    assert.equal(structure.ok, false);
+    if (structure.ok) return;
+    assert.match(structure.detail, /patternHits\[0\]\.level/);
+  });
+
+  check("ZFP patternHits non-object entry rejected", () => {
+    const structure = assertZiweiFactPackStructure(
+      validZiweiFactPack({ patternHits: ["not-an-object" as never] }),
+    );
+    assert.equal(structure.ok, false);
+  });
+
+  check("ZFP daxian NaN age rejected", () => {
+    const broken = validZiweiFactPack({
+      daxian: {
+        ...validZiweiFactPack().daxian,
+        startAge: Number.NaN,
+      },
+    });
+    const structure = assertZiweiFactPackStructure(broken);
+    assert.equal(structure.ok, false);
+    if (structure.ok) return;
+    assert.match(structure.detail, /finite/);
+  });
+
+  check("ZFP daxian Infinity year rejected", () => {
+    const base = validZiweiFactPack();
+    const broken = validZiweiFactPack({
+      daxian: {
+        ...base.daxian,
+        liunian: { ...base.daxian.liunian, year: Number.POSITIVE_INFINITY },
+      },
+    });
+    const structure = assertZiweiFactPackStructure(broken);
+    assert.equal(structure.ok, false);
+    if (structure.ok) return;
+    assert.match(structure.detail, /liunian\.year/);
+  });
+
+  check("ZFP palaces not exactly 十二宫 rejected", () => {
+    const structure = assertZiweiFactPackStructure(
+      validZiweiFactPack({
+        palaces: validZiweiFactPack().palaces.slice(0, 11),
+      }),
+    );
+    assert.equal(structure.ok, false);
+    if (structure.ok) return;
+    assert.match(structure.detail, /exactly 12|十二宫/);
+  });
+
+  check("ZFP palaces duplicate / unknown name rejected", () => {
+    const base = validZiweiFactPack();
+    const dup = base.palaces.map((p, i) =>
+      i === 1 ? { ...p, name: "命宫" as const } : p,
+    );
+    const structure = assertZiweiFactPackStructure(
+      validZiweiFactPack({ palaces: dup }),
+    );
+    assert.equal(structure.ok, false);
+  });
+
+  check("ZFP source invalid library/gender/clock rejected", () => {
+    const badLib = assertZiweiFactPackStructure(
+      validZiweiFactPack({
+        source: { ...validZiweiFactPack().source, library: "other" as never },
+      }),
+    );
+    assert.equal(badLib.ok, false);
+    const badGender = assertZiweiFactPackStructure(
+      validZiweiFactPack({
+        source: { ...validZiweiFactPack().source, gender: "F" as never },
+      }),
+    );
+    assert.equal(badGender.ok, false);
+    const badClock = assertZiweiFactPackStructure(
+      validZiweiFactPack({
+        source: { ...validZiweiFactPack().source, clock: "utc" as never },
+      }),
+    );
+    assert.equal(badClock.ok, false);
+  });
+
+  check("ZFP source non-finite timeIndex rejected", () => {
+    const structure = assertZiweiFactPackStructure(
+      validZiweiFactPack({
+        source: {
+          ...validZiweiFactPack().source,
+          timeIndex: Number.NaN,
+        },
+      }),
+    );
+    assert.equal(structure.ok, false);
+    if (structure.ok) return;
+    assert.match(structure.detail, /timeIndex/);
+  });
+
+  check("adapter rejects incomplete-palace ZFP (not silent accept)", () => {
+    const incompletePalaces = validZiweiFactPack({
+      palaces: validZiweiFactPack().palaces.slice(0, 2),
+    });
+    const res = buildBatch2InputsFromDI2(
+      baseSource({ ziwei_fact_pack: incompletePalaces }),
     );
     assert.equal(res.ok, false);
     if (res.ok) return;

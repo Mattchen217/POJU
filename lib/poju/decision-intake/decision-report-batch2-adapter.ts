@@ -1,5 +1,5 @@
 /**
- * Unit A / R1 — DI2 → Batch 2 input adapter (mapping only).
+ * Unit A / R2 — DI2 → Batch 2 input adapter (mapping only).
  *
  * Receives already-verified Freeze / Profile / optional packs and produces
  * ReportBatch2JobInputs. Does not authorize, create jobs, lock sessions,
@@ -13,6 +13,12 @@
  *   successfully computed (ziwei_status=ok or closed_set present), the caller
  *   MUST supply a structurally valid ZiweiFactPack — we refuse to silently
  *   drop computed Ziwei by reporting ziwei_available=false.
+ *
+ * Trust boundary (Unit C wiring precondition — not enforced by shape alone):
+ * Structure-valid ZFP ≠ trusted ZFP. Unit C MUST pass a ZiweiFactPack produced
+ * by server-trusted computation/verification for the current Freeze/Profile
+ * identity. A caller-submitted object that merely passes
+ * assertZiweiFactPackStructure is not sufficient provenance.
  */
 
 import {
@@ -27,6 +33,7 @@ import type {
 } from "@/lib/poju/decision-authority/types";
 import type { DecisionContext } from "@/lib/poju/decision-context/types";
 import type { ZiweiFactPack } from "@/lib/ziwei/fact-pack";
+import { ZIWEI_RUNTIME_PALACES } from "@/lib/ziwei/token-disposition";
 
 export type Di2Batch2AdapterIdentity = {
   session_id: string;
@@ -55,6 +62,9 @@ export type Di2Batch2AdapterSource = {
    * Structured ZiweiFactPack. Required when Profile indicates Ziwei was
    * computed successfully; optional when ziwei_status is not_available/failed
    * and ziwei_closed_set is empty.
+   *
+   * Unit C: must originate from server-trusted compute/verify for this
+   * Freeze/Profile — structural validity here does not prove provenance.
    */
   ziwei_fact_pack?: ZiweiFactPack | null;
   /**
@@ -113,23 +123,73 @@ function isPlainObject(v: unknown): v is Record<string, unknown> {
   return typeof v === "object" && v !== null && !Array.isArray(v);
 }
 
+const MUTAGEN_SET = new Set(["禄", "权", "科", "忌"]);
+const PATTERN_LEVEL_SET = new Set(["excellent", "good", "neutral", "caution"]);
+const LIBRARY_SET = new Set(["ziwei-doushu", "iztro"]);
+const GENDER_SET = new Set(["男", "女"]);
+const CLOCK_SET = new Set(["tst_meta", "true_solar", "civil"]);
+const PALACE_NAME_SET = new Set<string>(ZIWEI_RUNTIME_PALACES);
+
+function isFiniteNumber(v: unknown): v is number {
+  return typeof v === "number" && Number.isFinite(v);
+}
+
 function isStringArray(v: unknown): v is string[] {
   return Array.isArray(v) && v.every((x) => typeof x === "string");
 }
 
-function isSihuaHit(v: unknown): boolean {
-  if (!isPlainObject(v)) return false;
-  return (
-    typeof v.mutagen === "string" &&
-    typeof v.star === "string" &&
-    typeof v.palace === "string"
-  );
+function isOptionalStringArray(v: unknown): boolean {
+  return v === undefined || isStringArray(v);
+}
+
+function assertSihuaHit(
+  v: unknown,
+  path: string,
+): string | null {
+  if (!isPlainObject(v)) return `${path} must be an object`;
+  if (!MUTAGEN_SET.has(v.mutagen as string)) {
+    return `${path}.mutagen must be one of 禄|权|科|忌`;
+  }
+  if (typeof v.star !== "string") return `${path}.star must be string`;
+  if (typeof v.palace !== "string") return `${path}.palace must be string`;
+  return null;
+}
+
+function assertSihuaArray(v: unknown, path: string): string | null {
+  if (!Array.isArray(v)) return `${path} must be an array`;
+  for (const [i, hit] of v.entries()) {
+    const err = assertSihuaHit(hit, `${path}[${i}]`);
+    if (err) return err;
+  }
+  return null;
+}
+
+function assertPatternHit(v: unknown, path: string): string | null {
+  if (!isPlainObject(v)) return `${path} must be an object`;
+  if (typeof v.name !== "string") return `${path}.name must be string`;
+  if (!PATTERN_LEVEL_SET.has(v.level as string)) {
+    return `${path}.level must be excellent|good|neutral|caution`;
+  }
+  if (!isStringArray(v.palaces)) return `${path}.palaces must be string[]`;
+  if (!isOptionalStringArray(v.required)) {
+    return `${path}.required must be string[] when present`;
+  }
+  if (!isOptionalStringArray(v.bonus)) {
+    return `${path}.bonus must be string[] when present`;
+  }
+  if (!isOptionalStringArray(v.breaking)) {
+    return `${path}.breaking must be string[] when present`;
+  }
+  if (v.source !== undefined && typeof v.source !== "string") {
+    return `${path}.source must be string when present`;
+  }
+  return null;
 }
 
 /**
- * Runtime structural gate for ZiweiFactPack.
- * Not a Zod schema (none exists in-repo); checks required keys + nested shape
- * so `{ version: 1 }` and partial objects cannot mark ziwei_available=true.
+ * Runtime structural gate for ZiweiFactPack aligned to lib/ziwei/fact-pack.ts.
+ * Validates nested types, enums, finite numbers, and full 12-palace set.
+ * Does NOT prove provenance / Freeze binding — see trust boundary above.
  */
 export function assertZiweiFactPackStructure(
   raw: unknown,
@@ -162,72 +222,70 @@ export function assertZiweiFactPackStructure(
   if (!isPlainObject(topic)) {
     return { ok: false, detail: "topicPalace must be an object" };
   }
-  for (const key of [
-    "role",
-    "palace",
-    "heavenlyStem",
-    "earthlyBranch",
-    "majorStars",
-    "oppositePalace",
-    "oppositeMajorStars",
-  ] as const) {
-    if (!(key in topic)) {
-      return { ok: false, detail: `topicPalace missing ${key}` };
-    }
-  }
   if (topic.role !== "ming") {
     return { ok: false, detail: 'topicPalace.role must be "ming"' };
   }
-  if (!isStringArray(topic.majorStars) || !isStringArray(topic.oppositeMajorStars)) {
-    return { ok: false, detail: "topicPalace star lists must be string[]" };
+  for (const key of [
+    "palace",
+    "heavenlyStem",
+    "earthlyBranch",
+    "oppositePalace",
+  ] as const) {
+    if (typeof topic[key] !== "string") {
+      return { ok: false, detail: `topicPalace.${key} must be string` };
+    }
+  }
+  if (!isStringArray(topic.majorStars)) {
+    return { ok: false, detail: "topicPalace.majorStars must be string[]" };
+  }
+  if (!isStringArray(topic.oppositeMajorStars)) {
+    return {
+      ok: false,
+      detail: "topicPalace.oppositeMajorStars must be string[]",
+    };
   }
 
-  if (!Array.isArray(raw.sihua) || !raw.sihua.every(isSihuaHit)) {
-    return { ok: false, detail: "sihua must be an array of {mutagen,star,palace}" };
-  }
+  const sihuaErr = assertSihuaArray(raw.sihua, "sihua");
+  if (sihuaErr) return { ok: false, detail: sihuaErr };
 
   const daxian = raw.daxian;
   if (!isPlainObject(daxian)) {
     return { ok: false, detail: "daxian must be an object" };
   }
-  for (const key of [
-    "palace",
-    "heavenlyStem",
-    "earthlyBranch",
-    "startAge",
-    "endAge",
-    "majorStars",
-    "sihua",
-    "liunian",
-  ] as const) {
-    if (!(key in daxian)) {
-      return { ok: false, detail: `daxian missing ${key}` };
+  for (const key of ["palace", "heavenlyStem", "earthlyBranch"] as const) {
+    if (typeof daxian[key] !== "string") {
+      return { ok: false, detail: `daxian.${key} must be string` };
     }
   }
-  if (typeof daxian.startAge !== "number" || typeof daxian.endAge !== "number") {
-    return { ok: false, detail: "daxian ages must be numbers" };
+  if (!isFiniteNumber(daxian.startAge) || !isFiniteNumber(daxian.endAge)) {
+    return {
+      ok: false,
+      detail: "daxian.startAge/endAge must be finite numbers",
+    };
   }
-  if (!isStringArray(daxian.majorStars) || !Array.isArray(daxian.sihua) || !daxian.sihua.every(isSihuaHit)) {
-    return { ok: false, detail: "daxian.majorStars/sihua shape invalid" };
+  if (daxian.startAge > daxian.endAge) {
+    return { ok: false, detail: "daxian.startAge must be <= endAge" };
   }
+  if (!isStringArray(daxian.majorStars)) {
+    return { ok: false, detail: "daxian.majorStars must be string[]" };
+  }
+  const daxianSihuaErr = assertSihuaArray(daxian.sihua, "daxian.sihua");
+  if (daxianSihuaErr) return { ok: false, detail: daxianSihuaErr };
+
   const liunian = daxian.liunian;
   if (!isPlainObject(liunian)) {
     return { ok: false, detail: "daxian.liunian must be an object" };
   }
-  for (const key of [
-    "year",
-    "heavenlyStem",
-    "earthlyBranch",
-    "palace",
-    "sihua",
-  ] as const) {
-    if (!(key in liunian)) {
-      return { ok: false, detail: `daxian.liunian missing ${key}` };
+  if (!isFiniteNumber(liunian.year)) {
+    return { ok: false, detail: "daxian.liunian.year must be a finite number" };
+  }
+  for (const key of ["heavenlyStem", "earthlyBranch", "palace"] as const) {
+    if (typeof liunian[key] !== "string") {
+      return { ok: false, detail: `daxian.liunian.${key} must be string` };
     }
   }
-  if (typeof liunian.year !== "number" || !Array.isArray(liunian.sihua) || !liunian.sihua.every(isSihuaHit)) {
-    return { ok: false, detail: "daxian.liunian shape invalid" };
-  }
+  const liunianSihuaErr = assertSihuaArray(liunian.sihua, "daxian.liunian.sihua");
+  if (liunianSihuaErr) return { ok: false, detail: liunianSihuaErr };
 
   const mingShen = raw.mingShen;
   if (!isPlainObject(mingShen)) {
@@ -249,26 +307,62 @@ export function assertZiweiFactPackStructure(
   if (!Array.isArray(raw.patternHits)) {
     return { ok: false, detail: "patternHits must be an array" };
   }
-
-  if (!Array.isArray(raw.palaces) || raw.palaces.length === 0) {
-    return { ok: false, detail: "palaces must be a non-empty array" };
+  for (const [i, hit] of raw.patternHits.entries()) {
+    const err = assertPatternHit(hit, `patternHits[${i}]`);
+    if (err) return { ok: false, detail: err };
   }
+
+  if (!Array.isArray(raw.palaces)) {
+    return { ok: false, detail: "palaces must be an array" };
+  }
+  if (raw.palaces.length !== ZIWEI_RUNTIME_PALACES.length) {
+    return {
+      ok: false,
+      detail: `palaces must contain exactly ${ZIWEI_RUNTIME_PALACES.length} entries (十二宫)`,
+    };
+  }
+  const seenNames = new Set<string>();
   for (const [i, p] of raw.palaces.entries()) {
     if (!isPlainObject(p)) {
       return { ok: false, detail: `palaces[${i}] must be an object` };
     }
+    if (typeof p.name !== "string" || !PALACE_NAME_SET.has(p.name)) {
+      return {
+        ok: false,
+        detail: `palaces[${i}].name must be a known runtime palace`,
+      };
+    }
+    if (seenNames.has(p.name)) {
+      return { ok: false, detail: `palaces duplicate name: ${p.name}` };
+    }
+    seenNames.add(p.name);
+    if (typeof p.heavenlyStem !== "string") {
+      return { ok: false, detail: `palaces[${i}].heavenlyStem must be string` };
+    }
+    if (typeof p.earthlyBranch !== "string") {
+      return { ok: false, detail: `palaces[${i}].earthlyBranch must be string` };
+    }
+    if (!isStringArray(p.majorStars)) {
+      return { ok: false, detail: `palaces[${i}].majorStars must be string[]` };
+    }
+    if (typeof p.isBodyPalace !== "boolean") {
+      return { ok: false, detail: `palaces[${i}].isBodyPalace must be boolean` };
+    }
     if (
-      typeof p.name !== "string" ||
-      typeof p.heavenlyStem !== "string" ||
-      typeof p.earthlyBranch !== "string" ||
-      !isStringArray(p.majorStars) ||
-      typeof p.isBodyPalace !== "boolean" ||
       !Array.isArray(p.decadalRange) ||
       p.decadalRange.length !== 2 ||
-      typeof p.decadalRange[0] !== "number" ||
-      typeof p.decadalRange[1] !== "number"
+      !isFiniteNumber(p.decadalRange[0]) ||
+      !isFiniteNumber(p.decadalRange[1])
     ) {
-      return { ok: false, detail: `palaces[${i}] shape invalid` };
+      return {
+        ok: false,
+        detail: `palaces[${i}].decadalRange must be [finite, finite]`,
+      };
+    }
+  }
+  for (const expected of ZIWEI_RUNTIME_PALACES) {
+    if (!seenNames.has(expected)) {
+      return { ok: false, detail: `palaces missing required palace: ${expected}` };
     }
   }
 
@@ -276,29 +370,57 @@ export function assertZiweiFactPackStructure(
   if (!isPlainObject(source)) {
     return { ok: false, detail: "source must be an object" };
   }
-  for (const key of [
-    "library",
-    "version",
-    "license",
-    "solarDate",
-    "timeIndex",
-    "gender",
-    "fixLeap",
-    "clock",
-    "asOf",
-  ] as const) {
-    if (!(key in source)) {
-      return { ok: false, detail: `source missing ${key}` };
-    }
+  if (!LIBRARY_SET.has(source.library as string)) {
+    return { ok: false, detail: 'source.library must be "ziwei-doushu"|"iztro"' };
   }
-  if (typeof source.version !== "string" || typeof source.solarDate !== "string") {
-    return { ok: false, detail: "source.version/solarDate must be strings" };
+  if (typeof source.version !== "string") {
+    return { ok: false, detail: "source.version must be string" };
   }
-  if (typeof source.timeIndex !== "number") {
-    return { ok: false, detail: "source.timeIndex must be a number" };
+  if (source.license !== "MIT") {
+    return { ok: false, detail: 'source.license must be "MIT"' };
+  }
+  if (typeof source.solarDate !== "string") {
+    return { ok: false, detail: "source.solarDate must be string" };
+  }
+  if (!isFiniteNumber(source.timeIndex)) {
+    return { ok: false, detail: "source.timeIndex must be a finite number" };
+  }
+  if (
+    !Number.isInteger(source.timeIndex) ||
+    source.timeIndex < 0 ||
+    source.timeIndex > 12
+  ) {
+    return { ok: false, detail: "source.timeIndex must be an integer 0..12" };
+  }
+  if (!GENDER_SET.has(source.gender as string)) {
+    return { ok: false, detail: 'source.gender must be "男"|"女"' };
   }
   if (source.fixLeap !== true) {
     return { ok: false, detail: "source.fixLeap must be true" };
+  }
+  if (!CLOCK_SET.has(source.clock as string)) {
+    return {
+      ok: false,
+      detail: 'source.clock must be "tst_meta"|"true_solar"|"civil"',
+    };
+  }
+  if (typeof source.asOf !== "string") {
+    return { ok: false, detail: "source.asOf must be string" };
+  }
+  if (
+    source.chart_engine !== undefined &&
+    source.chart_engine !== "iztro"
+  ) {
+    return { ok: false, detail: 'source.chart_engine must be "iztro" when present' };
+  }
+  if (
+    source.patterns_commit !== undefined &&
+    typeof source.patterns_commit !== "string"
+  ) {
+    return {
+      ok: false,
+      detail: "source.patterns_commit must be string when present",
+    };
   }
 
   return { ok: true, pack: raw as ZiweiFactPack };
