@@ -1,0 +1,599 @@
+/**
+ * Unit D — DI2 Continue / Recovery → Batch2/3 (recovery only).
+ *
+ * Resumes the persisted Batch2 Generation / Job for a DI2 decision_report job.
+ * Does NOT: allocate identity, create Generation, send full ORCHESTRATE,
+ * write DI2 Report Store, or fall back to the legacy DI2 eight-page runner.
+ *
+ * Reuses Unit B binding + Unit C Session Lock / lease (holder "start").
+ */
+
+import {
+  isReportBatch2SharedStoreAvailable,
+  loadJobRawBlobs,
+} from "@/lib/llm/pro/delivery/decision-report-v2/batch2/job-store";
+import {
+  buildRecoverPayload,
+  getReportBatch2EventSenderForTests,
+  isReportBatch2InngestConfigured,
+  sendReportBatch2Events,
+} from "@/lib/llm/pro/delivery/decision-report-v2/batch2/dispatch";
+import {
+  assertGenerationActive,
+  readGeneration,
+} from "@/lib/llm/pro/delivery/decision-report-v2/batch3/generation-store";
+import {
+  evaluateExistingDi2Batch2Binding,
+  type Di2Batch2IdentityBinding,
+} from "@/lib/poju/decision-intake/decision-report-batch2-identity";
+import {
+  isDecisionReportJobInput,
+  type DecisionReportJobInput,
+} from "@/lib/poju/decision-intake/decision-report-types";
+import {
+  assertDeliveryExecutionAuthority,
+  DeliveryExecutionRevokedError,
+} from "@/lib/poju/final-delivery-execution-authority";
+import {
+  isReportLockOwnedBy,
+  updateOwnedReportLock,
+  withOwnedReportLockLease,
+  type ReportLockLeaseHandle,
+  type ReportLockOwner,
+} from "@/lib/poju/decision-intake/decision-report-lock";
+import { getXhighJob } from "@/lib/poju/xhigh-job-store";
+import type { PojuXhighJob } from "@/lib/poju/xhigh-job-types";
+
+export type Di2Batch2ContinueOutcome =
+  | "observing"
+  | "recovered"
+  | "ready_for_delivery"
+  | "job_running";
+
+export type Di2Batch2ContinueErrorCode =
+  | "missing_job"
+  | "wrong_phase"
+  | "binding_missing"
+  | "binding_invalid"
+  | "identity_mismatch"
+  | "job_revoked"
+  | "generation_missing"
+  | "generation_stale"
+  | "generation_epoch_mismatch"
+  | "batch2_job_missing"
+  | "batch2_job_unrecoverable"
+  | "kv_unavailable"
+  | "inngest_unavailable"
+  | "session_lock_required"
+  | "session_lock_lost"
+  | "dispatch_uncertain"
+  | "cas_failed";
+
+export type Di2Batch2ContinueResult =
+  | {
+      ok: true;
+      outcome: Di2Batch2ContinueOutcome;
+      binding: Di2Batch2IdentityBinding;
+      job: PojuXhighJob;
+      batch2_status: string | null;
+      recover_sent: boolean;
+    }
+  | { ok: false; code: Di2Batch2ContinueErrorCode; detail: string };
+
+/** @internal tests only */
+export const __di2Batch2ContinueSideEffectCountsForTests = {
+  recover_send: 0,
+  orchestrate_send: 0,
+  allocate_generation: 0,
+  ensure_binding: 0,
+  create_job: 0,
+  activate_generation: 0,
+  old_runner_dispatch: 0,
+};
+
+/** @internal tests only */
+export function __resetDi2Batch2ContinueSideEffectCountsForTests(): void {
+  __di2Batch2ContinueSideEffectCountsForTests.recover_send = 0;
+  __di2Batch2ContinueSideEffectCountsForTests.orchestrate_send = 0;
+  __di2Batch2ContinueSideEffectCountsForTests.allocate_generation = 0;
+  __di2Batch2ContinueSideEffectCountsForTests.ensure_binding = 0;
+  __di2Batch2ContinueSideEffectCountsForTests.create_job = 0;
+  __di2Batch2ContinueSideEffectCountsForTests.activate_generation = 0;
+  __di2Batch2ContinueSideEffectCountsForTests.old_runner_dispatch = 0;
+}
+
+type ContinueLeaseProbe = (ctx: {
+  job_id: string;
+  phase: "before_recover" | "after_lock_assert";
+}) => void | Promise<void>;
+
+let __continueLeaseProbe: ContinueLeaseProbe | null = null;
+
+/** @internal tests only */
+export function __setDi2Batch2ContinueLeaseProbeForTests(
+  fn: ContinueLeaseProbe | null,
+): void {
+  __continueLeaseProbe = fn;
+}
+
+const __activeContinueLeases = new WeakMap<ReportLockOwner, ReportLockLeaseHandle>();
+
+function leaseLost(
+  lock_owner: ReportLockOwner,
+): { ok: false; code: Di2Batch2ContinueErrorCode; detail: string } | null {
+  const lease = __activeContinueLeases.get(lock_owner);
+  if (!lease?.lost()) return null;
+  return {
+    ok: false,
+    code: "session_lock_lost",
+    detail: lease.lostDetail() || "continue lease lost",
+  };
+}
+
+async function assertHeldStartLock(
+  lock_owner: ReportLockOwner,
+): Promise<{ ok: true } | { ok: false; code: Di2Batch2ContinueErrorCode; detail: string }> {
+  const lost = leaseLost(lock_owner);
+  if (lost) return lost;
+  try {
+    const updated = await updateOwnedReportLock(lock_owner);
+    if (!updated) {
+      return {
+        ok: false,
+        code: "session_lock_lost",
+        detail: "session start lock no longer owned — refusing Continue side effects",
+      };
+    }
+    if (updated.holder !== "start") {
+      return {
+        ok: false,
+        code: "session_lock_lost",
+        detail: `session lock holder=${updated.holder} (expected start)`,
+      };
+    }
+    if (!isReportLockOwnedBy(updated, lock_owner)) {
+      return {
+        ok: false,
+        code: "session_lock_lost",
+        detail: "session lock ownership mismatch",
+      };
+    }
+    return { ok: true };
+  } catch (e) {
+    return {
+      ok: false,
+      code: "session_lock_lost",
+      detail: e instanceof Error ? e.message : String(e),
+    };
+  }
+}
+
+async function requireContinueAuthority(input: {
+  job_id: string;
+  execution_generation: number;
+  lock_owner: ReportLockOwner;
+}): Promise<{ ok: true } | { ok: false; code: Di2Batch2ContinueErrorCode; detail: string }> {
+  const lost = leaseLost(input.lock_owner);
+  if (lost) return lost;
+  const held = await assertHeldStartLock(input.lock_owner);
+  if (!held.ok) return held;
+  const lost2 = leaseLost(input.lock_owner);
+  if (lost2) return lost2;
+  try {
+    await assertDeliveryExecutionAuthority(input.job_id, input.execution_generation);
+    return { ok: true };
+  } catch (e) {
+    if (e instanceof DeliveryExecutionRevokedError) {
+      return { ok: false, code: "job_revoked", detail: e.message };
+    }
+    return {
+      ok: false,
+      code: "cas_failed",
+      detail: e instanceof Error ? e.message : String(e),
+    };
+  }
+}
+
+/**
+ * Validate binding against the live DI2 job input (Freeze / Profile / context / gen).
+ * Does not allocate or rewrite binding.
+ */
+export function validateDi2Batch2ContinueIdentity(input: {
+  job: PojuXhighJob;
+  binding: Di2Batch2IdentityBinding;
+}): { ok: true } | { ok: false; code: Di2Batch2ContinueErrorCode; detail: string } {
+  const { job, binding } = input;
+  if (job.phase !== "decision_report" || !isDecisionReportJobInput(job.input)) {
+    return { ok: false, code: "wrong_phase", detail: "not a decision_report job" };
+  }
+  const reportInput = job.input as DecisionReportJobInput;
+  if (binding.report_id !== reportInput.report_job_id.trim()) {
+    return {
+      ok: false,
+      code: "identity_mismatch",
+      detail: "binding.report_id ≠ job report_job_id",
+    };
+  }
+  if (binding.di2_execution_generation !== job.execution_generation) {
+    return {
+      ok: false,
+      code: "identity_mismatch",
+      detail: "binding.di2_execution_generation ≠ job.execution_generation",
+    };
+  }
+  if (job.session_id !== reportInput.session_id) {
+    return {
+      ok: false,
+      code: "identity_mismatch",
+      detail: "job.session_id ≠ input.session_id",
+    };
+  }
+  // Binding is keyed by report_job_id which embeds freeze/profile/generation;
+  // require durable job fields present for diagnostics.
+  if (!reportInput.freeze_id?.trim()) {
+    return { ok: false, code: "identity_mismatch", detail: "freeze_id missing on job input" };
+  }
+  if (!reportInput.context_id?.trim() || !reportInput.context_hash?.trim()) {
+    return {
+      ok: false,
+      code: "identity_mismatch",
+      detail: "context identity missing on job input",
+    };
+  }
+  if (
+    typeof reportInput.context_version !== "number" ||
+    !Number.isFinite(reportInput.context_version)
+  ) {
+    return {
+      ok: false,
+      code: "identity_mismatch",
+      detail: "context_version missing on job input",
+    };
+  }
+  if (!reportInput.profile_id?.trim() || !reportInput.profile_hash?.trim()) {
+    return {
+      ok: false,
+      code: "identity_mismatch",
+      detail: "profile identity missing on job input",
+    };
+  }
+  if (
+    job.batch2_production_state &&
+    (job.batch2_production_state.report_id !== binding.report_id ||
+      job.batch2_production_state.generation_id !== binding.generation_id)
+  ) {
+    return {
+      ok: false,
+      code: "identity_mismatch",
+      detail: "batch2_production_state identity ≠ binding",
+    };
+  }
+  return { ok: true };
+}
+
+async function sendRecoverUnderLease(input: {
+  lock_owner: ReportLockOwner;
+  job_id: string;
+  execution_generation: number;
+  report_id: string;
+  generation_id: string;
+  generation_epoch: number;
+  locale: string;
+}): Promise<{ ok: true } | { ok: false; code: Di2Batch2ContinueErrorCode; detail: string }> {
+  const pre = await requireContinueAuthority({
+    job_id: input.job_id,
+    execution_generation: input.execution_generation,
+    lock_owner: input.lock_owner,
+  });
+  if (!pre.ok) return pre;
+
+  await __continueLeaseProbe?.({
+    job_id: input.job_id,
+    phase: "after_lock_assert",
+  });
+
+  const afterProbe = await requireContinueAuthority({
+    job_id: input.job_id,
+    execution_generation: input.execution_generation,
+    lock_owner: input.lock_owner,
+  });
+  if (!afterProbe.ok) return afterProbe;
+
+  await __continueLeaseProbe?.({
+    job_id: input.job_id,
+    phase: "before_recover",
+  });
+
+  const beforeSend = await requireContinueAuthority({
+    job_id: input.job_id,
+    execution_generation: input.execution_generation,
+    lock_owner: input.lock_owner,
+  });
+  if (!beforeSend.ok) return beforeSend;
+
+  const send = await sendReportBatch2Events([
+    buildRecoverPayload({
+      report_id: input.report_id,
+      generation_id: input.generation_id,
+      generation_epoch: input.generation_epoch,
+      locale: input.locale,
+    }),
+  ]);
+  __di2Batch2ContinueSideEffectCountsForTests.recover_send += 1;
+
+  const afterSend = await requireContinueAuthority({
+    job_id: input.job_id,
+    execution_generation: input.execution_generation,
+    lock_owner: input.lock_owner,
+  });
+  if (!afterSend.ok) {
+    // In-flight RECOVER cannot be recalled; Fail Closed for further side effects.
+    return afterSend;
+  }
+  if (!send.ok) {
+    return {
+      ok: false,
+      code: "dispatch_uncertain",
+      detail: `recover_send_failed:${send.code}:${send.detail}`,
+    };
+  }
+  return { ok: true };
+}
+
+/**
+ * Continue / Recovery for a DI2 decision_report job that already has Unit B binding.
+ * Caller must hold DI2 Report Session Lock as holder "start".
+ */
+export async function continueDi2Batch2Production(input: {
+  job_id: string;
+  lock_owner: ReportLockOwner;
+}): Promise<Di2Batch2ContinueResult> {
+  if (!input.lock_owner?.session_id || !input.lock_owner.lock_token) {
+    return {
+      ok: false,
+      code: "session_lock_required",
+      detail: "Batch2 Continue requires DI2 session start lock owner",
+    };
+  }
+  if (!isReportBatch2SharedStoreAvailable()) {
+    return { ok: false, code: "kv_unavailable", detail: "Batch2 shared KV unavailable" };
+  }
+  if (!isReportBatch2InngestConfigured() && !getReportBatch2EventSenderForTests()) {
+    return {
+      ok: false,
+      code: "inngest_unavailable",
+      detail: "Batch2 Inngest unavailable and no test sender",
+    };
+  }
+
+  const lock_owner = input.lock_owner;
+  const held0 = await assertHeldStartLock(lock_owner);
+  if (!held0.ok) return held0;
+
+  return withOwnedReportLockLease(lock_owner, async (lease) => {
+    __activeContinueLeases.set(lock_owner, lease);
+    try {
+      if (lease.lost()) {
+        return {
+          ok: false as const,
+          code: "session_lock_lost" as const,
+          detail: lease.lostDetail() || "lock lost before Continue body",
+        };
+      }
+      return await runContinueUnderLease(input.job_id, lock_owner);
+    } finally {
+      __activeContinueLeases.delete(lock_owner);
+    }
+  });
+}
+
+async function runContinueUnderLease(
+  job_id: string,
+  lock_owner: ReportLockOwner,
+): Promise<Di2Batch2ContinueResult> {
+  const job = await getXhighJob(job_id);
+  if (!job) {
+    return { ok: false, code: "missing_job", detail: `job_id=${job_id}` };
+  }
+  if (job.phase !== "decision_report" || !isDecisionReportJobInput(job.input)) {
+    return { ok: false, code: "wrong_phase", detail: "not a decision_report job" };
+  }
+
+  // Read-only binding check — never ensureDi2Batch2IdentityBinding (no allocate).
+  const bindingEval = evaluateExistingDi2Batch2Binding(job);
+  if (!bindingEval.ok) {
+    if (
+      bindingEval.code === "missing_job" ||
+      bindingEval.detail.includes("not set") ||
+      bindingEval.detail.includes("no batch2_identity_binding")
+    ) {
+      return {
+        ok: false,
+        code: "binding_missing",
+        detail: bindingEval.detail,
+      };
+    }
+    return {
+      ok: false,
+      code: "binding_invalid",
+      detail: `${bindingEval.code}: ${bindingEval.detail}`,
+    };
+  }
+  const binding = bindingEval.binding;
+
+  const idCheck = validateDi2Batch2ContinueIdentity({ job, binding });
+  if (!idCheck.ok) return idCheck;
+
+  if (
+    typeof job.execution_generation !== "number" ||
+    !Number.isFinite(job.execution_generation)
+  ) {
+    return { ok: false, code: "job_revoked", detail: "execution_generation missing" };
+  }
+
+  const auth = await requireContinueAuthority({
+    job_id,
+    execution_generation: job.execution_generation,
+    lock_owner,
+  });
+  if (!auth.ok) return auth;
+
+  const gen = await readGeneration(binding.report_id, binding.generation_id);
+  if (!gen.ok) {
+    return {
+      ok: false,
+      code: "kv_unavailable",
+      detail: gen.detail ?? gen.code,
+    };
+  }
+  if (!gen.value) {
+    return {
+      ok: false,
+      code: "generation_missing",
+      detail: "Batch3 GenerationRecord missing — Continue refuses to allocate",
+    };
+  }
+  if (gen.value.generation_epoch !== binding.batch3_generation_epoch) {
+    return {
+      ok: false,
+      code: "generation_epoch_mismatch",
+      detail:
+        `live_epoch=${gen.value.generation_epoch} binding_epoch=${binding.batch3_generation_epoch}`,
+    };
+  }
+
+  if (
+    gen.value.status === "completed" ||
+    gen.value.status === "finalizing" ||
+    gen.value.status === "delivery_failed"
+  ) {
+    // Ready for Unit E Final Delivery Adapter — do not regenerate pages or write Report Store.
+    return {
+      ok: true,
+      outcome: "ready_for_delivery",
+      binding,
+      job,
+      batch2_status: gen.value.status,
+      recover_sent: false,
+    };
+  }
+
+  if (
+    gen.value.status === "superseded" ||
+    gen.value.status === "failed" ||
+    gen.value.status === "cancelled"
+  ) {
+    return {
+      ok: false,
+      code: "generation_stale",
+      detail: `generation status=${gen.value.status} — refuse Continue on non-active Generation`,
+    };
+  }
+
+  if (gen.value.status !== "active") {
+    return {
+      ok: false,
+      code: "generation_stale",
+      detail: `generation status=${gen.value.status} — refuse Continue`,
+    };
+  }
+
+  const fence = await assertGenerationActive({
+    report_id: binding.report_id,
+    generation_id: binding.generation_id,
+    generation_epoch: binding.batch3_generation_epoch,
+  });
+  if (!fence.ok) {
+    return {
+      ok: false,
+      code: "generation_stale",
+      detail: fence.detail ?? fence.code,
+    };
+  }
+
+  const blobs = await loadJobRawBlobs(binding.report_id, binding.generation_id);
+  if (!blobs.ok) {
+    return {
+      ok: false,
+      code: "kv_unavailable",
+      detail: blobs.detail ?? blobs.code,
+    };
+  }
+  if (!blobs.value) {
+    return {
+      ok: false,
+      code: "batch2_job_missing",
+      detail: "Batch2 Job missing — Continue refuses to create a replacement",
+    };
+  }
+
+  const meta = blobs.value.meta;
+  if (
+    meta.report_id !== binding.report_id ||
+    meta.generation_id !== binding.generation_id
+  ) {
+    return {
+      ok: false,
+      code: "identity_mismatch",
+      detail: "Batch2 job identity ≠ binding",
+    };
+  }
+  if (
+    typeof meta.generation_epoch === "number" &&
+    meta.generation_epoch !== binding.batch3_generation_epoch
+  ) {
+    return {
+      ok: false,
+      code: "generation_epoch_mismatch",
+      detail: "Batch2 job epoch ≠ binding epoch",
+    };
+  }
+
+  if (meta.status === "completed") {
+    return {
+      ok: true,
+      outcome: "ready_for_delivery",
+      binding,
+      job,
+      batch2_status: meta.status,
+      recover_sent: false,
+    };
+  }
+
+  if (meta.status === "failed") {
+    return {
+      ok: false,
+      code: "batch2_job_unrecoverable",
+      detail: `Batch2 job status=${meta.status}`,
+    };
+  }
+
+  const reportInput = job.input as DecisionReportJobInput;
+  const locale = job.locale || reportInput.locale || "en";
+  const epoch =
+    typeof meta.generation_epoch === "number"
+      ? meta.generation_epoch
+      : binding.batch3_generation_epoch;
+
+  // Continue never sends ORCHESTRATE — only RECOVER for incomplete production.
+  const recovered = await sendRecoverUnderLease({
+    lock_owner,
+    job_id,
+    execution_generation: job.execution_generation,
+    report_id: binding.report_id,
+    generation_id: binding.generation_id,
+    generation_epoch: epoch,
+    locale,
+  });
+  if (!recovered.ok) return recovered;
+
+  const live = await getXhighJob(job_id);
+  return {
+    ok: true,
+    outcome: "recovered",
+    binding,
+    job: live ?? job,
+    batch2_status: meta.status,
+    recover_sent: true,
+  };
+}

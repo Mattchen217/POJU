@@ -6,9 +6,8 @@
  *             settle the session's charge authorization, then (only when authorized)
  *             grant the job and give it a worker. One pass per session: later
  *             generations are free only once the session's authorization is confirmed.
- *   continue  pending/running → ensure a worker (no new generation, no new charge);
- *             interrupted → revive the same job from its checkpoints;
- *             completed → ALREADY_COMPLETED once the report record is confirmed.
+ *   continue  Unit D → Batch2/3 Recovery via persisted identity binding (RECOVER);
+ *             no new Generation / identity; never the legacy DI2 eight-page runner.
  *
  * M5-R1 — no job runs on an unconfirmed charge: a pending / uncertain / refused
  * authorization never dispatches, whichever request reaches the job.
@@ -26,15 +25,12 @@ import { isOpenRouterConfigured } from "@/lib/llm/openrouter-shared";
 import { getXhighJob } from "@/lib/poju/xhigh-job-store";
 import type { PojuXhighJob } from "@/lib/poju/xhigh-job-types";
 import {
-  dispatchDecisionReportStage,
-  ensureDecisionReportWorker,
   type DecisionReportDispatchDeps,
 } from "./decision-report-dispatch";
 import {
   abandonDecisionReportStartJob,
   acquireDecisionReportStartLock,
   buildDecisionReportStatus,
-  continueDecisionReportJob,
   createOrReuseDecisionReportJob,
   deliveryDeniedFailure,
   finishDecisionReportRefusalAbort,
@@ -47,7 +43,7 @@ import {
   type RefusalAbortResume,
   type ServiceFailure,
 } from "./decision-report-service";
-import { clearDecisionReportDispatch, loadCompletedReport } from "./decision-report-store";
+import { loadCompletedReport } from "./decision-report-store";
 import { isDecisionReportJobInput } from "./decision-report-types";
 import {
   claimDecisionReportRefusalAbort,
@@ -66,11 +62,14 @@ import {
   reportLockOwnerOf,
   isReportStartLockIdle,
   takeOverReportLock,
+  tryCreateReportLock,
   updateOwnedReportLock,
   type ReportLockOwner,
   type ReportSessionLock,
 } from "./decision-report-lock";
 import { startDi2Batch2Production } from "./decision-report-batch2-start";
+import { continueDi2Batch2Production } from "./decision-report-batch2-continue";
+import { evaluateExistingDi2Batch2Binding } from "./decision-report-batch2-identity";
 
 export type { DecisionReportChargeResult } from "./decision-report-charge";
 
@@ -182,9 +181,35 @@ function awaitingCharge(job: PojuXhighJob, reused: boolean): DecisionReportApiRe
   });
 }
 
+/**
+ * Unit D — Continue / Recovery → Batch2/3 only.
+ * Never falls back to ensureDecisionReportWorker / dispatchDecisionReportStage
+ * (legacy DI2 eight-page runner).
+ */
 async function continueAction(job_id: string, session_id: string, deps: DecisionReportApiDeps): Promise<DecisionReportApiReply> {
+  void deps;
   const job = await getXhighJob(job_id).catch(() => null);
-  if (job && job.session_id === session_id && job.status !== "completed") {
+  if (!job || job.session_id !== session_id) {
+    const done = await loadCompletedReport(session_id, job_id).catch(() => null);
+    if (done) {
+      const delivery = await verifyDecisionReportDelivery(done);
+      if (!delivery.ok) return failureReply(deliveryDeniedFailure(delivery));
+      return json(409, {
+        ok: false,
+        code: "ALREADY_COMPLETED",
+        error: "Report already completed",
+        retryable: false,
+      });
+    }
+    return json(404, {
+      ok: false,
+      code: "JOB_MISSING",
+      error: "Report job not found or expired",
+      retryable: true,
+    });
+  }
+
+  if (job.status !== "completed") {
     // Reconcile an unknown outcome (same ref); never open a first charge from Continue.
     const settled = await settleDecisionReportCharge({
       session_id,
@@ -200,42 +225,113 @@ async function continueAction(job_id: string, session_id: string, deps: Decision
     if (settled.state !== "authorized") return unauthorizedReply(job_id, settled);
   }
 
-  const ensured = await ensureDecisionReportWorker({ job_id, session_id, deps });
-  if (ensured.ok && ensured.state !== "completed") {
+  // Identity binding must already exist from Unit C Start — never allocate here.
+  const bindingEval = evaluateExistingDi2Batch2Binding(job);
+  if (!bindingEval.ok) {
+    return json(409, {
+      ok: false,
+      code:
+        bindingEval.code === "missing_job"
+          ? "BATCH2_BINDING_MISSING"
+          : "BATCH2_BINDING_INVALID",
+      error: bindingEval.detail,
+      retryable: false,
+      job_id,
+      execution_generation: job.execution_generation ?? null,
+    });
+  }
+
+  const owner = newReportLockOwner(session_id);
+  let handedOff = false;
+  try {
+    const cur = await readReportSessionLock(session_id);
+    if (cur.kind === "owned") {
+      if (cur.lock.holder === "start" && !isReportStartLockIdle(cur.lock)) {
+        return busyReply();
+      }
+      const taken = await takeOverReportLock(
+        cur.raw,
+        owner,
+        "start",
+        job.job_id,
+      );
+      if (!taken) return busyReply();
+    } else if (cur.kind === "absent") {
+      const created = await tryCreateReportLock(owner, "start", job.job_id);
+      if (!created) return busyReply();
+    } else if (cur.kind === "legacy") {
+      const taken = await takeOverReportLock(cur.raw, owner, "start", job.job_id);
+      if (!taken) return busyReply();
+    } else {
+      return lockUnconfirmed("continue_lock_unreadable");
+    }
+
+    const continued = await continueDi2Batch2Production({
+      job_id,
+      lock_owner: owner,
+    });
+
+    const handed = await updateOwnedReportLock(owner, {
+      holder: "job",
+      job_id: job.job_id,
+    }).catch(() => null);
+    if (handed) handedOff = true;
+    else handedOff = true; // paid job; do not release another owner's lock
+
+    if (!continued.ok) {
+      console.error("[decision-report] Batch2 continue failed", {
+        job_id,
+        code: continued.code,
+        detail: continued.detail,
+      });
+      return json(
+        continued.code === "dispatch_uncertain" ||
+          continued.code === "kv_unavailable" ||
+          continued.code === "inngest_unavailable" ||
+          continued.code === "session_lock_lost"
+          ? 503
+          : 409,
+        {
+          ok: false,
+          code: continued.code,
+          error: continued.detail,
+          retryable:
+            continued.code === "dispatch_uncertain" ||
+            continued.code === "kv_unavailable" ||
+            continued.code === "inngest_unavailable" ||
+            continued.code === "session_lock_lost" ||
+            continued.code === "cas_failed",
+          job_id,
+          execution_generation: job.execution_generation ?? null,
+        },
+      );
+    }
+
     return json(200, {
       ok: true,
       job_id,
-      status: ensured.job.status,
-      worker: ensured.state,
-      stage: ensured.stage,
+      status:
+        continued.outcome === "ready_for_delivery"
+          ? "completed_batch2"
+          : continued.job.status === "pending"
+            ? "pending"
+            : continued.job.status,
+      worker:
+        continued.outcome === "ready_for_delivery"
+          ? "batch2_ready_for_delivery"
+          : continued.recover_sent
+            ? "batch2_recovered"
+            : "batch2_observing",
+      outcome: continued.outcome,
+      batch2_report_id: continued.binding.report_id,
+      batch2_generation_id: continued.binding.generation_id,
+      batch2_status: continued.batch2_status,
+      recover_sent: continued.recover_sent,
+      execution_generation: job.execution_generation ?? null,
     });
+  } finally {
+    if (!handedOff) await releaseOwnedReportLock(owner).catch(() => undefined);
   }
-  if (!ensured.ok && ensured.code === "JOB_MISSING") {
-    // The execution job expired; a committed report outlives it.
-    const done = await loadCompletedReport(session_id, job_id).catch(() => null);
-    if (done) {
-      const delivery = await verifyDecisionReportDelivery(done);
-      if (!delivery.ok) return failureReply(deliveryDeniedFailure(delivery));
-      return json(409, { ok: false, code: "ALREADY_COMPLETED", error: "Report already completed", retryable: false });
-    }
-  }
-  if (!ensured.ok && ensured.code !== "JOB_NOT_RUNNING") return failureReply(ensured);
-
-  const cont = await continueDecisionReportJob({ job_id, session_id });
-  if (!cont.ok) return failureReply(cont as ServiceFailure);
-  const granted = await grantDecisionReportExecution(cont.job);
-  if (!granted.ok) {
-    return json(402, { ok: false, job_id, code: "CHARGE_NOT_AUTHORIZED", error: `Report job is not authorized to run (${granted.reason})`, retryable: true });
-  }
-  try {
-    await dispatchDecisionReportStage(cont.job.job_id, session_id, cont.stage, deps);
-  } catch (e) {
-    // The job is revived (pending); the next status / continue recovers its worker.
-    await clearDecisionReportDispatch(cont.job.job_id).catch(() => undefined);
-    console.error("[decision-report] continue dispatch failed", { job_id, e });
-    return json(503, { ok: false, code: "DISPATCH_FAILED", error: "Report worker could not be scheduled", retryable: true });
-  }
-  return json(200, { ok: true, job_id: cont.job.job_id, status: "running", worker: "dispatched", stage: cont.stage });
 }
 
 function batch2StartFailureReply(
