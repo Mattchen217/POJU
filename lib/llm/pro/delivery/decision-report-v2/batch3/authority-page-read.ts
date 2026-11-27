@@ -53,9 +53,15 @@ function mismatch(
   return { verdict: "mismatch", detail, ...extra };
 }
 
+type AuthorityPageReadMode = "active" | "historical";
+
 /**
  * Validate a page blob (or claim of terminal output) against Batch3 authority.
  * Missing/pending blobs that do not claim a terminal outcome → not_terminal.
+ *
+ * `mode: "active"` (default) — Generation must be the live active Generation.
+ * `mode: "historical"` — Generation need not be active (terminal Generations for
+ * DI2 Status); fence / provenance / authority output / fingerprint checks remain.
  */
 export async function readAuthorityGatedPage(input: {
   report_id: string;
@@ -64,12 +70,18 @@ export async function readAuthorityGatedPage(input: {
   page_id: ReportPageId;
   /** Raw Batch2 page blob, if any. */
   blob?: PageBlob | null;
+  /**
+   * Read-only Status / historical consumers may pass `"historical"` so a
+   * completed Generation is not rejected solely for not being active.
+   */
+  mode?: AuthorityPageReadMode;
 }): Promise<AuthorityPageReadResult> {
   const blob = input.blob ?? null;
   const page_id = input.page_id;
   const report_id = input.report_id.trim();
   const generation_id = input.generation_id.trim();
   const generation_epoch = input.generation_epoch;
+  const mode: AuthorityPageReadMode = input.mode ?? "active";
 
   const claimsTerminal = isAuthorityTerminalOutcome(blob?.state?.outcome);
 
@@ -88,37 +100,39 @@ export async function readAuthorityGatedPage(input: {
     );
   }
 
-  const active = await readActiveGeneration(report_id);
-  if (!active.ok) {
-    return {
-      verdict: "unavailable",
-      detail: `active read failed: ${active.detail}`,
-    };
-  }
-  if (
-    !active.value ||
-    active.value.generation_id !== generation_id ||
-    active.value.generation_epoch !== generation_epoch
-  ) {
-    return {
-      verdict: "stale",
-      detail: `active generation mismatch for page ${page_id}`,
-    };
-  }
-
-  const asserted = await assertGenerationActive({
-    report_id,
-    generation_id,
-    generation_epoch,
-  });
-  if (!asserted.ok) {
-    if (
-      asserted.code === "kv_unavailable" ||
-      asserted.code === "kv_read_failed"
-    ) {
-      return { verdict: "unavailable", detail: asserted.detail };
+  if (mode === "active") {
+    const active = await readActiveGeneration(report_id);
+    if (!active.ok) {
+      return {
+        verdict: "unavailable",
+        detail: `active read failed: ${active.detail}`,
+      };
     }
-    return { verdict: "stale", detail: asserted.detail };
+    if (
+      !active.value ||
+      active.value.generation_id !== generation_id ||
+      active.value.generation_epoch !== generation_epoch
+    ) {
+      return {
+        verdict: "stale",
+        detail: `active generation mismatch for page ${page_id}`,
+      };
+    }
+
+    const asserted = await assertGenerationActive({
+      report_id,
+      generation_id,
+      generation_epoch,
+    });
+    if (!asserted.ok) {
+      if (
+        asserted.code === "kv_unavailable" ||
+        asserted.code === "kv_read_failed"
+      ) {
+        return { verdict: "unavailable", detail: asserted.detail };
+      }
+      return { verdict: "stale", detail: asserted.detail };
+    }
   }
 
   const gen = await readGeneration(report_id, generation_id);
@@ -131,11 +145,17 @@ export async function readAuthorityGatedPage(input: {
       detail: `generation record missing for page ${page_id}`,
     };
   }
-  if (gen.value.status !== "active") {
+  if (mode === "active" && gen.value.status !== "active") {
     return {
       verdict: "stale",
       detail: `generation status=${gen.value.status}`,
     };
+  }
+  if (
+    gen.value.report_id !== report_id ||
+    gen.value.generation_id !== generation_id
+  ) {
+    return mismatch(`generation identity mismatch for page ${page_id}`);
   }
   if (gen.value.generation_epoch !== generation_epoch) {
     return mismatch(
@@ -528,6 +548,21 @@ export async function assertPageAuthorityForMerge(input: {
     reason: `page ${input.page_id} authority ${read.verdict}: ${read.detail}`,
     verdict: read.verdict,
   };
+}
+
+/**
+ * Historical / terminal-Generation page authority read for DI2 Status.
+ * Same fence / provenance / authority-output / fingerprint checks as the live
+ * gate; does not require the Generation to still be active.
+ */
+export async function readAuthorityGatedHistoricalPage(input: {
+  report_id: string;
+  generation_id: string;
+  generation_epoch: number;
+  page_id: ReportPageId;
+  blob?: PageBlob | null;
+}): Promise<AuthorityPageReadResult> {
+  return readAuthorityGatedPage({ ...input, mode: "historical" });
 }
 
 /** Bound identity for finalization claims (immutable once claimed). */

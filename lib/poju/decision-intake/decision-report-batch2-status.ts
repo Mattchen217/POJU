@@ -1,5 +1,5 @@
 /**
- * Unit D R2/R3 — Batch2-authoritative DI2 Status (read-only).
+ * Unit D R2/R3/R4 — Batch2-authoritative DI2 Status (read-only).
  *
  * For jobs that carry batch2_identity_binding, Status must report Batch2/Batch3
  * production state. Never judges Batch2 health by the legacy DI2 continue lease,
@@ -9,14 +9,29 @@
  * R3: Delivery Authorization is enforced by the Status caller before this adapter
  * returns page outcomes. DI2-bound Batch2 Jobs must carry a strict generation_epoch.
  * Terminal Generations still surface readable Batch2 page state when present.
+ *
+ * R4: Page outcomes must pass Batch3 Authority (active → loadJob /
+ * filterPagesThroughAuthority; terminal → historical authority gate). Raw blobs
+ * alone are never treated as valid completed pages.
  */
 
-import { loadJobRawBlobs } from "@/lib/llm/pro/delivery/decision-report-v2/batch2/job-store";
+import {
+  loadJob,
+  loadJobRawBlobs,
+  type PageBlob,
+} from "@/lib/llm/pro/delivery/decision-report-v2/batch2/job-store";
 import type { ReportBatch2JobStatus } from "@/lib/llm/pro/delivery/decision-report-v2/batch2/types";
+import {
+  readAuthorityGatedHistoricalPage,
+  readAuthorityGatedPage,
+} from "@/lib/llm/pro/delivery/decision-report-v2/batch3/authority-page-read";
 import { readGeneration } from "@/lib/llm/pro/delivery/decision-report-v2/batch3/generation-store";
 import type { GenerationStatus } from "@/lib/llm/pro/delivery/decision-report-v2/batch3/types";
 import { REPORT_PAGE_IDS } from "@/lib/llm/pro/delivery/decision-report-v2/orchestration";
-import type { ReportPageRuntimeState } from "@/lib/llm/pro/delivery/decision-report-v2/orchestration/types";
+import type {
+  ReportPageId,
+  ReportPageRuntimeState,
+} from "@/lib/llm/pro/delivery/decision-report-v2/orchestration/types";
 import type { DecisionPageId } from "@/lib/llm/pro/delivery/page-feed-matrix";
 import type { PojuXhighJob } from "@/lib/poju/xhigh-job-types";
 import {
@@ -278,28 +293,147 @@ type LoadedBatch2Pages = {
   batch2_job_status: ReportBatch2JobStatus;
   page_states: ReportPageRuntimeState[];
   page_outcomes: DecisionReportBatch2ProductionSnapshot["page_outcomes"];
+  pages_authority: "validated";
 };
 
-function pageStatesFromRawBlobs(
-  pages: Map<string, { state: ReportPageRuntimeState }>,
-): ReportPageRuntimeState[] {
-  const out: ReportPageRuntimeState[] = [];
-  for (const page_id of REPORT_PAGE_IDS) {
-    const blob = pages.get(page_id);
-    if (blob?.state) {
-      out.push(blob.state);
-    } else {
-      out.push({ page_id, outcome: "pending" });
-    }
+function validateBoundJobMeta(
+  meta: {
+    report_id: string;
+    generation_id: string;
+    generation_epoch?: number;
+    status: string;
+  },
+  binding: Di2Batch2IdentityBinding,
+): { ok: true } | { ok: false; code: "identity"; detail: string } {
+  if (
+    meta.report_id !== binding.report_id ||
+    meta.generation_id !== binding.generation_id
+  ) {
+    return {
+      ok: false,
+      code: "identity",
+      detail: "Batch2 Job identity ≠ binding",
+    };
   }
-  return out;
+  const epochCheck = assertDi2BoundBatch2JobEpoch(
+    meta.generation_epoch,
+    binding.batch3_generation_epoch,
+  );
+  if (!epochCheck.ok) {
+    return { ok: false, code: "identity", detail: epochCheck.detail };
+  }
+  return { ok: true };
 }
 
 /**
- * Load + identity/epoch validate the bound Batch2 Job via raw blobs (no authority
- * demotion — Status must retain recorded page outcomes on terminal Generations).
+ * Active / non-terminal Generation: authority-aware loadJob
+ * (filterPagesThroughAuthority). Status additionally fail-closes on
+ * missing/mismatch authority records for raw terminal claims (fence stale
+ * demotions from loadJob are kept as pending — not completed).
  */
-async function loadValidatedBatch2JobPages(input: {
+async function loadActiveAuthorityPages(input: {
+  binding: Di2Batch2IdentityBinding;
+}): Promise<
+  | { ok: true; value: LoadedBatch2Pages }
+  | { ok: false; code: "missing" | "unreadable" | "identity"; detail: string }
+> {
+  const { binding } = input;
+  const loaded = await loadJob(binding.report_id, binding.generation_id);
+  if (!loaded.ok) {
+    return {
+      ok: false,
+      code: "unreadable",
+      detail: `Batch2 Job unreadable: ${loaded.detail ?? loaded.code}`,
+    };
+  }
+  if (!loaded.value) {
+    return {
+      ok: false,
+      code: "missing",
+      detail: "Batch2 Job missing — Status refuses to create a replacement",
+    };
+  }
+
+  const job = loaded.value;
+  const metaCheck = validateBoundJobMeta(
+    {
+      report_id: job.report_id,
+      generation_id: job.generation_id,
+      generation_epoch: job.generation_epoch,
+      status: job.status,
+    },
+    binding,
+  );
+  if (!metaCheck.ok) return metaCheck;
+
+  // Re-check raw terminal claims: Status fail-closes on authority missing/mismatch
+  // (stronger than loadJob demotion). Fence-stale demotions remain pending.
+  const raw = await loadJobRawBlobs(binding.report_id, binding.generation_id);
+  if (!raw.ok) {
+    return {
+      ok: false,
+      code: "unreadable",
+      detail: `Batch2 Job raw unreadable: ${raw.detail ?? raw.code}`,
+    };
+  }
+  if (raw.value) {
+    for (const page_id of REPORT_PAGE_IDS) {
+      const blob = raw.value.pages.get(page_id as ReportPageId) ?? null;
+      if (!blob) continue;
+      const read = await readAuthorityGatedPage({
+        report_id: binding.report_id,
+        generation_id: binding.generation_id,
+        generation_epoch: binding.batch3_generation_epoch,
+        page_id: page_id as ReportPageId,
+        blob,
+        mode: "active",
+      });
+      if (read.verdict === "unavailable") {
+        return {
+          ok: false,
+          code: "unreadable",
+          detail: `authority unavailable for page ${page_id}: ${read.detail}`,
+        };
+      }
+      if (read.verdict === "missing" || read.verdict === "mismatch") {
+        return {
+          ok: false,
+          code: "unreadable",
+          detail: `authority ${read.verdict} for page ${page_id}: ${read.detail}`,
+        };
+      }
+    }
+  }
+
+  const page_outcomes = job.page_states.map((st) => {
+    const terminal =
+      st.outcome === "completed" ||
+      st.outcome === "skipped_not_applicable" ||
+      st.outcome === "insufficient_information";
+    return {
+      page_id: st.page_id,
+      outcome: st.outcome,
+      output_fingerprint: st.output_fingerprint ?? null,
+      authority_verdict: terminal ? ("valid" as const) : ("not_terminal" as const),
+    };
+  });
+
+  return {
+    ok: true,
+    value: {
+      batch2_job_status: job.status,
+      page_states: job.page_states,
+      page_outcomes,
+      pages_authority: "validated",
+    },
+  };
+}
+
+/**
+ * Terminal Generation: read raw blobs, then historical authority gate per page.
+ * Invalid terminal claims are demoted; authority unavailable fail-closes.
+ */
+async function loadHistoricalAuthorityPages(input: {
   binding: Di2Batch2IdentityBinding;
 }): Promise<
   | { ok: true; value: LoadedBatch2Pages }
@@ -322,43 +456,105 @@ async function loadValidatedBatch2JobPages(input: {
     };
   }
 
-  const meta = raw.value.meta;
-  if (
-    meta.report_id !== binding.report_id ||
-    meta.generation_id !== binding.generation_id
-  ) {
-    return {
-      ok: false,
-      code: "identity",
-      detail: "Batch2 Job identity ≠ binding",
-    };
-  }
+  const metaCheck = validateBoundJobMeta(raw.value.meta, binding);
+  if (!metaCheck.ok) return metaCheck;
 
-  const epochCheck = assertDi2BoundBatch2JobEpoch(
-    meta.generation_epoch,
-    binding.batch3_generation_epoch,
-  );
-  if (!epochCheck.ok) {
-    return { ok: false, code: "identity", detail: epochCheck.detail };
-  }
+  const page_states: ReportPageRuntimeState[] = [];
+  const page_outcomes: DecisionReportBatch2ProductionSnapshot["page_outcomes"] =
+    [];
 
-  const page_states = pageStatesFromRawBlobs(
-    raw.value.pages as Map<string, { state: ReportPageRuntimeState }>,
-  );
-  const page_outcomes = page_states.map((st) => ({
-    page_id: st.page_id,
-    outcome: st.outcome,
-    output_fingerprint: st.output_fingerprint ?? null,
-  }));
+  for (const page_id of REPORT_PAGE_IDS) {
+    const blob = (raw.value.pages.get(page_id as ReportPageId) ??
+      null) as PageBlob | null;
+    if (!blob) {
+      page_states.push({ page_id, outcome: "pending" });
+      page_outcomes.push({
+        page_id,
+        outcome: "pending",
+        output_fingerprint: null,
+        authority_verdict: "not_terminal",
+      });
+      continue;
+    }
+
+    const read = await readAuthorityGatedHistoricalPage({
+      report_id: binding.report_id,
+      generation_id: binding.generation_id,
+      generation_epoch: binding.batch3_generation_epoch,
+      page_id: page_id as ReportPageId,
+      blob,
+    });
+
+    if (read.verdict === "unavailable") {
+      return {
+        ok: false,
+        code: "unreadable",
+        detail: `authority unavailable for page ${page_id}: ${read.detail}`,
+      };
+    }
+
+    if (read.verdict === "valid") {
+      page_states.push(blob.state);
+      page_outcomes.push({
+        page_id,
+        outcome: blob.state.outcome,
+        output_fingerprint: blob.state.output_fingerprint ?? null,
+        authority_verdict: "valid",
+      });
+      continue;
+    }
+
+    if (read.verdict === "not_terminal") {
+      page_states.push(blob.state);
+      page_outcomes.push({
+        page_id,
+        outcome: blob.state.outcome,
+        output_fingerprint: blob.state.output_fingerprint ?? null,
+        authority_verdict: "not_terminal",
+      });
+      continue;
+    }
+
+    // stale / missing / mismatch — demote; never surface as completed.
+    page_states.push({
+      page_id,
+      outcome: "pending",
+      output_fingerprint: undefined,
+    });
+    page_outcomes.push({
+      page_id,
+      outcome: "pending",
+      output_fingerprint: null,
+      authority_verdict:
+        read.verdict === "stale" ||
+        read.verdict === "mismatch" ||
+        read.verdict === "missing"
+          ? read.verdict
+          : "demoted",
+    });
+  }
 
   return {
     ok: true,
     value: {
-      batch2_job_status: meta.status as ReportBatch2JobStatus,
+      batch2_job_status: raw.value.meta.status as ReportBatch2JobStatus,
       page_states,
       page_outcomes,
+      pages_authority: "validated",
     },
   };
+}
+
+async function loadValidatedBatch2JobPages(input: {
+  binding: Di2Batch2IdentityBinding;
+  terminal: boolean;
+}): Promise<
+  | { ok: true; value: LoadedBatch2Pages }
+  | { ok: false; code: "missing" | "unreadable" | "identity"; detail: string }
+> {
+  return input.terminal
+    ? loadHistoricalAuthorityPages(input)
+    : loadActiveAuthorityPages(input);
 }
 
 function snapshot(input: {
@@ -366,6 +562,7 @@ function snapshot(input: {
   generation_status: GenerationStatus;
   batch2_job_status: ReportBatch2JobStatus | null;
   pages_available: boolean;
+  pages_authority: DecisionReportBatch2ProductionSnapshot["pages_authority"];
   page_outcomes: DecisionReportBatch2ProductionSnapshot["page_outcomes"];
 }): DecisionReportBatch2ProductionSnapshot {
   return {
@@ -376,6 +573,7 @@ function snapshot(input: {
     generation_status: input.generation_status,
     batch2_job_status: input.batch2_job_status,
     pages_available: input.pages_available,
+    pages_authority: input.pages_authority,
     page_outcomes: input.page_outcomes,
   };
 }
@@ -473,7 +671,7 @@ export async function buildBatch2AuthoritativeDecisionReportStatus(
   }
 
   const terminal = TERMINAL_GENERATION.has(gen.value.status);
-  const loaded = await loadValidatedBatch2JobPages({ binding });
+  const loaded = await loadValidatedBatch2JobPages({ binding, terminal });
 
   if (terminal) {
     const mapped = mapGenerationToStatus({
@@ -493,6 +691,7 @@ export async function buildBatch2AuthoritativeDecisionReportStatus(
           generation_status: gen.value.status,
           batch2_job_status: loaded.value.batch2_job_status,
           pages_available: true,
+          pages_authority: loaded.value.pages_authority,
           page_outcomes: loaded.value.page_outcomes,
         }),
       };
@@ -503,6 +702,7 @@ export async function buildBatch2AuthoritativeDecisionReportStatus(
     }
 
     // missing / unreadable — keep Generation terminal overall status; pages unavailable.
+    // Authority could not be proven — pages_authority unavailable (not validated empty).
     return {
       ...basePayload(job, ji),
       ...mapped,
@@ -513,12 +713,13 @@ export async function buildBatch2AuthoritativeDecisionReportStatus(
         generation_status: gen.value.status,
         batch2_job_status: null,
         pages_available: false,
+        pages_authority: "unavailable",
         page_outcomes: [],
       }),
     };
   }
 
-  // Non-terminal: Batch2 Job is required.
+  // Non-terminal: Batch2 Job is required; authority unavailable fail-closes.
   if (!loaded.ok) {
     if (loaded.code === "missing") {
       return identityErrorPayload(job, ji, "batch2_job_missing", loaded.detail);
@@ -544,6 +745,7 @@ export async function buildBatch2AuthoritativeDecisionReportStatus(
       generation_status: gen.value.status,
       batch2_job_status: loaded.value.batch2_job_status,
       pages_available: true,
+      pages_authority: loaded.value.pages_authority,
       page_outcomes: loaded.value.page_outcomes,
     }),
   };

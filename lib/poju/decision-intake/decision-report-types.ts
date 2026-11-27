@@ -322,12 +322,27 @@ export type DecisionReportBatch2ProductionSnapshot = {
    * R3: false when Batch2 Job is missing/unreadable under a terminal Generation.
    * Empty `page_outcomes` with `pages_available: true` means truly no recorded outcomes;
    * empty with `pages_available: false` means pages could not be read (do not treat as empty).
+   * R4: `pages_available` is NOT proof of Batch3 Authority success — see `pages_authority`.
    */
   pages_available: boolean;
+  /**
+   * R4: whether page outcomes were filtered through Batch3 Authority.
+   * - validated: outcomes reflect authority-gated results (invalid terminal claims demoted)
+   * - unavailable: Job/pages could not be authority-validated (do not treat outcomes as authoritative)
+   */
+  pages_authority: "validated" | "unavailable";
   page_outcomes: Array<{
     page_id: string;
     outcome: string;
     output_fingerprint?: string | null;
+    /** R4 — authority verdict for this page when validated. */
+    authority_verdict?:
+      | "valid"
+      | "demoted"
+      | "not_terminal"
+      | "stale"
+      | "mismatch"
+      | "missing";
   }>;
 };
 

@@ -81,6 +81,7 @@ export {
 } from "./persist-page-blob";
 export {
   readAuthorityGatedPage,
+  readAuthorityGatedHistoricalPage,
   filterPagesThroughAuthority,
   assertPageAuthorityForMerge,
 } from "./authority-page-read";
