@@ -25,9 +25,13 @@ import {
 } from "../lib/poju/decision-authority/types";
 import type { DecisionContext } from "../lib/poju/decision-context/types";
 import {
+  __awaitUnderStartLeaseForTests,
   __di2Batch2StartSideEffectCountsForTests,
   __resetDi2Batch2StartSideEffectCountsForTests,
+  __runWithActiveStartLeaseForTests,
+  __setAwaitUnderLeasePreflightProbeForTests,
   __setDi2Batch2StartLockRaceProbeForTests,
+  __setDi2Batch2StartPreIntentProbeForTests,
   __setDi2Batch2StartSideEffectProbeForTests,
   resolveTrustedZiweiFactPack,
   startDi2Batch2Production,
@@ -360,6 +364,8 @@ async function main() {
   __setDi2Batch2StartSideEffectProbeForTests(null);
   __setDi2Batch2StartLockRaceProbeForTests(null);
   __setCommitUnderFenceRaceProbeForTests(null);
+  __setAwaitUnderLeasePreflightProbeForTests(null);
+  __setDi2Batch2StartPreIntentProbeForTests(null);
   __setReportStartLockIdleMsForTests(null);
   __setReportStartLockRenewEveryMsForTests(null);
   __setReportLockNowForTests(null);
@@ -1163,6 +1169,210 @@ async function main() {
   __setDi2Batch2StartSideEffectProbeForTests(null);
   __setDi2Batch2StartLockRaceProbeForTests(null);
   __setCommitUnderFenceRaceProbeForTests(null);
+  // ─── Unit C R4: lease preflight before side effects ──────────────────────
+
+  await check("R4: lease already lost → awaitUnderStartLease does not call work", async () => {
+    const session_id = uniq("sess");
+    const owner = await acquireStartLock(session_id, null);
+    try {
+      await __runWithActiveStartLeaseForTests(owner, async (lease) => {
+        const cur = await readReportSessionLock(session_id);
+        assert.equal(cur.kind, "owned");
+        if (cur.kind !== "owned") return;
+        const thief = newReportLockOwner(session_id);
+        assert.ok(await takeOverReportLock(cur.raw, thief, "start", null));
+        assert.equal(await lease.renewNow(), false);
+        assert.equal(lease.lost(), true);
+
+        let workCalls = 0;
+        const r = await __awaitUnderStartLeaseForTests(owner, async () => {
+          workCalls += 1;
+          return "should_not_run";
+        });
+        assert.equal(r.ok, false);
+        if (!r.ok) assert.equal(r.code, "session_lock_lost");
+        assert.equal(workCalls, 0);
+      });
+    } finally {
+      await releaseOwnedReportLock(owner).catch(() => undefined);
+    }
+  });
+
+  await check("R4: lease lost during preflight lock assert → work not called", async () => {
+    const session_id = uniq("sess");
+    const owner = await acquireStartLock(session_id, null);
+    try {
+      await __runWithActiveStartLeaseForTests(owner, async (lease) => {
+        let workCalls = 0;
+        __setAwaitUnderLeasePreflightProbeForTests(async () => {
+          const cur = await readReportSessionLock(session_id);
+          if (cur.kind !== "owned") return;
+          const thief = newReportLockOwner(session_id);
+          await takeOverReportLock(cur.raw, thief, "start", null);
+          await lease.renewNow();
+        });
+        const r = await __awaitUnderStartLeaseForTests(owner, async () => {
+          workCalls += 1;
+          return "should_not_run";
+        });
+        __setAwaitUnderLeasePreflightProbeForTests(null);
+        assert.equal(r.ok, false);
+        if (!r.ok) assert.equal(r.code, "session_lock_lost");
+        assert.equal(workCalls, 0);
+      });
+    } finally {
+      __setAwaitUnderLeasePreflightProbeForTests(null);
+      await releaseOwnedReportLock(owner).catch(() => undefined);
+    }
+  });
+
+  await check("R4: lease lost before intent → no intent enqueue, no ORCHESTRATE", async () => {
+    installEventSender();
+    __resetDi2Batch2StartSideEffectCountsForTests();
+    const ctx = await createDi2Job();
+    const owner = await acquireStartLock(ctx.session_id, ctx.job_id);
+    __setDi2Batch2StartPreIntentProbeForTests(async () => {
+      const cur = await readReportSessionLock(ctx.session_id);
+      if (cur.kind !== "owned") return;
+      const thief = newReportLockOwner(ctx.session_id);
+      await takeOverReportLock(cur.raw, thief, "start", null);
+    });
+    try {
+      const res = await startDi2Batch2Production({
+        job_id: ctx.job_id,
+        freeze: ctx.freeze,
+        profile: ctx.profile,
+        lock_owner: owner,
+      });
+      assert.equal(res.ok, false);
+      if (!res.ok) assert.equal(res.code, "session_lock_lost");
+      assert.equal(__di2Batch2StartSideEffectCountsForTests.intent_enqueue, 0);
+      assert.equal(__di2Batch2StartSideEffectCountsForTests.orchestrate_send, 0);
+      assert.equal(sentEvents.length, 0);
+    } finally {
+      __setDi2Batch2StartPreIntentProbeForTests(null);
+      await releaseOwnedReportLock(owner).catch(() => undefined);
+    }
+  });
+
+  await check("R4: lease lost before RECOVER send → no recover send", async () => {
+    sentEvents = [];
+    __resetDi2Batch2StartSideEffectCountsForTests();
+    let sends = 0;
+    setReportBatch2EventSenderForTests({
+      async send(events) {
+        sends += 1;
+        if (sends === 1) {
+          return { ok: false, code: "forced_fail", detail: "orch" };
+        }
+        for (const e of events) sentEvents.push({ name: e.name, data: e.data });
+        return { ok: true };
+      },
+    });
+    const ctx = await createDi2Job();
+    const owner = await acquireStartLock(ctx.session_id, ctx.job_id);
+    let stolenForRecover = false;
+    __setAwaitUnderLeasePreflightProbeForTests(async () => {
+      // Steal only on the RECOVER await (after ORCHESTRATE send was counted).
+      if (stolenForRecover) return;
+      if (__di2Batch2StartSideEffectCountsForTests.orchestrate_send < 1) return;
+      stolenForRecover = true;
+      const cur = await readReportSessionLock(ctx.session_id);
+      if (cur.kind !== "owned") return;
+      const thief = newReportLockOwner(ctx.session_id);
+      await takeOverReportLock(cur.raw, thief, "start", null);
+    });
+    try {
+      const res = await startDi2Batch2Production({
+        job_id: ctx.job_id,
+        freeze: ctx.freeze,
+        profile: ctx.profile,
+        lock_owner: owner,
+      });
+      assert.equal(res.ok, false);
+      if (!res.ok) assert.equal(res.code, "session_lock_lost");
+      assert.equal(__di2Batch2StartSideEffectCountsForTests.recover_send, 0);
+      assert.ok(
+        !sentEvents.some((e) => e.name === REPORT_BATCH2_EVENTS.RECOVER),
+      );
+    } finally {
+      __setAwaitUnderLeasePreflightProbeForTests(null);
+      await releaseOwnedReportLock(owner).catch(() => undefined);
+      installEventSender();
+    }
+  });
+
+  await check("R4: healthy lease → intent + ORCHESTRATE still run", async () => {
+    installEventSender();
+    __resetDi2Batch2StartSideEffectCountsForTests();
+    __setDi2Batch2StartPreIntentProbeForTests(null);
+    __setAwaitUnderLeasePreflightProbeForTests(null);
+    const ctx = await createDi2Job();
+    const res = await startWithLock(ctx);
+    assert.equal(res.ok, true);
+    assert.equal(__di2Batch2StartSideEffectCountsForTests.activate, 1);
+    assert.equal(__di2Batch2StartSideEffectCountsForTests.create_job, 1);
+    assert.equal(__di2Batch2StartSideEffectCountsForTests.intent_enqueue, 1);
+    assert.equal(__di2Batch2StartSideEffectCountsForTests.orchestrate_send, 1);
+  });
+
+  await check("R4: in-flight send then lease lost → Fail Closed, no further side effects", async () => {
+    sentEvents = [];
+    __resetDi2Batch2StartSideEffectCountsForTests();
+    const ctx = await createDi2Job();
+    const owner = await acquireStartLock(ctx.session_id, ctx.job_id);
+    setReportBatch2EventSenderForTests({
+      async send(events) {
+        // Steal during in-flight ORCHESTRATE — cannot recall this send.
+        const cur = await readReportSessionLock(ctx.session_id);
+        if (cur.kind === "owned") {
+          const thief = newReportLockOwner(ctx.session_id);
+          await takeOverReportLock(cur.raw, thief, "start", null);
+        }
+        for (const e of events) sentEvents.push({ name: e.name, data: e.data });
+        return { ok: true };
+      },
+    });
+    try {
+      const res = await startDi2Batch2Production({
+        job_id: ctx.job_id,
+        freeze: ctx.freeze,
+        profile: ctx.profile,
+        lock_owner: owner,
+      });
+      // Postflight Fail Closed; do not claim in-flight send was recalled.
+      assert.equal(res.ok, false);
+      if (!res.ok) assert.equal(res.code, "session_lock_lost");
+      assert.equal(__di2Batch2StartSideEffectCountsForTests.recover_send, 0);
+      // ORCHESTRATE may have left the sender; must not start RECOVER after loss.
+      assert.ok(
+        !sentEvents.some((e) => e.name === REPORT_BATCH2_EVENTS.RECOVER),
+      );
+    } finally {
+      await releaseOwnedReportLock(owner).catch(() => undefined);
+      installEventSender();
+    }
+  });
+
+  await check("R4: repeat Start still idempotent after preflight fix", async () => {
+    installEventSender();
+    __resetDi2Batch2StartSideEffectCountsForTests();
+    const ctx = await createDi2Job();
+    const first = await startWithLock(ctx);
+    assert.equal(first.ok, true);
+    if (!first.ok) return;
+    const second = await startWithLock(ctx);
+    assert.equal(second.ok, true);
+    if (!second.ok) return;
+    assert.equal(second.reused, true);
+    assert.equal(second.binding.generation_id, first.binding.generation_id);
+  });
+
+  __setDi2Batch2StartSideEffectProbeForTests(null);
+  __setDi2Batch2StartLockRaceProbeForTests(null);
+  __setCommitUnderFenceRaceProbeForTests(null);
+  __setAwaitUnderLeasePreflightProbeForTests(null);
+  __setDi2Batch2StartPreIntentProbeForTests(null);
   __setReportStartLockIdleMsForTests(null);
   __setReportStartLockRenewEveryMsForTests(null);
   __setReportLockNowForTests(null);

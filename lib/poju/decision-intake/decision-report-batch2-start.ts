@@ -20,6 +20,8 @@
  * R3: owner-checked lease renewal (withOwnedReportLockLease) keeps touched_at
  * fresh during long awaits (ORCHESTRATE/RECOVER) so 60s idle takeover cannot
  * steal a live Start. Fence assert + start_gate remain defense in depth.
+ * R4: awaitUnderStartLease preflights lease+lock BEFORE work; dispatch intent
+ * and sends also require preflight — known lease loss must not start side effects.
  */
 
 import {
@@ -144,6 +146,7 @@ export function __setDi2Batch2StartLockRaceProbeForTests(
 export const __di2Batch2StartSideEffectCountsForTests = {
   activate: 0,
   create_job: 0,
+  intent_enqueue: 0,
   orchestrate_send: 0,
   recover_send: 0,
 };
@@ -152,8 +155,65 @@ export const __di2Batch2StartSideEffectCountsForTests = {
 export function __resetDi2Batch2StartSideEffectCountsForTests(): void {
   __di2Batch2StartSideEffectCountsForTests.activate = 0;
   __di2Batch2StartSideEffectCountsForTests.create_job = 0;
+  __di2Batch2StartSideEffectCountsForTests.intent_enqueue = 0;
   __di2Batch2StartSideEffectCountsForTests.orchestrate_send = 0;
   __di2Batch2StartSideEffectCountsForTests.recover_send = 0;
+}
+
+type AwaitLeasePreflightProbe = (ctx: {
+  lock_owner: ReportLockOwner;
+  phase: "after_lock_assert";
+}) => void | Promise<void>;
+
+let __awaitLeasePreflightProbe: AwaitLeasePreflightProbe | null = null;
+
+/** @internal tests only — fires after preflight lock assert, before work. */
+export function __setAwaitUnderLeasePreflightProbeForTests(
+  fn: AwaitLeasePreflightProbe | null,
+): void {
+  __awaitLeasePreflightProbe = fn;
+}
+
+type PreIntentProbe = (ctx: {
+  job_id: string;
+  execution_generation: number;
+}) => void | Promise<void>;
+
+let __preIntentProbe: PreIntentProbe | null = null;
+
+/** @internal tests only — fires after import, before enqueueDispatchIntent. */
+export function __setDi2Batch2StartPreIntentProbeForTests(
+  fn: PreIntentProbe | null,
+): void {
+  __preIntentProbe = fn;
+}
+
+/**
+ * @internal tests only — bind an active Start lease then run `fn`.
+ */
+export async function __runWithActiveStartLeaseForTests<T>(
+  lock_owner: ReportLockOwner,
+  fn: (lease: ReportLockLeaseHandle) => Promise<T>,
+): Promise<T> {
+  return withOwnedReportLockLease(lock_owner, async (lease) => {
+    __activeStartLeases.set(lock_owner, lease);
+    try {
+      return await fn(lease);
+    } finally {
+      __activeStartLeases.delete(lock_owner);
+    }
+  });
+}
+
+/** @internal tests only */
+export async function __awaitUnderStartLeaseForTests<T>(
+  lock_owner: ReportLockOwner,
+  work: () => Promise<T>,
+): Promise<
+  | { ok: true; value: T }
+  | { ok: false; code: Di2Batch2StartErrorCode; detail: string }
+> {
+  return awaitUnderStartLease(lock_owner, work);
 }
 
 export type Di2Batch2StartErrorCode =
@@ -457,8 +517,10 @@ async function assertHeldStartLock(
 }
 
 /**
- * R3: await a long side effect while the Start lease renews in the background.
- * After the await, Fail Closed if renew lost the lock — do not continue dispatch.
+ * R3/R4: run a side effect only while the Start lease + Session Lock are held.
+ * Preflight BEFORE work (R4): known lease loss must not start the side effect.
+ * Postflight AFTER work: Fail Closed before any subsequent side effect.
+ * In-flight network I/O already started cannot be recalled.
  */
 async function awaitUnderStartLease<T>(
   lock_owner: ReportLockOwner,
@@ -467,12 +529,50 @@ async function awaitUnderStartLease<T>(
   | { ok: true; value: T }
   | { ok: false; code: Di2Batch2StartErrorCode; detail: string }
 > {
+  // 1. Lease already lost → do not call work.
+  const lostBefore = leaseLostResult(__activeStartLeases.get(lock_owner));
+  if (lostBefore) return lostBefore;
+
+  // 2. Owner-checked Session Lock (holder must still be "start").
+  const heldBefore = await assertHeldStartLock(lock_owner);
+  if (!heldBefore.ok) return heldBefore;
+
+  await __awaitLeasePreflightProbe?.({
+    lock_owner,
+    phase: "after_lock_assert",
+  });
+
+  // 3. Lease flag OR live ownership may have changed during assert/probe.
+  // (Steal does not set lease.lost() until renew runs — re-assert the lock.)
+  const lostAfterAssert = leaseLostResult(__activeStartLeases.get(lock_owner));
+  if (lostAfterAssert) return lostAfterAssert;
+  const heldAfterProbe = await assertHeldStartLock(lock_owner);
+  if (!heldAfterProbe.ok) return heldAfterProbe;
+  const lostAfterHeld = leaseLostResult(__activeStartLeases.get(lock_owner));
+  if (lostAfterHeld) return lostAfterHeld;
+
+  // 4. Only now start the side effect.
   const value = await work();
-  const lost = leaseLostResult(__activeStartLeases.get(lock_owner));
-  if (lost) return lost;
+
+  // 5. Postflight: lease + lock must still be ours.
+  const lostAfter = leaseLostResult(__activeStartLeases.get(lock_owner));
+  if (lostAfter) return lostAfter;
+  const heldAfter = await assertHeldStartLock(lock_owner);
+  if (!heldAfter.ok) return heldAfter;
+  return { ok: true, value };
+}
+
+/** Preflight before intent enqueue / send paths (R4). */
+async function requireStartLeaseForSideEffect(
+  lock_owner: ReportLockOwner,
+): Promise<{ ok: true } | { ok: false; code: Di2Batch2StartErrorCode; detail: string }> {
+  const lost0 = leaseLostResult(__activeStartLeases.get(lock_owner));
+  if (lost0) return lost0;
   const held = await assertHeldStartLock(lock_owner);
   if (!held.ok) return held;
-  return { ok: true, value };
+  const lost1 = leaseLostResult(__activeStartLeases.get(lock_owner));
+  if (lost1) return lost1;
+  return { ok: true };
 }
 
 async function requireStartAuthority(input: {
@@ -588,13 +688,17 @@ async function dispatchOrchestrateOrRecover(input: {
   });
   if (!ticket.ok) return ticket;
 
-  // Re-confirm session lock immediately before enqueue/send.
-  const lockAgain = await assertHeldStartLock(input.lock_owner);
+  // Re-confirm session lock immediately before import / enqueue / send.
+  const lockAgain = await requireStartLeaseForSideEffect(input.lock_owner);
   if (!lockAgain.ok) return lockAgain;
 
   const { enqueueDispatchIntent, markIntentFailed, markIntentSent } = await import(
     "@/lib/llm/pro/delivery/decision-report-v2/batch3/dispatch-intent"
   );
+
+  // Import may have awaited — re-preflight before any intent or send (R4).
+  const afterImport = await requireStartLeaseForSideEffect(input.lock_owner);
+  if (!afterImport.ok) return afterImport;
 
   if (input.mode === "recover") {
     const recover = await awaitUnderStartLease(input.lock_owner, () =>
@@ -625,6 +729,14 @@ async function dispatchOrchestrateOrRecover(input: {
     locale: input.locale,
     generation_epoch: input.generation_epoch,
   });
+
+  await __preIntentProbe?.({
+    job_id: input.job_id,
+    execution_generation: input.execution_generation,
+  });
+  const beforeIntent = await requireStartLeaseForSideEffect(input.lock_owner);
+  if (!beforeIntent.ok) return beforeIntent;
+
   const intent = await enqueueDispatchIntent({
     report_id: input.report_id,
     generation_id: input.generation_id,
@@ -632,6 +744,7 @@ async function dispatchOrchestrateOrRecover(input: {
     event_name: payload.name,
     payload: { ...payload.data },
   });
+  __di2Batch2StartSideEffectCountsForTests.intent_enqueue += 1;
   if (!intent.ok) {
     await updateJobStatus(input.report_id, input.generation_id, "failed").catch(
       () => undefined,
@@ -664,7 +777,7 @@ async function dispatchOrchestrateOrRecover(input: {
       phase: "dispatch_authorized",
     });
     if (!recoverTicket.ok) return recoverTicket;
-    const lockForRecover = await assertHeldStartLock(input.lock_owner);
+    const lockForRecover = await requireStartLeaseForSideEffect(input.lock_owner);
     if (!lockForRecover.ok) return lockForRecover;
     const recover = await awaitUnderStartLease(input.lock_owner, () =>
       sendReportBatch2Events([
