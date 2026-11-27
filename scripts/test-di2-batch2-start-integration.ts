@@ -1,10 +1,10 @@
 /**
- * Unit C — DI2 Start → Batch2 production integration (no real model / Inngest).
+ * Unit C / R1 — DI2 Start → Batch2 production + Execution Fence side-effect gates.
  *
  *   pnpm exec tsx scripts/test-di2-batch2-start-integration.ts
  *
- * Covers startDi2Batch2Production + identity/ZFP gates. Uses MemoryKv + test
- * event sender. Does not claim multi-isolate Upstash PASS.
+ * Covers startDi2Batch2Production, ZFP trust, and fence revocation between
+ * activate / createJob / dispatch. Uses MemoryKv + test event sender.
  */
 
 process.env.REPORT_BATCH2_ALLOW_MEMORY_STORE = "1";
@@ -24,8 +24,12 @@ import {
 } from "../lib/poju/decision-authority/types";
 import type { DecisionContext } from "../lib/poju/decision-context/types";
 import {
+  __di2Batch2StartSideEffectCountsForTests,
+  __resetDi2Batch2StartSideEffectCountsForTests,
+  __setDi2Batch2StartSideEffectProbeForTests,
   resolveTrustedZiweiFactPack,
   startDi2Batch2Production,
+  type Di2Batch2StartSideEffectGate,
 } from "../lib/poju/decision-intake/decision-report-batch2-start";
 import {
   DI2_REPORT_SCHEMA_VERSION,
@@ -35,6 +39,7 @@ import {
 } from "../lib/poju/decision-intake/decision-report-types";
 import { di2Batch2GenerationId } from "../lib/poju/decision-intake/decision-report-batch2-identity";
 import { profileIndicatesComputedZiwei } from "../lib/poju/decision-intake/decision-report-batch2-adapter";
+import { supersedeFinalDeliveryJobForRegenerate } from "../lib/poju/final-delivery-execution-authority";
 import {
   authorizeFdExecutionFence,
   bumpFdExecutionFence,
@@ -288,9 +293,20 @@ async function createDi2Job(opts?: {
   };
 }
 
+async function revokeAtGate(
+  gate: Di2Batch2StartSideEffectGate,
+  target: Di2Batch2StartSideEffectGate,
+  job_id: string,
+): Promise<void> {
+  if (gate !== target) return;
+  await supersedeFinalDeliveryJobForRegenerate(job_id);
+}
+
 async function main() {
-  console.log("Unit C — DI2 Start → Batch2 production");
+  console.log("Unit C / R1 — DI2 Start → Batch2 + Fence side-effect closure");
   installEventSender();
+  __setDi2Batch2StartSideEffectProbeForTests(null);
+  __resetDi2Batch2StartSideEffectCountsForTests();
   await resetBatch3KeysForTests();
   await resetBatch2JobStoreForTests();
 
@@ -569,6 +585,150 @@ async function main() {
     installEventSender();
   });
 
+  // ─── Unit C R1: Execution Fence side-effect closure ─────────────────────
+
+  await check("R1: valid Fence → Start completes activate+create+orchestrate", async () => {
+    installEventSender();
+    __resetDi2Batch2StartSideEffectCountsForTests();
+    __setDi2Batch2StartSideEffectProbeForTests(null);
+    const ctx = await createDi2Job();
+    const res = await startDi2Batch2Production({
+      job_id: ctx.job_id,
+      freeze: ctx.freeze,
+      profile: ctx.profile,
+    });
+    assert.equal(res.ok, true);
+    assert.equal(__di2Batch2StartSideEffectCountsForTests.activate, 1);
+    assert.equal(__di2Batch2StartSideEffectCountsForTests.create_job, 1);
+    assert.equal(__di2Batch2StartSideEffectCountsForTests.orchestrate_send, 1);
+  });
+
+  await check("R1: Fence revoked before activate → no activate/create/dispatch", async () => {
+    installEventSender();
+    __resetDi2Batch2StartSideEffectCountsForTests();
+    const ctx = await createDi2Job();
+    __setDi2Batch2StartSideEffectProbeForTests(async (gate) => {
+      await revokeAtGate(gate, "before_activate", ctx.job_id);
+    });
+    const res = await startDi2Batch2Production({
+      job_id: ctx.job_id,
+      freeze: ctx.freeze,
+      profile: ctx.profile,
+    });
+    assert.equal(res.ok, false);
+    if (!res.ok) assert.equal(res.code, "job_revoked");
+    assert.equal(__di2Batch2StartSideEffectCountsForTests.activate, 0);
+    assert.equal(__di2Batch2StartSideEffectCountsForTests.create_job, 0);
+    assert.equal(__di2Batch2StartSideEffectCountsForTests.orchestrate_send, 0);
+    assert.equal(__di2Batch2StartSideEffectCountsForTests.recover_send, 0);
+    assert.equal(sentEvents.length, 0);
+    __setDi2Batch2StartSideEffectProbeForTests(null);
+  });
+
+  await check("R1: Fence revoked after activate before createJob → no create/dispatch", async () => {
+    installEventSender();
+    __resetDi2Batch2StartSideEffectCountsForTests();
+    const ctx = await createDi2Job();
+    __setDi2Batch2StartSideEffectProbeForTests(async (gate) => {
+      await revokeAtGate(gate, "before_create_job", ctx.job_id);
+    });
+    const res = await startDi2Batch2Production({
+      job_id: ctx.job_id,
+      freeze: ctx.freeze,
+      profile: ctx.profile,
+    });
+    assert.equal(res.ok, false);
+    if (!res.ok) assert.equal(res.code, "job_revoked");
+    assert.equal(__di2Batch2StartSideEffectCountsForTests.activate, 1);
+    assert.equal(__di2Batch2StartSideEffectCountsForTests.create_job, 0);
+    assert.equal(__di2Batch2StartSideEffectCountsForTests.orchestrate_send, 0);
+    assert.equal(sentEvents.length, 0);
+    const blob = await loadJobRawBlobs(
+      ctx.report_job_id,
+      di2Batch2GenerationId(ctx.report_job_id),
+    );
+    assert.equal(blob.ok && blob.value, null);
+    __setDi2Batch2StartSideEffectProbeForTests(null);
+  });
+
+  await check("R1: Fence revoked after createJob before dispatch → no event send", async () => {
+    installEventSender();
+    __resetDi2Batch2StartSideEffectCountsForTests();
+    const ctx = await createDi2Job();
+    __setDi2Batch2StartSideEffectProbeForTests(async (gate) => {
+      await revokeAtGate(gate, "before_dispatch", ctx.job_id);
+    });
+    const res = await startDi2Batch2Production({
+      job_id: ctx.job_id,
+      freeze: ctx.freeze,
+      profile: ctx.profile,
+    });
+    assert.equal(res.ok, false);
+    if (!res.ok) assert.equal(res.code, "job_revoked");
+    assert.equal(__di2Batch2StartSideEffectCountsForTests.activate, 1);
+    assert.equal(__di2Batch2StartSideEffectCountsForTests.create_job, 1);
+    assert.equal(__di2Batch2StartSideEffectCountsForTests.orchestrate_send, 0);
+    assert.equal(__di2Batch2StartSideEffectCountsForTests.recover_send, 0);
+    assert.equal(sentEvents.length, 0);
+    __setDi2Batch2StartSideEffectProbeForTests(null);
+  });
+
+  await check("R1: regenerate mid-Start → old execution cannot dispatch", async () => {
+    installEventSender();
+    __resetDi2Batch2StartSideEffectCountsForTests();
+    const ctx = await createDi2Job();
+    __setDi2Batch2StartSideEffectProbeForTests(async (gate) => {
+      if (gate === "before_dispatch") {
+        await supersedeFinalDeliveryJobForRegenerate(ctx.job_id);
+      }
+    });
+    const old = await startDi2Batch2Production({
+      job_id: ctx.job_id,
+      freeze: ctx.freeze,
+      profile: ctx.profile,
+    });
+    assert.equal(old.ok, false);
+    if (!old.ok) assert.equal(old.code, "job_revoked");
+    assert.equal(__di2Batch2StartSideEffectCountsForTests.orchestrate_send, 0);
+    assert.equal(sentEvents.length, 0);
+
+    // Old generation cannot be revived into a successful Start.
+    __setDi2Batch2StartSideEffectProbeForTests(null);
+    const retryOld = await startDi2Batch2Production({
+      job_id: ctx.job_id,
+      freeze: ctx.freeze,
+      profile: ctx.profile,
+    });
+    assert.equal(retryOld.ok, false);
+    if (!retryOld.ok) assert.equal(retryOld.code, "job_revoked");
+  });
+
+  await check("R1: normal repeat Start still reuses Batch2 Job/Generation", async () => {
+    installEventSender();
+    __resetDi2Batch2StartSideEffectCountsForTests();
+    __setDi2Batch2StartSideEffectProbeForTests(null);
+    const ctx = await createDi2Job();
+    const first = await startDi2Batch2Production({
+      job_id: ctx.job_id,
+      freeze: ctx.freeze,
+      profile: ctx.profile,
+    });
+    assert.equal(first.ok, true);
+    if (!first.ok) return;
+    const second = await startDi2Batch2Production({
+      job_id: ctx.job_id,
+      freeze: ctx.freeze,
+      profile: ctx.profile,
+    });
+    assert.equal(second.ok, true);
+    if (!second.ok) return;
+    assert.equal(second.reused, true);
+    assert.equal(second.binding.generation_id, first.binding.generation_id);
+    assert.equal(__di2Batch2StartSideEffectCountsForTests.activate, 1);
+    assert.equal(__di2Batch2StartSideEffectCountsForTests.create_job, 1);
+  });
+
+  __setDi2Batch2StartSideEffectProbeForTests(null);
   await resetBatch3KeysForTests();
   await resetBatch2JobStoreForTests();
   setReportBatch2EventSenderForTests(null);

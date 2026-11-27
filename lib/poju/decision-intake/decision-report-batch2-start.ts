@@ -1,5 +1,5 @@
 /**
- * Unit C — DI2 Start → Batch2 production engine (Start only).
+ * Unit C / R1 — DI2 Start → Batch2 production engine (Start only).
  *
  * After DI2 authorization / job / fence / charge, kicks Batch2 via the same
  * bootstrap sequence as startReportBatch2Production, but:
@@ -8,6 +8,17 @@
  * - Resolves ZiweiFactPack only from server-trusted birth recompute
  * - Never falls back to the legacy DI2 eight-page runner
  * - Never accepts client-submitted ZFP objects
+ *
+ * Execution Fence side-effect closure (R1):
+ * DI2 fence CAS only covers the DI2 job record — it cannot atomically wrap
+ * Batch3/Batch2 KV writes. Minimal protocol using existing fence:
+ *   1) fence-CAS advance batch2_start_gate before each side-effect class
+ *   2) assertDeliveryExecutionAuthority immediately before the external call
+ *   3) dispatch requires a successful fence-CAS "dispatch_authorized" ticket
+ *      BEFORE send — stampProductionState alone is NOT the start gate
+ * Residual TOCTOU between a successful dispatch ticket CAS and the network
+ * send is inherent to split KV namespaces; Fail Closed if authority is
+ * uncertain at any gate.
  */
 
 import {
@@ -46,6 +57,10 @@ import {
   type DecisionReportJobInput,
 } from "@/lib/poju/decision-intake/decision-report-types";
 import {
+  assertDeliveryExecutionAuthority,
+  DeliveryExecutionRevokedError,
+} from "@/lib/poju/final-delivery-execution-authority";
+import {
   commitXhighJobUnderExecutionFence,
   getXhighJob,
 } from "@/lib/poju/xhigh-job-store";
@@ -63,6 +78,56 @@ export type Di2Batch2ProductionState = {
   /** Last Start outcome for recovery readers. */
   last_dispatch: "orchestrate" | "recover" | "none";
 };
+
+/** Fence-CAS phases for Batch2 Start side effects (Unit C R1). */
+export type Di2Batch2StartGatePhase =
+  | "claimed"
+  | "before_activate"
+  | "before_create_job"
+  | "dispatch_authorized"
+  | "done";
+
+export type Di2Batch2StartGate = {
+  execution_generation: number;
+  phase: Di2Batch2StartGatePhase;
+  updated_at: string;
+};
+
+/** Test probe points — revoke fence here to prove side effects stop. */
+export type Di2Batch2StartSideEffectGate =
+  | "before_activate"
+  | "before_create_job"
+  | "before_dispatch";
+
+type StartSideEffectProbe = (
+  gate: Di2Batch2StartSideEffectGate,
+  ctx: { job_id: string; execution_generation: number },
+) => void | Promise<void>;
+
+let __startSideEffectProbe: StartSideEffectProbe | null = null;
+
+/** @internal tests only */
+export function __setDi2Batch2StartSideEffectProbeForTests(
+  fn: StartSideEffectProbe | null,
+): void {
+  __startSideEffectProbe = fn;
+}
+
+/** @internal tests only — reset between cases */
+export const __di2Batch2StartSideEffectCountsForTests = {
+  activate: 0,
+  create_job: 0,
+  orchestrate_send: 0,
+  recover_send: 0,
+};
+
+/** @internal tests only */
+export function __resetDi2Batch2StartSideEffectCountsForTests(): void {
+  __di2Batch2StartSideEffectCountsForTests.activate = 0;
+  __di2Batch2StartSideEffectCountsForTests.create_job = 0;
+  __di2Batch2StartSideEffectCountsForTests.orchestrate_send = 0;
+  __di2Batch2StartSideEffectCountsForTests.recover_send = 0;
+}
 
 export type Di2Batch2StartErrorCode =
   | "missing_job"
@@ -282,7 +347,95 @@ async function stampProductionState(
   return { ok: true, job: durable };
 }
 
+async function requireLiveExecutionFence(
+  job_id: string,
+  execution_generation: number,
+): Promise<{ ok: true } | { ok: false; code: Di2Batch2StartErrorCode; detail: string }> {
+  try {
+    await assertDeliveryExecutionAuthority(job_id, execution_generation);
+    return { ok: true };
+  } catch (e) {
+    if (e instanceof DeliveryExecutionRevokedError) {
+      return {
+        ok: false,
+        code: "job_revoked",
+        detail: e.message,
+      };
+    }
+    return {
+      ok: false,
+      code: "cas_failed",
+      detail: e instanceof Error ? e.message : String(e),
+    };
+  }
+}
+
+/**
+ * Advance batch2_start_gate under DI2 execution-fence CAS.
+ * Failure means this Start no longer holds authority — do not continue side effects.
+ */
+async function advanceStartGateUnderFence(input: {
+  job_id: string;
+  execution_generation: number;
+  phase: Di2Batch2StartGatePhase;
+}): Promise<{ ok: true } | { ok: false; code: Di2Batch2StartErrorCode; detail: string }> {
+  const committed = await commitXhighJobUnderExecutionFence(
+    input.job_id,
+    input.execution_generation,
+    (current) => ({
+      ...current,
+      batch2_start_gate: {
+        execution_generation: input.execution_generation,
+        phase: input.phase,
+        updated_at: new Date().toISOString(),
+      },
+    }),
+  );
+  if (!committed.ok) {
+    if (committed.reason === "revoked" || committed.reason === "missing") {
+      return {
+        ok: false,
+        code: "job_revoked",
+        detail: `start_gate ${input.phase}: ${committed.reason}`,
+      };
+    }
+    if (committed.reason === "cas_conflict") {
+      // Re-read: if fence still ours and gate already at/after phase, treat as ok;
+      // otherwise Fail Closed — do not proceed with uncertain authority.
+      const live = await requireLiveExecutionFence(
+        input.job_id,
+        input.execution_generation,
+      );
+      if (!live.ok) return live;
+      return {
+        ok: false,
+        code: "cas_failed",
+        detail: `start_gate ${input.phase}: cas_conflict_unresolved`,
+      };
+    }
+    return {
+      ok: false,
+      code: "cas_failed",
+      detail: `start_gate ${input.phase}: ${committed.reason}`,
+    };
+  }
+  return { ok: true };
+}
+
+async function runSideEffectProbe(
+  gate: Di2Batch2StartSideEffectGate,
+  ctx: { job_id: string; execution_generation: number },
+): Promise<void> {
+  await __startSideEffectProbe?.(gate, ctx);
+}
+
+/**
+ * Dispatch only after a fence-CAS "dispatch_authorized" ticket.
+ * Losing the fence after job create must not send ORCHESTRATE/RECOVER.
+ */
 async function dispatchOrchestrateOrRecover(input: {
+  job_id: string;
+  execution_generation: number;
   report_id: string;
   generation_id: string;
   generation_epoch: number;
@@ -292,6 +445,25 @@ async function dispatchOrchestrateOrRecover(input: {
   | { ok: true; last_dispatch: "orchestrate" | "recover" }
   | { ok: false; code: Di2Batch2StartErrorCode; detail: string }
 > {
+  await runSideEffectProbe("before_dispatch", {
+    job_id: input.job_id,
+    execution_generation: input.execution_generation,
+  });
+
+  const live = await requireLiveExecutionFence(
+    input.job_id,
+    input.execution_generation,
+  );
+  if (!live.ok) return live;
+
+  // Dispatch ticket: fence CAS must succeed BEFORE any event send.
+  const ticket = await advanceStartGateUnderFence({
+    job_id: input.job_id,
+    execution_generation: input.execution_generation,
+    phase: "dispatch_authorized",
+  });
+  if (!ticket.ok) return ticket;
+
   const { enqueueDispatchIntent, markIntentFailed, markIntentSent } = await import(
     "@/lib/llm/pro/delivery/decision-report-v2/batch3/dispatch-intent"
   );
@@ -305,6 +477,7 @@ async function dispatchOrchestrateOrRecover(input: {
         locale: input.locale,
       }),
     ]);
+    __di2Batch2StartSideEffectCountsForTests.recover_send += 1;
     if (!recover.ok) {
       return {
         ok: false,
@@ -340,8 +513,21 @@ async function dispatchOrchestrateOrRecover(input: {
   }
 
   const send = await sendReportBatch2Events([payload]);
+  __di2Batch2StartSideEffectCountsForTests.orchestrate_send += 1;
   if (!send.ok) {
     await markIntentFailed(intent.value, send.detail);
+    // Re-check fence before RECOVER send — revoked Start must not heal via recover.
+    const stillLive = await requireLiveExecutionFence(
+      input.job_id,
+      input.execution_generation,
+    );
+    if (!stillLive.ok) return stillLive;
+    const recoverTicket = await advanceStartGateUnderFence({
+      job_id: input.job_id,
+      execution_generation: input.execution_generation,
+      phase: "dispatch_authorized",
+    });
+    if (!recoverTicket.ok) return recoverTicket;
     const recover = await sendReportBatch2Events([
       buildRecoverPayload({
         report_id: input.report_id,
@@ -350,8 +536,8 @@ async function dispatchOrchestrateOrRecover(input: {
         locale: input.locale,
       }),
     ]);
+    __di2Batch2StartSideEffectCountsForTests.recover_send += 1;
     if (recover.ok) {
-      // Durable job + recover triggered — do not mint a second generation.
       return { ok: true, last_dispatch: "recover" };
     }
     return {
@@ -516,6 +702,17 @@ export async function startDi2Batch2Production(input: {
     };
   }
 
+  const execution_generation = job.execution_generation;
+  const locale = job.locale || reportInput.locale || "en";
+
+  // Claim Start under fence BEFORE any Batch2/Batch3 side effect.
+  const claimed = await advanceStartGateUnderFence({
+    job_id: input.job_id,
+    execution_generation,
+    phase: "claimed",
+  });
+  if (!claimed.ok) return claimed;
+
   // Idempotent path: Batch2 job already exists for this binding.
   const existing = await loadJobRawBlobs(binding.report_id, binding.generation_id);
   if (!existing.ok) {
@@ -555,10 +752,12 @@ export async function startDi2Batch2Production(input: {
           ? meta.generation_epoch
           : binding.batch3_generation_epoch;
       const dispatched = await dispatchOrchestrateOrRecover({
+        job_id: input.job_id,
+        execution_generation,
         report_id: binding.report_id,
         generation_id: binding.generation_id,
         generation_epoch: epoch,
-        locale: job.locale || reportInput.locale || "en",
+        locale,
         mode: "recover",
       });
       if (!dispatched.ok) return dispatched;
@@ -576,10 +775,15 @@ export async function startDi2Batch2Production(input: {
     };
     const stamped = await stampProductionState(
       input.job_id,
-      job.execution_generation,
+      execution_generation,
       production,
     );
     if (!stamped.ok) return stamped;
+    await advanceStartGateUnderFence({
+      job_id: input.job_id,
+      execution_generation,
+      phase: "done",
+    }).catch(() => undefined);
     return {
       ok: true,
       binding,
@@ -589,8 +793,24 @@ export async function startDi2Batch2Production(input: {
     };
   }
 
-  // Fresh Start: activate pre-bound generation → create job → orchestrate.
+  // Fresh Start: fence gate → activate → fence gate → createJob → dispatch ticket → send.
   // Do NOT call allocateGeneration again (Unit B already created the record).
+  await runSideEffectProbe("before_activate", {
+    job_id: input.job_id,
+    execution_generation,
+  });
+  const beforeActivate = await requireLiveExecutionFence(
+    input.job_id,
+    execution_generation,
+  );
+  if (!beforeActivate.ok) return beforeActivate;
+  const activateGate = await advanceStartGateUnderFence({
+    job_id: input.job_id,
+    execution_generation,
+    phase: "before_activate",
+  });
+  if (!activateGate.ok) return activateGate;
+
   const activated = await activateGeneration({
     record: gen.value,
     job_id: binding.report_id,
@@ -602,24 +822,43 @@ export async function startDi2Batch2Production(input: {
       detail: activated.detail ?? activated.code,
     };
   }
+  __di2Batch2StartSideEffectCountsForTests.activate += 1;
+
+  await runSideEffectProbe("before_create_job", {
+    job_id: input.job_id,
+    execution_generation,
+  });
+  const beforeCreate = await requireLiveExecutionFence(
+    input.job_id,
+    execution_generation,
+  );
+  if (!beforeCreate.ok) return beforeCreate;
+  const createGate = await advanceStartGateUnderFence({
+    job_id: input.job_id,
+    execution_generation,
+    phase: "before_create_job",
+  });
+  if (!createGate.ok) return createGate;
 
   const created = await createJobAndPersist({
     report_id: binding.report_id,
     generation_id: binding.generation_id,
-    locale: job.locale || reportInput.locale || "en",
+    locale,
     inputs: adapted.inputs,
     status: "orchestrating",
     generation_epoch: binding.batch3_generation_epoch,
   });
   if (!created.ok) {
-    // Race: another Start created the job — re-enter idempotent path.
+    // Race: another Start created the job — re-enter idempotent path (still fence-gated).
     const raced = await loadJobRawBlobs(binding.report_id, binding.generation_id);
     if (raced.ok && raced.value) {
       const dispatched = await dispatchOrchestrateOrRecover({
+        job_id: input.job_id,
+        execution_generation,
         report_id: binding.report_id,
         generation_id: binding.generation_id,
         generation_epoch: binding.batch3_generation_epoch,
-        locale: job.locale || reportInput.locale || "en",
+        locale,
         mode: "recover",
       });
       if (!dispatched.ok) return dispatched;
@@ -633,7 +872,7 @@ export async function startDi2Batch2Production(input: {
       };
       const stamped = await stampProductionState(
         input.job_id,
-        job.execution_generation,
+        execution_generation,
         production,
       );
       if (!stamped.ok) return stamped;
@@ -662,12 +901,15 @@ export async function startDi2Batch2Production(input: {
       detail: "created Batch2 job identity ≠ DI2 binding",
     };
   }
+  __di2Batch2StartSideEffectCountsForTests.create_job += 1;
 
   const dispatched = await dispatchOrchestrateOrRecover({
+    job_id: input.job_id,
+    execution_generation,
     report_id: binding.report_id,
     generation_id: binding.generation_id,
     generation_epoch: binding.batch3_generation_epoch,
-    locale: job.locale || reportInput.locale || "en",
+    locale,
     mode: "orchestrate",
   });
   if (!dispatched.ok) return dispatched;
@@ -682,10 +924,15 @@ export async function startDi2Batch2Production(input: {
   };
   const stamped = await stampProductionState(
     input.job_id,
-    job.execution_generation,
+    execution_generation,
     production,
   );
   if (!stamped.ok) return stamped;
+  await advanceStartGateUnderFence({
+    job_id: input.job_id,
+    execution_generation,
+    phase: "done",
+  }).catch(() => undefined);
 
   return {
     ok: true,

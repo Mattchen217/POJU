@@ -209,6 +209,11 @@ export interface PojuXhighJob {
    * Recoverable report_id / generation_id / epoch for the active production run.
    */
   batch2_production_state?: import("@/lib/poju/decision-intake/decision-report-batch2-start").Di2Batch2ProductionState;
+  /**
+   * Unit C R1 — fence-CAS start gate across Batch2 side effects.
+   * Advanced under commitXhighJobUnderExecutionFence before activate/create/dispatch.
+   */
+  batch2_start_gate?: import("@/lib/poju/decision-intake/decision-report-batch2-start").Di2Batch2StartGate;
   input:
     | Segment2JobInput
     | Segment2AgendaJobInput
