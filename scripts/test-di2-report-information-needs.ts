@@ -79,6 +79,7 @@ async function main() {
     REPORT_INFORMATION_NEEDS,
     classifyDecisionIntakeComplexity,
     complexitySignalsFromDecisionMaterials,
+    countProvenDistinctOptions,
     reportInformationNeedById,
     reportInformationNeedsForDirIds,
   } = await import("../lib/poju/decision-intake/report-information-needs.v1");
@@ -2832,97 +2833,79 @@ async function main() {
     assert.equal(withStakes.high_stakes, true);
     assert.equal(classifyDecisionIntakeComplexity(withStakes).complexity, "medium");
 
-    const threeOptions = complexitySignalsFromDecisionMaterials({
-      dc: draftDc({
-        reality_facts: [
-          {
-            fact_id: "o1",
-            statement: "接受 offer A",
-            status: "confirmed",
-            verification_level: "user_stated",
-            source_stage: "collecting_context",
-            source_turn_id: "t1",
-            user_confirmed: true,
-            fact_roles: ["option"],
-            related_dir_ids: ["DIR-OPT-ON-TABLE"],
-          },
-          {
-            fact_id: "o2",
-            statement: "接受 offer A",
-            status: "confirmed",
-            verification_level: "user_stated",
-            source_stage: "collecting_context",
-            source_turn_id: "t2",
-            user_confirmed: true,
-            fact_roles: ["option"],
-            related_dir_ids: ["DIR-OPT-ON-TABLE"],
-          },
-          {
-            fact_id: "o3",
-            statement: "维持现状",
-            status: "confirmed",
-            verification_level: "user_stated",
-            source_stage: "collecting_context",
-            source_turn_id: "t3",
-            user_confirmed: true,
-            fact_roles: ["option"],
-            related_dir_ids: ["DIR-OPT-ON-TABLE"],
-          },
-          {
-            fact_id: "o4",
-            statement: "创业",
-            status: "confirmed",
-            verification_level: "user_stated",
-            source_stage: "collecting_context",
-            source_turn_id: "t4",
-            user_confirmed: true,
-            fact_roles: ["option"],
-            related_dir_ids: ["DIR-OPT-ON-TABLE"],
-          },
-        ],
-      }),
+    // RealityFact has no durable option identity. Fail-closed: statement /
+    // fact_id cardinality must not upgrade option_count above baseline 2.
+    const opt = (
+      fact_id: string,
+      statement: string,
+      turn: string,
+      extra?: Partial<DecisionContext["reality_facts"][number]>,
+    ) => ({
+      fact_id,
+      statement,
+      status: "confirmed" as const,
+      verification_level: "user_asserted" as const,
+      source_stage: "collecting_context" as const,
+      source_turn_id: turn,
+      user_confirmed: true,
+      fact_roles: ["option"],
+      related_dir_ids: ["DIR-OPT-ON-TABLE"],
+      ...extra,
     });
-    // Duplicate statement "接受 offer A" counts once → 3 distinct options.
-    assert.equal(threeOptions.option_count, 3);
 
-    // Constraints linked to DIR-OPT-ON-TABLE must not inflate option_count.
-    const twoOptsThreeConstraints = complexitySignalsFromDecisionMaterials({
+    // 1) Two real options, one RealityFact each → baseline 2 (no identity upgrade).
+    const twoSingletonFacts = [
+      opt("oa", "接受 Offer A", "t1"),
+      opt("ob", "维持现状", "t2"),
+    ];
+    assert.equal(countProvenDistinctOptions({ reality_facts: twoSingletonFacts }), 0);
+    assert.equal(
+      complexitySignalsFromDecisionMaterials({
+        dc: draftDc({ reality_facts: twoSingletonFacts }),
+      }).option_count,
+      2,
+    );
+
+    // 2) Same real option, three different statements (incl. correction links)
+    // → still one logical proposition family, but no durable option id → no upgrade.
+    const sameOptionParaphrases = [
+      opt("p1", "接受 A 公司的 offer", "t1"),
+      opt("p2", "加入 A 公司担任产品负责人", "t2", {
+        corrects_fact_ids: ["p1"],
+      }),
+      opt("p3", "去 A 公司工作，接受新的管理职责", "t3", {
+        corrects_fact_ids: ["p1", "p2"],
+      }),
+    ];
+    assert.equal(countProvenDistinctOptions({ reality_facts: sameOptionParaphrases }), 0);
+    assert.equal(
+      complexitySignalsFromDecisionMaterials({
+        dc: draftDc({ reality_facts: sameOptionParaphrases }),
+      }).option_count,
+      2,
+      "paraphrases of one option must not become option_count=3",
+    );
+
+    // 3) Two real options, each with multiple different descriptions → still 2.
+    const twoOptsMultiDesc = [
+      opt("a1", "接受 A 公司的 offer", "t1"),
+      opt("a2", "加入 A 公司担任产品负责人", "t2", { corrects_fact_ids: ["a1"] }),
+      opt("b1", "维持现状", "t3"),
+      opt("b2", "继续留在当前岗位观察一年", "t4", { corrects_fact_ids: ["b1"] }),
+    ];
+    assert.equal(
+      complexitySignalsFromDecisionMaterials({
+        dc: draftDc({ reality_facts: twoOptsMultiDesc }),
+      }).option_count,
+      2,
+    );
+
+    // 4) Constraints do not increase option_count.
+    const withConstraints = complexitySignalsFromDecisionMaterials({
       dc: draftDc({
         reality_facts: [
-          {
-            fact_id: "oa",
-            statement: "接受 Offer A",
-            status: "confirmed",
-            verification_level: "user_stated",
-            source_stage: "collecting_context",
-            source_turn_id: "t1",
-            user_confirmed: true,
-            fact_roles: ["option"],
-            related_dir_ids: ["DIR-OPT-ON-TABLE"],
-          },
-          {
-            fact_id: "ob",
-            statement: "维持现状",
-            status: "confirmed",
-            verification_level: "user_stated",
-            source_stage: "collecting_context",
-            source_turn_id: "t2",
-            user_confirmed: true,
-            fact_roles: ["option"],
-            related_dir_ids: ["DIR-OPT-ON-TABLE"],
-          },
-          {
-            fact_id: "non_option",
-            statement: "同事提到过远程岗",
-            status: "confirmed",
-            verification_level: "user_stated",
-            source_stage: "collecting_context",
-            source_turn_id: "t3",
-            user_confirmed: true,
-            // No option role → must not upgrade option_count.
-            fact_roles: ["situation"],
-            related_dir_ids: ["DIR-OPT-ON-TABLE"],
-          },
+          opt("oa", "接受 Offer A", "t1"),
+          opt("ob", "维持现状", "t2"),
         ],
         constraints: [
           {
@@ -2930,7 +2913,7 @@ async function main() {
             statement: "薪酬不能低于某水平",
             category: "financial",
             status: "confirmed",
-            verification_level: "user_stated",
+            verification_level: "user_asserted",
             source_stage: "collecting_context",
             source_turn_id: "t4",
             rigidity: "hard",
@@ -2942,7 +2925,7 @@ async function main() {
             statement: "不能搬离当前城市",
             category: "responsibility",
             status: "confirmed",
-            verification_level: "user_stated",
+            verification_level: "user_asserted",
             source_stage: "collecting_context",
             source_turn_id: "t5",
             rigidity: "hard",
@@ -2954,7 +2937,7 @@ async function main() {
             statement: "必须照顾家庭成员",
             category: "responsibility",
             status: "confirmed",
-            verification_level: "user_stated",
+            verification_level: "user_asserted",
             source_stage: "collecting_context",
             source_turn_id: "t6",
             rigidity: "hard",
@@ -2964,10 +2947,81 @@ async function main() {
         ],
       }),
     });
+    assert.equal(withConstraints.option_count, 2);
+
+    // 5) Missing option role does not increase count.
     assert.equal(
-      twoOptsThreeConstraints.option_count,
+      complexitySignalsFromDecisionMaterials({
+        dc: draftDc({
+          reality_facts: [
+            opt("oa", "接受 Offer A", "t1"),
+            opt("ob", "维持现状", "t2"),
+            {
+              ...opt("non_option", "同事提到过远程岗", "t3"),
+              fact_roles: ["situation"],
+            },
+          ],
+        }),
+      }).option_count,
       2,
-      "Constraints and non-option facts must not raise option_count above 2",
+    );
+
+    // 6) unknown / unverified RealityFacts do not increase count.
+    assert.equal(
+      complexitySignalsFromDecisionMaterials({
+        dc: draftDc({
+          reality_facts: [
+            opt("oa", "接受 Offer A", "t1"),
+            opt("ob", "维持现状", "t2"),
+            {
+              ...opt("uv", "创业", "t3"),
+              status: "unverified",
+              user_confirmed: false,
+            },
+            {
+              ...opt("unk", "出国读研", "t4"),
+              status: "unknown",
+              user_confirmed: false,
+            },
+          ],
+        }),
+      }).option_count,
+      2,
+    );
+
+    // 7) Materials without stable option identity must not upgrade complexity.
+    const noIdentityUpgrade = classifyDecisionIntakeComplexity(
+      complexitySignalsFromDecisionMaterials({
+        dc: draftDc({
+          reality_facts: [
+            opt("o1", "接受 offer A", "t1"),
+            opt("o2", "加入 A 公司", "t2"),
+            opt("o3", "维持现状", "t3"),
+            opt("o4", "创业", "t4"),
+          ],
+        }),
+        page_07_emit: false,
+      }),
+    );
+    assert.equal(noIdentityUpgrade.complexity, "simple");
+    assert.equal(noIdentityUpgrade.core_round_hard_cap, 7);
+
+    // 8) Four independent option *statements* without identity stay baseline —
+    // complexity must not treat text cardinality as four real options.
+    const fourStatementFacts = [
+      opt("o1", "接受 offer A", "t1"),
+      opt("o2", "接受 offer A", "t2"), // exact duplicate text still no identity
+      opt("o3", "维持现状", "t3"),
+      opt("o4", "创业", "t4"),
+    ];
+    assert.equal(countProvenDistinctOptions({ reality_facts: fourStatementFacts }), 0);
+    const fourStatements = complexitySignalsFromDecisionMaterials({
+      dc: draftDc({ reality_facts: fourStatementFacts }),
+    });
+    assert.equal(fourStatements.option_count, 2);
+    assert.equal(
+      classifyDecisionIntakeComplexity(fourStatements).complexity,
+      "simple",
     );
 
     // Non-confirmed stakes material must not flip high_stakes.

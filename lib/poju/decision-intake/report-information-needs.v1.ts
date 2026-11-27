@@ -1288,10 +1288,16 @@ export function formatReportInformationNeedsForPrompt(
 }
 
 type ComplexityFact = {
+  fact_id?: string;
   statement?: string;
   status?: string;
   related_dir_ids?: string[] | null;
   fact_roles?: string[] | null;
+  /**
+   * Correction links only — not an option identity. One real option may span
+   * many RealityFacts via this field; absence of links does not prove distinct options.
+   */
+  corrects_fact_ids?: string[] | null;
 };
 
 type ComplexityConstraint = {
@@ -1324,25 +1330,37 @@ function confirmedMaterialStatementsForDir(
   return out;
 }
 
+function isEligibleOptionFact(f: ComplexityFact): boolean {
+  if (f.status !== "confirmed") return false;
+  if (!(f.related_dir_ids ?? []).includes("DIR-OPT-ON-TABLE")) return false;
+  if (!(f.fact_roles ?? []).includes("option")) return false;
+  return Boolean(f.statement?.trim());
+}
+
 /**
- * Distinct real options on DIR-OPT-ON-TABLE.
- * Only confirmed RealityFacts with the catalog `option` role count —
- * Constraints never inflate option_count.
+ * Proven distinct option identities on DIR-OPT-ON-TABLE.
+ *
+ * RealityFact schema (decision-context/types) has no durable option identity:
+ * `fact_id` is a record id (one option may have many facts), and `statement`
+ * paraphrases are not identity. `corrects_fact_ids` only links corrections of
+ * the same proposition — it does not mint independent option ids.
+ *
+ * Fail-closed: without a stable option-identity field, return 0 proven
+ * identities so callers keep the baseline option_count=2. Never treat distinct
+ * statements or bare fact_ids as distinct options; never use text similarity.
  */
-function distinctConfirmedOptionStatements(
-  dc: {
-    reality_facts?: ReadonlyArray<ComplexityFact>;
-  } | null | undefined,
-): Set<string> {
-  const out = new Set<string>();
-  for (const f of dc?.reality_facts ?? []) {
-    if (f.status !== "confirmed") continue;
-    if (!(f.related_dir_ids ?? []).includes("DIR-OPT-ON-TABLE")) continue;
-    if (!(f.fact_roles ?? []).includes("option")) continue;
-    const s = f.statement?.trim();
-    if (s) out.add(s);
-  }
-  return out;
+export function countProvenDistinctOptions(input: {
+  reality_facts?: ReadonlyArray<ComplexityFact>;
+} | null | undefined): number {
+  // Eligibility is enforced so Constraints / non-option / non-confirmed rows
+  // never participate — but eligibility alone is not identity.
+  const eligible = (input?.reality_facts ?? []).filter(isEligibleOptionFact);
+  if (eligible.length === 0) return 0;
+
+  // Schema gap: no durable option identity on RealityFact. Statement text and
+  // fact_id must not be treated as option identity; corrects_fact_ids only
+  // marks corrections, not independent options. Fail closed at 0 proven.
+  return 0;
 }
 
 /**
@@ -1359,10 +1377,12 @@ export function complexitySignalsFromDecisionMaterials(input: {
   page_07_emit?: boolean;
 }): DecisionIntakeComplexitySignals {
   const dc = input.dc;
-  const optionStatements = distinctConfirmedOptionStatements(dc);
+  // Baseline 2. Upgrade only on proven option identities — none available on
+  // current RealityFact schema (see countProvenDistinctOptions).
+  const proven = countProvenDistinctOptions(dc);
   let option_count = 2;
-  if (optionStatements.size >= 4) option_count = 4;
-  else if (optionStatements.size >= 3) option_count = 3;
+  if (proven >= 4) option_count = 4;
+  else if (proven >= 3) option_count = 3;
 
   const high_stakes =
     confirmedMaterialStatementsForDir(dc, "DIR-DEF-STAKES").length > 0;
