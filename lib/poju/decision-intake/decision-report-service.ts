@@ -116,6 +116,18 @@ import {
 /** Older than one invoke budget with no live lease → the worker died. */
 const STALE_NO_LEASE_MS = 6 * 60_000;
 
+/** @internal tests only — inject Delivery Authorization outcomes for Status. */
+let __statusDeliveryVerifyForTests:
+  | ((job: PojuXhighJob) => Promise<DeliveryCheck>)
+  | null = null;
+
+/** @internal tests only */
+export function __setStatusDeliveryVerifyForTests(
+  fn: ((job: PojuXhighJob) => Promise<DeliveryCheck>) | null,
+): void {
+  __statusDeliveryVerifyForTests = fn;
+}
+
 export type ServiceFailure = {
   ok: false;
   status: number;
@@ -916,10 +928,17 @@ export async function buildDecisionReportStatus(input: {
     }
   }
 
-  // Unit D R2: any job that carries batch2_identity_binding (valid or corrupted)
+  // Unit D R2/R3: any job that carries batch2_identity_binding (valid or corrupted)
   // uses the Batch2-authoritative Status branch. Never fall back to legacy DI2
   // lease stale-fail or decisionReportWorkerState for these jobs.
+  // R3: Delivery Authorization must pass before exposing Batch2 page outcomes.
   if (di2JobHasBatch2IdentityBindingField(job)) {
+    const delivery = await (__statusDeliveryVerifyForTests
+      ? __statusDeliveryVerifyForTests(job)
+      : verifyDecisionReportDelivery(job));
+    if (!delivery.ok) {
+      return deliveryDeniedPayload(input, jobBinding, delivery);
+    }
     return buildBatch2AuthoritativeDecisionReportStatus(job);
   }
 

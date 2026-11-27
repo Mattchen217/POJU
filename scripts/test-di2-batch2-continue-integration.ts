@@ -31,9 +31,20 @@ import {
   continueDi2Batch2Production,
   validateDi2Batch2ContinueIdentity,
 } from "../lib/poju/decision-intake/decision-report-batch2-continue";
-import { buildDecisionReportStatus } from "../lib/poju/decision-intake/decision-report-service";
+import {
+  __setStatusDeliveryVerifyForTests,
+  buildDecisionReportStatus,
+} from "../lib/poju/decision-intake/decision-report-service";
+import {
+  di2ChargeAuthorizationKey,
+  di2DeliveryAuthorizationKey,
+  grantDecisionReportDelivery,
+  revokeDecisionReportDelivery,
+  type ChargeAuthorization,
+} from "../lib/poju/decision-intake/decision-report-charge";
 import { kv } from "../lib/kv/client";
 import { xhighJobKey } from "../lib/poju/xhigh-job-types";
+import type { PojuXhighJob } from "../lib/poju/xhigh-job-types";
 import {
   loadJob,
 } from "../lib/llm/pro/delivery/decision-report-v2/batch2/job-store";
@@ -336,6 +347,28 @@ function installAuthoritySnapshot(ctx: {
   });
 }
 
+async function grantDeliveryForTests(job: PojuXhighJob): Promise<void> {
+  const charge_ref = `charge_${job.session_id}`;
+  const now = Date.now();
+  const auth: ChargeAuthorization = {
+    version: 1,
+    session_id: job.session_id,
+    state: "authorized",
+    charge_ref,
+    joint_pass_ref: null,
+    question: "unit-d-r3",
+    attempt_id: `att_${job.job_id}`,
+    claimed_at: now,
+    attempts: 1,
+    reason: null,
+    updated_at: now,
+    authorized_at: now,
+  };
+  await kv.set(di2ChargeAuthorizationKey(job.session_id), auth, { ex: 60 * 60 });
+  const granted = await grantDecisionReportDelivery(job, auth);
+  assert.equal(granted.ok, true, JSON.stringify(granted));
+}
+
 async function startThen(ctx: {
   job_id: string;
   session_id: string;
@@ -352,10 +385,89 @@ async function startThen(ctx: {
       lock_owner: owner,
     });
     assert.equal(res.ok, true);
+    const job = await getXhighJob(ctx.job_id);
+    assert.ok(job);
+    await grantDeliveryForTests(job!);
     return res;
   } finally {
     await releaseOwnedReportLock(owner).catch(() => undefined);
   }
+}
+
+async function commitPage01(ctx: {
+  report_job_id: string;
+  generation_id: string;
+  generation_epoch: number;
+  body?: string;
+}): Promise<{ output_fingerprint: string; out: { page: string; body: string } }> {
+  const page_id = "01" as const;
+  const def = reportPageDefinition(page_id);
+  const input_fingerprint = `fp_r3_${ctx.body ?? "page01"}`;
+  await ensurePageFence({
+    report_id: ctx.report_job_id,
+    generation_id: ctx.generation_id,
+    generation_epoch: ctx.generation_epoch,
+    page_id,
+  });
+  const claimed = await fenceAndClaimPageTask({
+    report_id: ctx.report_job_id,
+    generation_id: ctx.generation_id,
+    generation_epoch: ctx.generation_epoch,
+    page_id,
+    task_type: "generate",
+    input_fingerprint,
+    upstream_output_fingerprints: {},
+    worker_id: "w_unit_d_r3",
+  });
+  assert.equal(claimed.ok, true, JSON.stringify(claimed));
+  if (!claimed.ok) throw new Error("claim failed");
+  const out = { page: "01", body: ctx.body ?? "r3_page01" };
+  const output_fingerprint = hashCanonicalPayload(out);
+  const committed = await commitPageResult({
+    report_id: ctx.report_job_id,
+    generation_id: ctx.generation_id,
+    generation_epoch: ctx.generation_epoch,
+    page_id,
+    attempt_id: claimed.value.attempt_id,
+    task_key: claimed.value.task_key,
+    output: out,
+    output_fingerprint,
+    state_patch: { outcome: "completed", input_fingerprint },
+    provenance: {
+      report_id: ctx.report_job_id,
+      generation_id: ctx.generation_id,
+      generation_epoch: ctx.generation_epoch,
+      page_id,
+      input_fingerprint,
+      upstream_output_fingerprints: {},
+      page_contract_version: def.production_version,
+      prompt_version: def.prompt_version,
+      validator_version: def.validator_version,
+      output_fingerprint,
+      attempt_id: claimed.value.attempt_id,
+      task_key: claimed.value.task_key,
+      validity_rev: claimed.value.validity_rev,
+    },
+  });
+  assert.equal(committed.ok, true, JSON.stringify(committed));
+  return { output_fingerprint, out };
+}
+
+async function patchBatch2MetaEpoch(
+  report_id: string,
+  generation_id: string,
+  epoch: unknown,
+): Promise<void> {
+  const key = `report-batch2:${report_id.trim()}:${generation_id.trim()}:meta`;
+  const meta = await kv.get<Record<string, unknown>>(key);
+  assert.ok(meta);
+  const next = { ...meta };
+  if (epoch === undefined) {
+    delete next.generation_epoch;
+  } else {
+    next.generation_epoch = epoch as never;
+  }
+  await kv.set(key, next, { ex: 60 * 60 });
 }
 
 async function continueWithLock(ctx: {
@@ -374,11 +486,12 @@ async function continueWithLock(ctx: {
 }
 
 async function main() {
-  console.log("Unit D / R2 — DI2 Continue / Recovery + Batch2-authoritative Status");
+  console.log("Unit D / R3 — Continue/Recovery + Batch2 Status auth/epoch/pages");
   installEventSender();
   __resetDi2Batch2ContinueSideEffectCountsForTests();
   __setDi2Batch2ContinueLeaseProbeForTests(null);
   __setDi2Batch2ContinueAuthoritySnapshotForTests(null);
+  __setStatusDeliveryVerifyForTests(null);
   await resetBatch3KeysForTests();
   await resetBatch2JobStoreForTests();
 
@@ -762,6 +875,7 @@ async function main() {
     assert.equal(status.batch2_production!.source, "batch2");
     assert.equal(status.batch2_production!.generation_id, started.binding.generation_id);
     assert.equal(status.batch2_production!.generation_status, "active");
+    assert.equal(status.batch2_production!.pages_available, true);
     assert.ok(
       status.current_stage === "batch2_producing" ||
         status.current_stage === "batch2_pending" ||
@@ -786,60 +900,12 @@ async function main() {
     assert.equal(started.ok, true);
     if (!started.ok) return;
     const gid = started.binding.generation_id;
-    const gen = await readGeneration(ctx.report_job_id, gid);
-    assert.equal(gen.ok && Boolean(gen.value), true);
-    if (!gen.ok || !gen.value) return;
-    const generation_epoch = gen.value.generation_epoch;
-    const page_id = "01" as const;
-    const def = reportPageDefinition(page_id);
-    const input_fingerprint = "fp_r2_status_page01";
-    await ensurePageFence({
-      report_id: ctx.report_job_id,
+    const committed = await commitPage01({
+      report_job_id: ctx.report_job_id,
       generation_id: gid,
-      generation_epoch,
-      page_id,
+      generation_epoch: started.binding.batch3_generation_epoch,
+      body: "r2_status_partial",
     });
-    const claimed = await fenceAndClaimPageTask({
-      report_id: ctx.report_job_id,
-      generation_id: gid,
-      generation_epoch,
-      page_id,
-      task_type: "generate",
-      input_fingerprint,
-      upstream_output_fingerprints: {},
-      worker_id: "w_unit_d_r2_status",
-    });
-    assert.equal(claimed.ok, true, JSON.stringify(claimed));
-    if (!claimed.ok) return;
-    const out = { page: "01", body: "r2_status_partial" };
-    const output_fingerprint = hashCanonicalPayload(out);
-    const committed = await commitPageResult({
-      report_id: ctx.report_job_id,
-      generation_id: gid,
-      generation_epoch,
-      page_id,
-      attempt_id: claimed.value.attempt_id,
-      task_key: claimed.value.task_key,
-      output: out,
-      output_fingerprint,
-      state_patch: { outcome: "completed", input_fingerprint },
-      provenance: {
-        report_id: ctx.report_job_id,
-        generation_id: gid,
-        generation_epoch,
-        page_id,
-        input_fingerprint,
-        upstream_output_fingerprints: {},
-        page_contract_version: def.production_version,
-        prompt_version: def.prompt_version,
-        validator_version: def.validator_version,
-        output_fingerprint,
-        attempt_id: claimed.value.attempt_id,
-        task_key: claimed.value.task_key,
-        validity_rev: claimed.value.validity_rev,
-      },
-    });
-    assert.equal(committed.ok, true, JSON.stringify(committed));
 
     sentEvents = [];
     const status = await buildDecisionReportStatus({
@@ -849,9 +915,10 @@ async function main() {
     assert.equal(status.ok, true);
     assert.equal(status.status, "running");
     assert.ok(status.batch2_production);
+    assert.equal(status.batch2_production!.pages_available, true);
     const page01 = status.batch2_production!.page_outcomes.find((p) => p.page_id === "01");
     assert.equal(page01?.outcome, "completed");
-    assert.equal(page01?.output_fingerprint, output_fingerprint);
+    assert.equal(page01?.output_fingerprint, committed.output_fingerprint);
     assert.equal(
       status.pages.find((p) => p.page_id === "01")?.status,
       "completed",
@@ -901,6 +968,7 @@ async function main() {
     assert.equal(status.result, null);
     assert.ok(status.batch2_production);
     assert.equal(status.batch2_production!.generation_status, "completed");
+    assert.equal(status.batch2_production!.pages_available, true);
     assert.equal(sentEvents.length, 0);
     const di2 = await getXhighJob(ctx.job_id);
     assert.ok(di2);
@@ -1029,6 +1097,328 @@ async function main() {
     assert.equal(again!.failure_reason, "interrupted");
   });
 
+  await check("R3: Status auth granted → Batch2-authoritative Status", async () => {
+    const ctx = await createDi2Job();
+    const started = await startThen(ctx);
+    assert.equal(started.ok, true);
+    if (!started.ok) return;
+    const status = await buildDecisionReportStatus({
+      job_id: ctx.job_id,
+      session_id: ctx.session_id,
+    });
+    assert.equal(status.ok, true);
+    assert.equal(status.status, "running");
+    assert.ok(status.batch2_production);
+    assert.equal(status.batch2_production!.pages_available, true);
+    assert.notEqual(status.failure_reason, "delivery_not_authorized");
+  });
+
+  await check("R3: Status auth revoked → deliveryDenied, no Batch2 pages", async () => {
+    installEventSender();
+    const ctx = await createDi2Job();
+    const started = await startThen(ctx);
+    assert.equal(started.ok, true);
+    if (!started.ok) return;
+    const job = await getXhighJob(ctx.job_id);
+    assert.ok(job);
+    await revokeDecisionReportDelivery({
+      job_id: ctx.job_id,
+      session_id: ctx.session_id,
+      execution_generation: job!.execution_generation ?? null,
+      charge_ref: `charge_${ctx.session_id}`,
+      reason: "unit_d_r3_test_revoke",
+    });
+    sentEvents = [];
+    const status = await buildDecisionReportStatus({
+      job_id: ctx.job_id,
+      session_id: ctx.session_id,
+    });
+    assert.equal(status.ok, false);
+    assert.equal(status.status, "failed");
+    assert.equal(status.failure_reason, "charge_refused");
+    assert.equal(status.pages.length, 0);
+    assert.equal(status.batch2_production ?? null, null);
+    assert.equal(sentEvents.length, 0);
+  });
+
+  await check("R3: Status auth unreadable → delivery_unconfirmed, no Batch2 pages", async () => {
+    installEventSender();
+    const ctx = await createDi2Job();
+    const started = await startThen(ctx);
+    assert.equal(started.ok, true);
+    if (!started.ok) return;
+    __setStatusDeliveryVerifyForTests(async () => ({
+      ok: false,
+      reason: "delivery_unreadable",
+      unreadable: true,
+      revoked: false,
+    }));
+    try {
+      sentEvents = [];
+      const status = await buildDecisionReportStatus({
+        job_id: ctx.job_id,
+        session_id: ctx.session_id,
+      });
+      assert.equal(status.ok, false);
+      assert.equal(status.failure_reason, "delivery_unconfirmed");
+      assert.equal(status.retryable, true);
+      assert.equal(status.pages.length, 0);
+      assert.equal(status.batch2_production ?? null, null);
+      assert.equal(sentEvents.length, 0);
+    } finally {
+      __setStatusDeliveryVerifyForTests(null);
+    }
+  });
+
+  await check("R3: Status auth missing → delivery_not_authorized, no Batch2 pages", async () => {
+    installEventSender();
+    const ctx = await createDi2Job();
+    const started = await startThen(ctx);
+    assert.equal(started.ok, true);
+    if (!started.ok) return;
+    // Drop delivery + charge records so verify fails closed without Batch2 exposure.
+    await kv.del(di2DeliveryAuthorizationKey(ctx.job_id));
+    await kv.del(di2ChargeAuthorizationKey(ctx.session_id));
+    sentEvents = [];
+    const status = await buildDecisionReportStatus({
+      job_id: ctx.job_id,
+      session_id: ctx.session_id,
+    });
+    assert.equal(status.ok, false);
+    assert.equal(status.failure_reason, "delivery_not_authorized");
+    assert.equal(status.pages.length, 0);
+    assert.equal(status.batch2_production ?? null, null);
+    assert.equal(sentEvents.length, 0);
+  });
+
+  await check("R3: Status Batch2 epoch correct / missing / string / NaN / mismatch", async () => {
+    installEventSender();
+    const ctx = await createDi2Job();
+    const started = await startThen(ctx);
+    assert.equal(started.ok, true);
+    if (!started.ok) return;
+    const rid = started.binding.report_id;
+    const gid = started.binding.generation_id;
+    const epoch = started.binding.batch3_generation_epoch;
+
+    sentEvents = [];
+    const okStatus = await buildDecisionReportStatus({
+      job_id: ctx.job_id,
+      session_id: ctx.session_id,
+    });
+    assert.equal(okStatus.ok, true);
+    assert.equal(okStatus.batch2_production?.generation_epoch, epoch);
+    assert.equal(sentEvents.length, 0);
+
+    const cases: Array<{ label: string; value: unknown }> = [
+      { label: "missing", value: undefined },
+      { label: "string", value: String(epoch) },
+      { label: "NaN", value: Number.NaN },
+      { label: "Infinity", value: Number.POSITIVE_INFINITY },
+      { label: "mismatch", value: epoch + 99 },
+    ];
+    for (const c of cases) {
+      await patchBatch2MetaEpoch(rid, gid, c.value);
+      sentEvents = [];
+      __resetDi2Batch2ContinueSideEffectCountsForTests();
+      const status = await buildDecisionReportStatus({
+        job_id: ctx.job_id,
+        session_id: ctx.session_id,
+      });
+      assert.equal(status.ok, false, c.label);
+      assert.equal(status.failure_reason, "batch2_identity_error", c.label);
+      assert.equal(sentEvents.length, 0, c.label);
+      assert.equal(__di2Batch2ContinueSideEffectCountsForTests.create_job, 0, c.label);
+      assert.equal(__di2Batch2ContinueSideEffectCountsForTests.allocate_generation, 0, c.label);
+      const di2 = await getXhighJob(ctx.job_id);
+      assert.notEqual(di2!.failure_reason, "interrupted", c.label);
+    }
+
+    // Restore valid epoch for cleanup safety.
+    await patchBatch2MetaEpoch(rid, gid, epoch);
+  });
+
+  await check("R3: Status Generation completed + pages → real page records", async () => {
+    installEventSender();
+    const ctx = await createDi2Job();
+    const started = await startThen(ctx);
+    assert.equal(started.ok, true);
+    if (!started.ok) return;
+    const b = started.binding;
+    const committed = await commitPage01({
+      report_job_id: ctx.report_job_id,
+      generation_id: b.generation_id,
+      generation_epoch: b.batch3_generation_epoch,
+      body: "r3_completed_pages",
+    });
+    assert.equal(
+      (
+        await transitionGenerationStatus({
+          report_id: b.report_id,
+          generation_id: b.generation_id,
+          generation_epoch: b.batch3_generation_epoch,
+          to: "finalizing",
+        })
+      ).ok,
+      true,
+    );
+    assert.equal(
+      (
+        await transitionGenerationStatus({
+          report_id: b.report_id,
+          generation_id: b.generation_id,
+          generation_epoch: b.batch3_generation_epoch,
+          to: "completed",
+        })
+      ).ok,
+      true,
+    );
+    sentEvents = [];
+    const status = await buildDecisionReportStatus({
+      job_id: ctx.job_id,
+      session_id: ctx.session_id,
+    });
+    assert.equal(status.ok, true);
+    assert.equal(status.current_stage, "ready_for_delivery");
+    assert.ok(status.batch2_production);
+    assert.equal(status.batch2_production!.pages_available, true);
+    assert.equal(
+      status.batch2_production!.page_outcomes.find((p) => p.page_id === "01")?.outcome,
+      "completed",
+    );
+    assert.equal(
+      status.batch2_production!.page_outcomes.find((p) => p.page_id === "01")
+        ?.output_fingerprint,
+      committed.output_fingerprint,
+    );
+    assert.equal(status.pages.find((p) => p.page_id === "01")?.status, "completed");
+    assert.equal(sentEvents.length, 0);
+  });
+
+  await check("R3: Status Generation finalizing + partial pages → real page records", async () => {
+    const ctx = await createDi2Job();
+    const started = await startThen(ctx);
+    assert.equal(started.ok, true);
+    if (!started.ok) return;
+    const b = started.binding;
+    await commitPage01({
+      report_job_id: ctx.report_job_id,
+      generation_id: b.generation_id,
+      generation_epoch: b.batch3_generation_epoch,
+      body: "r3_finalizing_partial",
+    });
+    assert.equal(
+      (
+        await transitionGenerationStatus({
+          report_id: b.report_id,
+          generation_id: b.generation_id,
+          generation_epoch: b.batch3_generation_epoch,
+          to: "finalizing",
+        })
+      ).ok,
+      true,
+    );
+    const status = await buildDecisionReportStatus({
+      job_id: ctx.job_id,
+      session_id: ctx.session_id,
+    });
+    assert.equal(status.ok, true);
+    assert.equal(status.current_stage, "batch2_finalizing");
+    assert.equal(status.batch2_production!.pages_available, true);
+    assert.equal(
+      status.batch2_production!.page_outcomes.find((p) => p.page_id === "01")?.outcome,
+      "completed",
+    );
+    assert.notEqual(
+      status.batch2_production!.page_outcomes.find((p) => p.page_id === "02")?.outcome,
+      "completed",
+    );
+  });
+
+  await check("R3: Status Generation superseded + readable Job → terminal + pages", async () => {
+    const ctx = await createDi2Job();
+    const started = await startThen(ctx);
+    assert.equal(started.ok, true);
+    if (!started.ok) return;
+    const b = started.binding;
+    await commitPage01({
+      report_job_id: ctx.report_job_id,
+      generation_id: b.generation_id,
+      generation_epoch: b.batch3_generation_epoch,
+      body: "r3_superseded_pages",
+    });
+    assert.equal(
+      (
+        await transitionGenerationStatus({
+          report_id: b.report_id,
+          generation_id: b.generation_id,
+          generation_epoch: b.batch3_generation_epoch,
+          to: "superseded",
+        })
+      ).ok,
+      true,
+    );
+    const status = await buildDecisionReportStatus({
+      job_id: ctx.job_id,
+      session_id: ctx.session_id,
+    });
+    assert.equal(status.ok, false);
+    assert.equal(status.failure_reason, "batch2_generation_terminal");
+    assert.equal(status.current_stage, "batch2_superseded");
+    assert.equal(status.batch2_production!.pages_available, true);
+    assert.equal(
+      status.batch2_production!.page_outcomes.find((p) => p.page_id === "01")?.outcome,
+      "completed",
+    );
+  });
+
+  await check("R3: Status Generation completed + Job missing → ready_for_delivery, pages unavailable", async () => {
+    installEventSender();
+    __resetDi2Batch2ContinueSideEffectCountsForTests();
+    const ctx = await createDi2Job();
+    const started = await startThen(ctx);
+    assert.equal(started.ok, true);
+    if (!started.ok) return;
+    const b = started.binding;
+    assert.equal(
+      (
+        await transitionGenerationStatus({
+          report_id: b.report_id,
+          generation_id: b.generation_id,
+          generation_epoch: b.batch3_generation_epoch,
+          to: "finalizing",
+        })
+      ).ok,
+      true,
+    );
+    assert.equal(
+      (
+        await transitionGenerationStatus({
+          report_id: b.report_id,
+          generation_id: b.generation_id,
+          generation_epoch: b.batch3_generation_epoch,
+          to: "completed",
+        })
+      ).ok,
+      true,
+    );
+    await resetBatch2JobStoreForTests();
+    sentEvents = [];
+    const status = await buildDecisionReportStatus({
+      job_id: ctx.job_id,
+      session_id: ctx.session_id,
+    });
+    assert.equal(status.ok, true);
+    assert.equal(status.current_stage, "ready_for_delivery");
+    assert.ok(status.batch2_production);
+    assert.equal(status.batch2_production!.generation_status, "completed");
+    assert.equal(status.batch2_production!.pages_available, false);
+    assert.equal(status.batch2_production!.page_outcomes.length, 0);
+    assert.equal(status.pages.length, 0);
+    assert.equal(__di2Batch2ContinueSideEffectCountsForTests.create_job, 0);
+    assert.equal(sentEvents.length, 0);
+  });
+
   await check("R1: recomputed report_job_id mismatch → no RECOVER", async () => {
     installEventSender();
     __resetDi2Batch2ContinueSideEffectCountsForTests();
@@ -1138,6 +1528,7 @@ async function main() {
 
   __setDi2Batch2ContinueLeaseProbeForTests(null);
   __setDi2Batch2ContinueAuthoritySnapshotForTests(null);
+  __setStatusDeliveryVerifyForTests(null);
   await resetBatch3KeysForTests();
   await resetBatch2JobStoreForTests();
   setReportBatch2EventSenderForTests(null);

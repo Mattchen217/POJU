@@ -318,6 +318,12 @@ export type DecisionReportBatch2ProductionSnapshot = {
   generation_epoch: number;
   generation_status: string;
   batch2_job_status: string | null;
+  /**
+   * R3: false when Batch2 Job is missing/unreadable under a terminal Generation.
+   * Empty `page_outcomes` with `pages_available: true` means truly no recorded outcomes;
+   * empty with `pages_available: false` means pages could not be read (do not treat as empty).
+   */
+  pages_available: boolean;
   page_outcomes: Array<{
     page_id: string;
     outcome: string;
