@@ -47,7 +47,13 @@ import { xhighJobKey } from "../lib/poju/xhigh-job-types";
 import type { PojuXhighJob } from "../lib/poju/xhigh-job-types";
 import {
   loadJob,
+  pageBlobKey,
 } from "../lib/llm/pro/delivery/decision-report-v2/batch2/job-store";
+import {
+  __di2Batch2StatusSideEffectCountsForTests,
+  __resetDi2Batch2StatusSideEffectCountsForTests,
+  __setDi2Batch2StatusActivePageGateProbeForTests,
+} from "../lib/poju/decision-intake/decision-report-batch2-status";
 import {
   di2Batch2GenerationId,
   evaluateExistingDi2Batch2Binding,
@@ -490,12 +496,14 @@ async function continueWithLock(ctx: {
 }
 
 async function main() {
-  console.log("Unit D / R4 — Continue/Recovery + Batch2 Status Authority pages");
+  console.log("Unit D / R5 — Continue/Recovery + Batch2 Status single-snapshot Authority");
   installEventSender();
   __resetDi2Batch2ContinueSideEffectCountsForTests();
   __setDi2Batch2ContinueLeaseProbeForTests(null);
   __setDi2Batch2ContinueAuthoritySnapshotForTests(null);
   __setStatusDeliveryVerifyForTests(null);
+  __resetDi2Batch2StatusSideEffectCountsForTests();
+  __setDi2Batch2StatusActivePageGateProbeForTests(null);
   await resetBatch3KeysForTests();
   await resetBatch2JobStoreForTests();
 
@@ -1710,6 +1718,219 @@ async function main() {
     assert.equal(sentEvents.length, 0);
   });
 
+  await check("R5: Active single snapshot — one raw load; KV mutate mid-gate does not split snapshot", async () => {
+    installEventSender();
+    __resetDi2Batch2StatusSideEffectCountsForTests();
+    const ctx = await createDi2Job();
+    const started = await startThen(ctx);
+    assert.equal(started.ok, true);
+    if (!started.ok) return;
+    const b = started.binding;
+    const committed = await commitPage01({
+      report_job_id: ctx.report_job_id,
+      generation_id: b.generation_id,
+      generation_epoch: b.batch3_generation_epoch,
+      body: "r5_single_snapshot",
+    });
+
+    let mutated = false;
+    __setDi2Batch2StatusActivePageGateProbeForTests(
+      async ({ page_id, verdict, report_id, generation_id }) => {
+        if (page_id !== "01" || verdict !== "valid" || mutated) return;
+        mutated = true;
+        // Mutate durable KV after Authority on the in-memory snapshot succeeded.
+        // A second independent re-read would see pending; single-snapshot must not.
+        const key = pageBlobKey(report_id, generation_id, "01");
+        const cur = await kv.get<{
+          rev: number;
+          state: { page_id: string; outcome: string; output_fingerprint?: string };
+          output?: unknown;
+        }>(key);
+        assert.ok(cur);
+        await kv.set(
+          key,
+          {
+            ...cur!,
+            state: {
+              page_id: "01",
+              outcome: "pending",
+              output_fingerprint: undefined,
+            },
+            output: undefined,
+          },
+          { ex: 60 * 60 },
+        );
+      },
+    );
+
+    try {
+      sentEvents = [];
+      __resetDi2Batch2StatusSideEffectCountsForTests();
+      const status = await buildDecisionReportStatus({
+        job_id: ctx.job_id,
+        session_id: ctx.session_id,
+      });
+      assert.equal(status.ok, true);
+      assert.equal(__di2Batch2StatusSideEffectCountsForTests.active_raw_job_loads, 1);
+      assert.equal(__di2Batch2StatusSideEffectCountsForTests.historical_raw_job_loads, 0);
+      assert.equal(mutated, true);
+      const page01 = status.batch2_production!.page_outcomes.find((p) => p.page_id === "01");
+      assert.equal(page01?.outcome, "completed");
+      assert.equal(page01?.authority_verdict, "valid");
+      assert.equal(page01?.output_fingerprint, committed.output_fingerprint);
+      assert.equal(status.pages.find((p) => p.page_id === "01")?.status, "completed");
+      assert.equal(sentEvents.length, 0);
+    } finally {
+      __setDi2Batch2StatusActivePageGateProbeForTests(null);
+    }
+  });
+
+  await check("R5: Active + valid / stale / missing still match R4 semantics", async () => {
+    // Valid completed (single snapshot).
+    {
+      __resetDi2Batch2StatusSideEffectCountsForTests();
+      const ctx = await createDi2Job();
+      const started = await startThen(ctx);
+      assert.equal(started.ok, true);
+      if (!started.ok) return;
+      await commitPage01({
+        report_job_id: ctx.report_job_id,
+        generation_id: started.binding.generation_id,
+        generation_epoch: started.binding.batch3_generation_epoch,
+        body: "r5_valid",
+      });
+      const status = await buildDecisionReportStatus({
+        job_id: ctx.job_id,
+        session_id: ctx.session_id,
+      });
+      assert.equal(status.ok, true);
+      assert.equal(__di2Batch2StatusSideEffectCountsForTests.active_raw_job_loads, 1);
+      assert.equal(
+        status.batch2_production!.page_outcomes.find((p) => p.page_id === "01")?.outcome,
+        "completed",
+      );
+      assert.equal(
+        status.batch2_production!.page_outcomes.find((p) => p.page_id === "01")
+          ?.authority_verdict,
+        "valid",
+      );
+    }
+    // Stale fence → pending, not completed.
+    {
+      const ctx = await createDi2Job();
+      const started = await startThen(ctx);
+      assert.equal(started.ok, true);
+      if (!started.ok) return;
+      const b = started.binding;
+      await commitPage01({
+        report_job_id: ctx.report_job_id,
+        generation_id: b.generation_id,
+        generation_epoch: b.batch3_generation_epoch,
+        body: "r5_stale",
+      });
+      assert.equal(
+        (
+          await invalidatePageAuthority({
+            report_id: b.report_id,
+            generation_id: b.generation_id,
+            generation_epoch: b.batch3_generation_epoch,
+            page_id: "01",
+            reason: "unit_d_r5_stale",
+          })
+        ).ok,
+        true,
+      );
+      const status = await buildDecisionReportStatus({
+        job_id: ctx.job_id,
+        session_id: ctx.session_id,
+      });
+      assert.equal(status.ok, true);
+      assert.notEqual(
+        status.batch2_production!.page_outcomes.find((p) => p.page_id === "01")?.outcome,
+        "completed",
+      );
+    }
+    // Authority output missing → fail closed.
+    {
+      const ctx = await createDi2Job();
+      const started = await startThen(ctx);
+      assert.equal(started.ok, true);
+      if (!started.ok) return;
+      const b = started.binding;
+      await commitPage01({
+        report_job_id: ctx.report_job_id,
+        generation_id: b.generation_id,
+        generation_epoch: b.batch3_generation_epoch,
+        body: "r5_auth_missing",
+      });
+      await kv.del(authOutputKey(b.report_id, b.generation_id, "01"));
+      const status = await buildDecisionReportStatus({
+        job_id: ctx.job_id,
+        session_id: ctx.session_id,
+      });
+      assert.equal(status.ok, false);
+      assert.equal(status.failure_reason, "batch2_job_unreadable");
+      assert.equal(status.batch2_production ?? null, null);
+    }
+  });
+
+  await check("R5: Terminal historical Authority behavior unchanged", async () => {
+    installEventSender();
+    __resetDi2Batch2StatusSideEffectCountsForTests();
+    const ctx = await createDi2Job();
+    const started = await startThen(ctx);
+    assert.equal(started.ok, true);
+    if (!started.ok) return;
+    const b = started.binding;
+    const committed = await commitPage01({
+      report_job_id: ctx.report_job_id,
+      generation_id: b.generation_id,
+      generation_epoch: b.batch3_generation_epoch,
+      body: "r5_terminal_hist",
+    });
+    assert.equal(
+      (
+        await transitionGenerationStatus({
+          report_id: b.report_id,
+          generation_id: b.generation_id,
+          generation_epoch: b.batch3_generation_epoch,
+          to: "finalizing",
+        })
+      ).ok,
+      true,
+    );
+    assert.equal(
+      (
+        await transitionGenerationStatus({
+          report_id: b.report_id,
+          generation_id: b.generation_id,
+          generation_epoch: b.batch3_generation_epoch,
+          to: "completed",
+        })
+      ).ok,
+      true,
+    );
+    sentEvents = [];
+    const status = await buildDecisionReportStatus({
+      job_id: ctx.job_id,
+      session_id: ctx.session_id,
+    });
+    assert.equal(status.ok, true);
+    assert.equal(status.current_stage, "ready_for_delivery");
+    assert.equal(__di2Batch2StatusSideEffectCountsForTests.active_raw_job_loads, 0);
+    assert.equal(__di2Batch2StatusSideEffectCountsForTests.historical_raw_job_loads, 1);
+    assert.equal(
+      status.batch2_production!.page_outcomes.find((p) => p.page_id === "01")?.outcome,
+      "completed",
+    );
+    assert.equal(
+      status.batch2_production!.page_outcomes.find((p) => p.page_id === "01")
+        ?.output_fingerprint,
+      committed.output_fingerprint,
+    );
+    assert.equal(sentEvents.length, 0);
+  });
+
   await check("R1: recomputed report_job_id mismatch → no RECOVER", async () => {
     installEventSender();
     __resetDi2Batch2ContinueSideEffectCountsForTests();
@@ -1820,6 +2041,8 @@ async function main() {
   __setDi2Batch2ContinueLeaseProbeForTests(null);
   __setDi2Batch2ContinueAuthoritySnapshotForTests(null);
   __setStatusDeliveryVerifyForTests(null);
+  __setDi2Batch2StatusActivePageGateProbeForTests(null);
+  __resetDi2Batch2StatusSideEffectCountsForTests();
   await resetBatch3KeysForTests();
   await resetBatch2JobStoreForTests();
   setReportBatch2EventSenderForTests(null);
