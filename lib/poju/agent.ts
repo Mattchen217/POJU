@@ -1544,7 +1544,9 @@ async function runAgentTurn(input: HandleInput, internalTurn: InternalTurn): Pro
     if (modelReply) {
       finalContent = modelReply;
       if (m1HasAuthorizedQuestion && m1CollectingTurn.plan) {
-        const { assertQuestionMatchesPlan } = await import("@/lib/poju/decision-intake");
+        const { assertQuestionMatchesPlan } = await import(
+          "@/lib/poju/decision-intake/question-generation"
+        );
         // Ensure authorized question text is present in the model reply (or equals it).
         const matched = assertQuestionMatchesPlan(
           m1CollectingTurn.authorized_question!,
@@ -1559,7 +1561,9 @@ async function runAgentTurn(input: HandleInput, internalTurn: InternalTurn): Pro
       }
     } else if (m1HasAuthorizedQuestion && m1CollectingTurn.plan) {
       // Clarification / intake-control turns may still use authorized plan text.
-      const { assertQuestionMatchesPlan } = await import("@/lib/poju/decision-intake");
+      const { assertQuestionMatchesPlan } = await import(
+        "@/lib/poju/decision-intake/question-generation"
+      );
       const matched = assertQuestionMatchesPlan(
         m1CollectingTurn.authorized_question!,
         m1CollectingTurn.plan,
@@ -1668,10 +1672,19 @@ async function runAgentTurn(input: HandleInput, internalTurn: InternalTurn): Pro
       const {
         guardAndAttachAuthorizedQuestion,
         releaseAuthorizedQuestionClaim,
-        classifyCollectionMode,
+      } = await import("@/lib/poju/decision-intake/adaptive-turn");
+      const { classifyCollectionMode } = await import(
+        "@/lib/poju/decision-intake/budget-ledger"
+      );
+      // Node-only CAS (async_hooks / crypto). Keep out of client webpack graphs
+      // the same way assistant-history attestation uses webpackIgnore.
+      const {
         reserveClarificationClaimCas,
         releaseClarificationClaimCas,
-      } = await import("@/lib/poju/decision-intake");
+      } = await import(
+        /* webpackIgnore: true */
+        "@/lib/poju/decision-intake/clarification-claim-cas"
+      );
       const plan = m1CollectingTurn.plan;
       let sessionForGuard = sessionOut;
       let clarificationReservation: { plan_id: string; claimed_at: string } | null =
@@ -2231,14 +2244,23 @@ async function runAgentTurn(input: HandleInput, internalTurn: InternalTurn): Pro
   // M1 — Plan controls the actual sent question (post-LLM enforce / attach).
   // DC + Understanding + Plan already ran BEFORE the LLM call.
   if (m1CollectingTurn?.plan && m1CollectingTurn.authorized_question) {
+    const { assertQuestionMatchesPlan } = await import(
+      "@/lib/poju/decision-intake/question-generation"
+    );
     const {
-      assertQuestionMatchesPlan,
       guardAndAttachAuthorizedQuestion,
       releaseAuthorizedQuestionClaim,
-      classifyCollectionMode,
+    } = await import("@/lib/poju/decision-intake/adaptive-turn");
+    const { classifyCollectionMode } = await import(
+      "@/lib/poju/decision-intake/budget-ledger"
+    );
+    const {
       reserveClarificationClaimCas,
       releaseClarificationClaimCas,
-    } = await import("@/lib/poju/decision-intake");
+    } = await import(
+      /* webpackIgnore: true */
+      "@/lib/poju/decision-intake/clarification-claim-cas"
+    );
     const matched = assertQuestionMatchesPlan(finalContent, m1CollectingTurn.plan);
     finalContent = matched.text;
     const lastUser = [...messagesWithUser]
