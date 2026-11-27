@@ -1,10 +1,11 @@
 /**
- * Unit C / R2 — DI2 Start → Batch2 + Session Lock mutual exclusion.
+ * Unit C / R2+R3 — DI2 Start → Batch2 + Session Lock lease closure.
  *
  *   pnpm exec tsx scripts/test-di2-batch2-start-integration.ts
  *
  * Covers startDi2Batch2Production under DI2 Report Session Lock, ZFP trust,
- * fence revocation, and concurrent Regenerate race windows.
+ * fence revocation, concurrent Regenerate windows, and owner-checked lease
+ * renewal across idle-timeout boundaries (controllable idle ms).
  */
 
 process.env.REPORT_BATCH2_ALLOW_MEMORY_STORE = "1";
@@ -33,12 +34,17 @@ import {
   type Di2Batch2StartSideEffectGate,
 } from "../lib/poju/decision-intake/decision-report-batch2-start";
 import {
+  __setReportLockNowForTests,
+  __setReportStartLockIdleMsForTests,
+  __setReportStartLockRenewEveryMsForTests,
+  isReportStartLockIdle,
   newReportLockOwner,
   readReportSessionLock,
   releaseOwnedReportLock,
   takeOverReportLock,
   tryCreateReportLock,
   updateOwnedReportLock,
+  withOwnedReportLockLease,
   type ReportLockOwner,
 } from "../lib/poju/decision-intake/decision-report-lock";
 import {
@@ -349,11 +355,14 @@ async function revokeAtGate(
 }
 
 async function main() {
-  console.log("Unit C / R2 — DI2 Start → Batch2 + Session Lock closure");
+  console.log("Unit C / R2+R3 — DI2 Start → Batch2 + Session Lock lease closure");
   installEventSender();
   __setDi2Batch2StartSideEffectProbeForTests(null);
   __setDi2Batch2StartLockRaceProbeForTests(null);
   __setCommitUnderFenceRaceProbeForTests(null);
+  __setReportStartLockIdleMsForTests(null);
+  __setReportStartLockRenewEveryMsForTests(null);
+  __setReportLockNowForTests(null);
   __resetDi2Batch2StartSideEffectCountsForTests();
   await resetBatch3KeysForTests();
   await resetBatch2JobStoreForTests();
@@ -933,9 +942,230 @@ async function main() {
     );
   });
 
+  // ─── Unit C R3: Session Lock lease renewal across idle window ────────────
+
+  async function withShortIdle<T>(fn: () => Promise<T>): Promise<T> {
+    __setReportStartLockIdleMsForTests(80);
+    __setReportStartLockRenewEveryMsForTests(20);
+    try {
+      return await fn();
+    } finally {
+      __setReportStartLockIdleMsForTests(null);
+      __setReportStartLockRenewEveryMsForTests(null);
+      __setReportLockNowForTests(null);
+    }
+  }
+
+  await check("R3: renew across > idle → other Start cannot take over", async () => {
+    await withShortIdle(async () => {
+      const session_id = uniq("sess");
+      const owner = newReportLockOwner(session_id);
+      assert.ok(await tryCreateReportLock(owner, "start", "job_live"));
+      const before = await readReportSessionLock(session_id);
+      assert.equal(before.kind, "owned");
+      if (before.kind !== "owned") return;
+      const staleRaw = before.raw;
+      let idleAfterLease = true;
+      let staleTakeover = null as Awaited<ReturnType<typeof takeOverReportLock>>;
+      await withOwnedReportLockLease(owner, async () => {
+        await new Promise((r) => setTimeout(r, 250)); // > 3× idle
+        const cur = await readReportSessionLock(session_id);
+        assert.equal(cur.kind, "owned");
+        if (cur.kind !== "owned") return;
+        // acquireDecisionReportStartLock refuses idle_start when not idle.
+        idleAfterLease = isReportStartLockIdle(cur.lock);
+        const thief = newReportLockOwner(session_id);
+        // Stale snapshot from before renewals must CAS-fail.
+        staleTakeover = await takeOverReportLock(staleRaw, thief, "start", null);
+      });
+      assert.equal(idleAfterLease, false);
+      assert.equal(staleTakeover, null);
+      const still = await readReportSessionLock(session_id);
+      assert.equal(still.kind, "owned");
+      if (still.kind === "owned") {
+        assert.equal(still.lock.lock_token, owner.lock_token);
+      }
+      await releaseOwnedReportLock(owner);
+    });
+  });
+
+  await check("R3: renew across > idle → Regenerate-style idle takeover blocked", async () => {
+    await withShortIdle(async () => {
+      const session_id = uniq("sess");
+      const owner = newReportLockOwner(session_id);
+      assert.ok(await tryCreateReportLock(owner, "start", "job_live"));
+      const before = await readReportSessionLock(session_id);
+      assert.equal(before.kind, "owned");
+      if (before.kind !== "owned") return;
+      const staleRaw = before.raw;
+      await withOwnedReportLockLease(owner, async () => {
+        await new Promise((r) => setTimeout(r, 250));
+        const cur = await readReportSessionLock(session_id);
+        assert.equal(cur.kind, "owned");
+        if (cur.kind !== "owned") return;
+        // Same gate acquireDecisionReportStartLock uses for holder start.
+        assert.equal(isReportStartLockIdle(cur.lock), false);
+        const regen = newReportLockOwner(session_id);
+        const taken = await takeOverReportLock(staleRaw, regen, "start", null);
+        assert.equal(taken, null);
+      });
+      await releaseOwnedReportLock(owner);
+    });
+  });
+
+  await check("R3: truly idle (no renew) → new Start can take over", async () => {
+    await withShortIdle(async () => {
+      const session_id = uniq("sess");
+      const owner = newReportLockOwner(session_id);
+      assert.ok(await tryCreateReportLock(owner, "start", null));
+      await new Promise((r) => setTimeout(r, 120)); // > idle, no renew
+      const cur = await readReportSessionLock(session_id);
+      assert.equal(cur.kind, "owned");
+      if (cur.kind !== "owned") return;
+      assert.equal(isReportStartLockIdle(cur.lock), true);
+      const next = newReportLockOwner(session_id);
+      const taken = await takeOverReportLock(cur.raw, next, "start", null);
+      assert.ok(taken);
+      assert.equal(taken.lock_token, next.lock_token);
+      const releaseOld = await releaseOwnedReportLock(owner);
+      assert.equal(releaseOld, "not_owner");
+      await releaseOwnedReportLock(next);
+    });
+  });
+
+  await check("R3: concurrent renew vs takeover → single owner", async () => {
+    await withShortIdle(async () => {
+      const session_id = uniq("sess");
+      const owner = newReportLockOwner(session_id);
+      assert.ok(await tryCreateReportLock(owner, "start", null));
+      await new Promise((r) => setTimeout(r, 120)); // idle
+      const cur = await readReportSessionLock(session_id);
+      assert.equal(cur.kind, "owned");
+      if (cur.kind !== "owned") return;
+      const thief = newReportLockOwner(session_id);
+      const [renewed, stolen] = await Promise.all([
+        updateOwnedReportLock(owner),
+        takeOverReportLock(cur.raw, thief, "start", null),
+      ]);
+      const winners = [renewed != null, stolen != null].filter(Boolean).length;
+      assert.equal(winners, 1, "exactly one of renew/takeover must win");
+      const final = await readReportSessionLock(session_id);
+      assert.equal(final.kind, "owned");
+      if (final.kind === "owned") {
+        if (renewed) {
+          assert.equal(final.lock.lock_token, owner.lock_token);
+          await releaseOwnedReportLock(owner);
+        } else {
+          assert.equal(final.lock.lock_token, thief.lock_token);
+          await releaseOwnedReportLock(thief);
+        }
+      }
+    });
+  });
+
+  await check("R3: lease lost mid-Start → no activate/create/dispatch", async () => {
+    await withShortIdle(async () => {
+      installEventSender();
+      __resetDi2Batch2StartSideEffectCountsForTests();
+      const ctx = await createDi2Job();
+      const owner = await acquireStartLock(ctx.session_id, ctx.job_id);
+      __setDi2Batch2StartLockRaceProbeForTests(async ({ gate }) => {
+        if (gate !== "before_activate") return;
+        // Steal lock so background renew + assertHeldStartLock Fail Closed.
+        const cur = await readReportSessionLock(ctx.session_id);
+        if (cur.kind !== "owned") return;
+        const thief = newReportLockOwner(ctx.session_id);
+        await takeOverReportLock(cur.raw, thief, "start", null);
+      });
+      try {
+        const res = await startDi2Batch2Production({
+          job_id: ctx.job_id,
+          freeze: ctx.freeze,
+          profile: ctx.profile,
+          lock_owner: owner,
+        });
+        assert.equal(res.ok, false);
+        if (!res.ok) assert.equal(res.code, "session_lock_lost");
+        assert.equal(__di2Batch2StartSideEffectCountsForTests.activate, 0);
+        assert.equal(__di2Batch2StartSideEffectCountsForTests.create_job, 0);
+        assert.equal(__di2Batch2StartSideEffectCountsForTests.orchestrate_send, 0);
+        assert.equal(sentEvents.length, 0);
+      } finally {
+        __setDi2Batch2StartLockRaceProbeForTests(null);
+        await releaseOwnedReportLock(owner).catch(() => undefined);
+      }
+    });
+  });
+
+  await check("R3: ORCHESTRATE send longer than idle still holds lock", async () => {
+    await withShortIdle(async () => {
+      sentEvents = [];
+      __resetDi2Batch2StartSideEffectCountsForTests();
+      setReportBatch2EventSenderForTests({
+        async send(events) {
+          await new Promise((r) => setTimeout(r, 250)); // > idle
+          for (const e of events) sentEvents.push({ name: e.name, data: e.data });
+          return { ok: true };
+        },
+      });
+      const ctx = await createDi2Job();
+      const res = await startWithLock(ctx);
+      assert.equal(res.ok, true);
+      assert.equal(__di2Batch2StartSideEffectCountsForTests.orchestrate_send, 1);
+      assert.ok(sentEvents.some((e) => e.name === REPORT_BATCH2_EVENTS.ORCHESTRATE));
+      installEventSender();
+    });
+  });
+
+  await check("R3: ORCHESTRATE fail then long RECOVER still under same lease", async () => {
+    await withShortIdle(async () => {
+      sentEvents = [];
+      __resetDi2Batch2StartSideEffectCountsForTests();
+      let sends = 0;
+      setReportBatch2EventSenderForTests({
+        async send(events) {
+          sends += 1;
+          await new Promise((r) => setTimeout(r, 120)); // each send > idle/2
+          if (sends === 1) {
+            return { ok: false, code: "forced_fail", detail: "orch" };
+          }
+          for (const e of events) sentEvents.push({ name: e.name, data: e.data });
+          return { ok: true };
+        },
+      });
+      const ctx = await createDi2Job();
+      const res = await startWithLock(ctx);
+      assert.equal(res.ok, true);
+      if (!res.ok) return;
+      assert.equal(res.production.last_dispatch, "recover");
+      assert.equal(__di2Batch2StartSideEffectCountsForTests.recover_send, 1);
+      assert.ok(sentEvents.some((e) => e.name === REPORT_BATCH2_EVENTS.RECOVER));
+      installEventSender();
+    });
+  });
+
+  await check("R3: normal / repeat Start still idempotent with lease", async () => {
+    await withShortIdle(async () => {
+      installEventSender();
+      __resetDi2Batch2StartSideEffectCountsForTests();
+      const ctx = await createDi2Job();
+      const first = await startWithLock(ctx);
+      assert.equal(first.ok, true);
+      if (!first.ok) return;
+      const second = await startWithLock(ctx);
+      assert.equal(second.ok, true);
+      if (!second.ok) return;
+      assert.equal(second.reused, true);
+      assert.equal(second.binding.generation_id, first.binding.generation_id);
+    });
+  });
+
   __setDi2Batch2StartSideEffectProbeForTests(null);
   __setDi2Batch2StartLockRaceProbeForTests(null);
   __setCommitUnderFenceRaceProbeForTests(null);
+  __setReportStartLockIdleMsForTests(null);
+  __setReportStartLockRenewEveryMsForTests(null);
+  __setReportLockNowForTests(null);
   await resetBatch3KeysForTests();
   await resetBatch2JobStoreForTests();
   setReportBatch2EventSenderForTests(null);

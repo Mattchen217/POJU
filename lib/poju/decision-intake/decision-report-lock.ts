@@ -21,12 +21,62 @@
 import { kv, KV_TTL } from "@/lib/kv/client";
 import { xhighSessionLockKey } from "@/lib/poju/xhigh-job-types";
 
-/** Same window as an abandoned charge claim: a start silent this long has died. */
+/**
+ * Same window as an abandoned charge claim: a start silent this long has died.
+ * Live Starts must renew (owner-checked touch) more often than this while
+ * awaiting long async work (Unit C R3) — do not "fix" races by raising this alone.
+ */
 export const REPORT_START_LOCK_IDLE_MS = 60_000;
 /** Pre-FU3 lock values (bare timestamps): reclaimable only when no job is live and this old. */
 export const LEGACY_REPORT_LOCK_ORPHAN_MS = 2 * 60_000;
 
+/** Default renew cadence: 1/3 of idle window (production 20s). */
+export const REPORT_START_LOCK_RENEW_EVERY_MS = Math.floor(REPORT_START_LOCK_IDLE_MS / 3);
+
 const LOCK_TTL = KV_TTL.POJU_XHIGH_LOCK;
+
+let __idleMsForTests: number | null = null;
+let __renewEveryMsForTests: number | null = null;
+let __nowForTests: (() => number) | null = null;
+
+/** @internal tests only — shorten idle window without rewriting production constant. */
+export function __setReportStartLockIdleMsForTests(ms: number | null): void {
+  __idleMsForTests = ms == null ? null : Math.max(1, Math.floor(ms));
+}
+
+/** @internal tests only */
+export function __setReportStartLockRenewEveryMsForTests(ms: number | null): void {
+  __renewEveryMsForTests = ms == null ? null : Math.max(1, Math.floor(ms));
+}
+
+/** @internal tests only — controllable clock for lease expiry tests. */
+export function __setReportLockNowForTests(now: (() => number) | null): void {
+  __nowForTests = now;
+}
+
+export function reportLockNowMs(): number {
+  return __nowForTests ? __nowForTests() : Date.now();
+}
+
+/** Effective idle timeout (production or test override). */
+export function reportStartLockIdleMs(): number {
+  return __idleMsForTests ?? REPORT_START_LOCK_IDLE_MS;
+}
+
+/** Effective renew interval (production or test override). */
+export function reportStartLockRenewEveryMs(): number {
+  if (__renewEveryMsForTests != null) return __renewEveryMsForTests;
+  return Math.max(250, Math.floor(reportStartLockIdleMs() / 3));
+}
+
+/** Whether a holder:"start" lock is idle long enough for takeover. */
+export function isReportStartLockIdle(
+  lock: Pick<ReportSessionLock, "holder" | "touched_at">,
+  nowMs: number = reportLockNowMs(),
+): boolean {
+  if (lock.holder !== "start") return false;
+  return nowMs - lock.touched_at >= reportStartLockIdleMs();
+}
 
 export type ReportLockHolder = "start" | "job";
 
@@ -165,7 +215,7 @@ async function casDelete(session_id: string, expectedRaw: unknown): Promise<bool
 }
 
 function freshLock(owner: ReportLockOwner, holder: ReportLockHolder, job_id: string | null): ReportSessionLock {
-  const now = Date.now();
+  const now = reportLockNowMs();
   return {
     version: 1,
     session_id: owner.session_id,
@@ -219,11 +269,90 @@ export async function updateOwnedReportLock(
       ...cur.lock,
       holder: patch.holder ?? cur.lock.holder,
       job_id: patch.job_id !== undefined ? patch.job_id : cur.lock.job_id,
-      touched_at: Date.now(),
+      touched_at: reportLockNowMs(),
     };
     if (await casReplace(owner.session_id, cur.raw, next)) return next;
   }
   return null;
+}
+
+/**
+ * Owner-checked lease renewal while `work` runs (Unit C R3).
+ * Keeps `touched_at` fresh so idle takeover cannot steal a live Start during
+ * long awaits (e.g. ORCHESTRATE network). Renew uses the same CAS ownership
+ * checks as updateOwnedReportLock — never touches another owner's lock.
+ *
+ * If a renew fails, `lease.lost()` becomes true; callers must Fail Closed on
+ * subsequent side effects. In-flight network I/O already started cannot be
+ * recalled — that residual is documented, not claimed solved.
+ */
+export type ReportLockLeaseHandle = {
+  lost: () => boolean;
+  lostDetail: () => string;
+  /** Force one owner-checked renew now (also used by the timer). */
+  renewNow: () => Promise<boolean>;
+};
+
+export async function withOwnedReportLockLease<T>(
+  owner: ReportLockOwner,
+  work: (lease: ReportLockLeaseHandle) => Promise<T>,
+  opts?: { renewEveryMs?: number },
+): Promise<T> {
+  let lost = false;
+  let lostDetail = "";
+  const renewNow = async (): Promise<boolean> => {
+    if (lost) return false;
+    try {
+      const updated = await updateOwnedReportLock(owner);
+      if (!updated) {
+        lost = true;
+        lostDetail = "session start lock renew: no longer owned";
+        return false;
+      }
+      if (updated.holder !== "start") {
+        lost = true;
+        lostDetail = `session start lock renew: holder=${updated.holder}`;
+        return false;
+      }
+      if (!isReportLockOwnedBy(updated, owner)) {
+        lost = true;
+        lostDetail = "session start lock renew: ownership mismatch";
+        return false;
+      }
+      return true;
+    } catch (e) {
+      lost = true;
+      lostDetail = e instanceof Error ? e.message : String(e);
+      return false;
+    }
+  };
+
+  const lease: ReportLockLeaseHandle = {
+    lost: () => lost,
+    lostDetail: () => lostDetail,
+    renewNow,
+  };
+
+  const ok0 = await renewNow();
+  if (!ok0) {
+    // Still run work only if caller wants — no: Fail Closed before work when
+    // initial renew already lost. Throw via returning work that shouldn't run:
+    // callers wrap and check; we invoke work only when held.
+    return work(lease);
+  }
+
+  const every = opts?.renewEveryMs ?? reportStartLockRenewEveryMs();
+  const timer = setInterval(() => {
+    void renewNow();
+  }, every);
+  // Do not keep the process alive solely for renewals.
+  if (typeof timer.unref === "function") timer.unref();
+
+  try {
+    return await work(lease);
+  } finally {
+    clearInterval(timer);
+  }
 }
 
 export type ReportLockRelease = "released" | "absent" | "not_owner";

@@ -64,7 +64,7 @@ import {
   readReportSessionLock,
   releaseOwnedReportLock,
   reportLockOwnerOf,
-  REPORT_START_LOCK_IDLE_MS,
+  isReportStartLockIdle,
   takeOverReportLock,
   updateOwnedReportLock,
   type ReportLockOwner,
@@ -377,10 +377,7 @@ async function followStart(
       if (cur.kind !== "owned") {
         return lockUnconfirmed("follow_lock_unreadable");
       }
-      if (
-        cur.lock.holder === "start" &&
-        Date.now() - cur.lock.touched_at < REPORT_START_LOCK_IDLE_MS
-      ) {
+      if (cur.lock.holder === "start" && !isReportStartLockIdle(cur.lock)) {
         return busyReply();
       }
       const taken = await takeOverReportLock(cur.raw, owner, "start", job.job_id);

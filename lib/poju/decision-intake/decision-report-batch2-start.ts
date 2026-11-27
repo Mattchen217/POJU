@@ -9,7 +9,7 @@
  * - Never falls back to the legacy DI2 eight-page runner
  * - Never accepts client-submitted ZFP objects
  *
- * Execution authority closure (R1 + R2):
+ * Execution authority closure (R1 + R2 + R3):
  * Job-only fence CAS is NOT cross-KV atomic with Session Fence (R1 residual).
  * R2: Batch2 Start side effects run only while the caller holds the DI2
  * Report Session Lock (holder "start"). DI2 Regenerate calls
@@ -17,7 +17,9 @@
  * createOrReuseDecisionReportJob — so Start and Regenerate are mutually
  * exclusive for the critical window. Before each side effect we
  * updateOwnedReportLock (touch + ownership check); lock loss → Fail Closed.
- * Fence assert + start_gate remain as defense in depth, not the sole mutex.
+ * R3: owner-checked lease renewal (withOwnedReportLockLease) keeps touched_at
+ * fresh during long awaits (ORCHESTRATE/RECOVER) so 60s idle takeover cannot
+ * steal a live Start. Fence assert + start_gate remain defense in depth.
  */
 
 import {
@@ -62,6 +64,8 @@ import {
 import {
   isReportLockOwnedBy,
   updateOwnedReportLock,
+  withOwnedReportLockLease,
+  type ReportLockLeaseHandle,
   type ReportLockOwner,
 } from "@/lib/poju/decision-intake/decision-report-lock";
 import {
@@ -395,14 +399,30 @@ async function requireLiveExecutionFence(
   }
 }
 
+/** Live Start leases keyed by the same lock_owner object reference. */
+const __activeStartLeases = new WeakMap<ReportLockOwner, ReportLockLeaseHandle>();
+
+function leaseLostResult(
+  lease: ReportLockLeaseHandle | undefined,
+): { ok: false; code: Di2Batch2StartErrorCode; detail: string } | null {
+  if (!lease?.lost()) return null;
+  return {
+    ok: false,
+    code: "session_lock_lost",
+    detail: lease.lostDetail() || "session start lock lease lost",
+  };
+}
+
 /**
- * R2 mutual exclusion: DI2 Regenerate supersedes only under the same Session
- * Start lock. Refresh ownership + touched_at; Fail Closed if lock is gone or
- * no longer held by this start owner as holder "start".
+ * R2/R3 mutual exclusion: DI2 Regenerate supersedes only under the same Session
+ * Start lock. Refresh ownership + touched_at; Fail Closed if lock is gone,
+ * lease renew failed, or no longer held by this start owner as holder "start".
  */
 async function assertHeldStartLock(
   lock_owner: ReportLockOwner,
 ): Promise<{ ok: true } | { ok: false; code: Di2Batch2StartErrorCode; detail: string }> {
+  const lost = leaseLostResult(__activeStartLeases.get(lock_owner));
+  if (lost) return lost;
   try {
     const updated = await updateOwnedReportLock(lock_owner);
     if (!updated) {
@@ -434,6 +454,25 @@ async function assertHeldStartLock(
       detail: e instanceof Error ? e.message : String(e),
     };
   }
+}
+
+/**
+ * R3: await a long side effect while the Start lease renews in the background.
+ * After the await, Fail Closed if renew lost the lock — do not continue dispatch.
+ */
+async function awaitUnderStartLease<T>(
+  lock_owner: ReportLockOwner,
+  work: () => Promise<T>,
+): Promise<
+  | { ok: true; value: T }
+  | { ok: false; code: Di2Batch2StartErrorCode; detail: string }
+> {
+  const value = await work();
+  const lost = leaseLostResult(__activeStartLeases.get(lock_owner));
+  if (lost) return lost;
+  const held = await assertHeldStartLock(lock_owner);
+  if (!held.ok) return held;
+  return { ok: true, value };
 }
 
 async function requireStartAuthority(input: {
@@ -558,20 +597,23 @@ async function dispatchOrchestrateOrRecover(input: {
   );
 
   if (input.mode === "recover") {
-    const recover = await sendReportBatch2Events([
-      buildRecoverPayload({
-        report_id: input.report_id,
-        generation_id: input.generation_id,
-        generation_epoch: input.generation_epoch,
-        locale: input.locale,
-      }),
-    ]);
+    const recover = await awaitUnderStartLease(input.lock_owner, () =>
+      sendReportBatch2Events([
+        buildRecoverPayload({
+          report_id: input.report_id,
+          generation_id: input.generation_id,
+          generation_epoch: input.generation_epoch,
+          locale: input.locale,
+        }),
+      ]),
+    );
+    if (!recover.ok) return recover;
     __di2Batch2StartSideEffectCountsForTests.recover_send += 1;
-    if (!recover.ok) {
+    if (!recover.value.ok) {
       return {
         ok: false,
         code: "dispatch_uncertain",
-        detail: `recover_send_failed:${recover.code}:${recover.detail}`,
+        detail: `recover_send_failed:${recover.value.code}:${recover.value.detail}`,
       };
     }
     return { ok: true, last_dispatch: "recover" };
@@ -601,10 +643,13 @@ async function dispatchOrchestrateOrRecover(input: {
     };
   }
 
-  const send = await sendReportBatch2Events([payload]);
+  const send = await awaitUnderStartLease(input.lock_owner, () =>
+    sendReportBatch2Events([payload]),
+  );
+  if (!send.ok) return send;
   __di2Batch2StartSideEffectCountsForTests.orchestrate_send += 1;
-  if (!send.ok) {
-    await markIntentFailed(intent.value, send.detail);
+  if (!send.value.ok) {
+    await markIntentFailed(intent.value, send.value.detail);
     // Re-check session lock + fence before RECOVER — revoked Start must not heal.
     const stillAuth = await requireStartAuthority({
       job_id: input.job_id,
@@ -621,24 +666,27 @@ async function dispatchOrchestrateOrRecover(input: {
     if (!recoverTicket.ok) return recoverTicket;
     const lockForRecover = await assertHeldStartLock(input.lock_owner);
     if (!lockForRecover.ok) return lockForRecover;
-    const recover = await sendReportBatch2Events([
-      buildRecoverPayload({
-        report_id: input.report_id,
-        generation_id: input.generation_id,
-        generation_epoch: input.generation_epoch,
-        locale: input.locale,
-      }),
-    ]);
+    const recover = await awaitUnderStartLease(input.lock_owner, () =>
+      sendReportBatch2Events([
+        buildRecoverPayload({
+          report_id: input.report_id,
+          generation_id: input.generation_id,
+          generation_epoch: input.generation_epoch,
+          locale: input.locale,
+        }),
+      ]),
+    );
+    if (!recover.ok) return recover;
     __di2Batch2StartSideEffectCountsForTests.recover_send += 1;
-    if (recover.ok) {
+    if (recover.value.ok) {
       return { ok: true, last_dispatch: "recover" };
     }
     return {
       ok: false,
       code: "dispatch_uncertain",
       detail:
-        `orchestrate_failed:${send.code}:${send.detail};` +
-        `recover_failed:${recover.code}:${recover.detail}`,
+        `orchestrate_failed:${send.value.code}:${send.value.detail};` +
+        `recover_failed:${recover.value.code}:${recover.value.detail}`,
     };
   }
   await markIntentSent(intent.value);
@@ -709,6 +757,34 @@ export async function startDi2Batch2Production(input: {
     if (!lockOnly.ok) return lockOnly;
   }
 
+  // R3: renew Session Lock for the whole critical Start window (incl. network).
+  return withOwnedReportLockLease(lock_owner, async (lease) => {
+    __activeStartLeases.set(lock_owner, lease);
+    try {
+      if (lease.lost()) {
+        return {
+          ok: false as const,
+          code: "session_lock_lost" as const,
+          detail: lease.lostDetail() || "lock lost before Start body",
+        };
+      }
+      return await runDi2Batch2ProductionUnderLease(input, lock_owner);
+    } finally {
+      __activeStartLeases.delete(lock_owner);
+    }
+  });
+}
+
+async function runDi2Batch2ProductionUnderLease(
+  input: {
+    job_id: string;
+    freeze: FreezeRecord;
+    profile: ProfileRecord;
+    lock_owner: ReportLockOwner;
+    birth_info?: unknown;
+  },
+  lock_owner: ReportLockOwner,
+): Promise<Di2Batch2StartResult> {
   const job = await getXhighJob(input.job_id);
   if (!job) {
     return { ok: false, code: "missing_job", detail: `job_id=${input.job_id}` };
@@ -820,12 +896,13 @@ export async function startDi2Batch2Production(input: {
       detail: "Unit B GenerationRecord missing — refusing to allocate a second identity",
     };
   }
-  if (gen.value.generation_epoch !== binding.batch3_generation_epoch) {
+  const generationRecord = gen.value;
+  if (generationRecord.generation_epoch !== binding.batch3_generation_epoch) {
     return {
       ok: false,
       code: "generation_epoch_mismatch",
       detail:
-        `live_epoch=${gen.value.generation_epoch} binding_epoch=${binding.batch3_generation_epoch}`,
+        `live_epoch=${generationRecord.generation_epoch} binding_epoch=${binding.batch3_generation_epoch}`,
     };
   }
 
@@ -948,15 +1025,18 @@ export async function startDi2Batch2Production(input: {
   });
   if (!activateGate.ok) return activateGate;
 
-  const activated = await activateGeneration({
-    record: gen.value,
-    job_id: binding.report_id,
-  });
-  if (!activated.ok) {
+  const activated = await awaitUnderStartLease(lock_owner, () =>
+    activateGeneration({
+      record: generationRecord,
+      job_id: binding.report_id,
+    }),
+  );
+  if (!activated.ok) return activated;
+  if (!activated.value.ok) {
     return {
       ok: false,
       code: "activate_failed",
-      detail: activated.detail ?? activated.code,
+      detail: activated.value.detail ?? activated.value.code,
     };
   }
   __di2Batch2StartSideEffectCountsForTests.activate += 1;
@@ -979,14 +1059,18 @@ export async function startDi2Batch2Production(input: {
   });
   if (!createGate.ok) return createGate;
 
-  const created = await createJobAndPersist({
-    report_id: binding.report_id,
-    generation_id: binding.generation_id,
-    locale,
-    inputs: adapted.inputs,
-    status: "orchestrating",
-    generation_epoch: binding.batch3_generation_epoch,
-  });
+  const createdWrap = await awaitUnderStartLease(lock_owner, () =>
+    createJobAndPersist({
+      report_id: binding.report_id,
+      generation_id: binding.generation_id,
+      locale,
+      inputs: adapted.inputs,
+      status: "orchestrating",
+      generation_epoch: binding.batch3_generation_epoch,
+    }),
+  );
+  if (!createdWrap.ok) return createdWrap;
+  const created = createdWrap.value;
   if (!created.ok) {
     // Race: another Start created the job — re-enter idempotent path (still gated).
     const raced = await loadJobRawBlobs(binding.report_id, binding.generation_id);

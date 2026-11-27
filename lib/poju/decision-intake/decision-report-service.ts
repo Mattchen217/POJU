@@ -89,12 +89,12 @@ import {
   type DeliveryCheck,
 } from "./decision-report-charge";
 import {
+  isReportStartLockIdle,
   LEGACY_REPORT_LOCK_ORPHAN_MS,
   newReportLockOwner,
   readReportSessionLock,
   releaseOwnedReportLock,
   releaseReportJobLock,
-  REPORT_START_LOCK_IDLE_MS,
   reportLockOwnerOf,
   takeOverReportLock,
   tryCreateReportLock,
@@ -342,7 +342,7 @@ export async function acquireDecisionReportStartLock(
       }
       const held = cur.lock;
       if (held.holder === "start") {
-        if (Date.now() - held.touched_at < REPORT_START_LOCK_IDLE_MS) {
+        if (!isReportStartLockIdle(held)) {
           const job = held.job_id ? await getXhighJob(held.job_id) : null;
           return { kind: "observe", job: job && job.session_id === sid ? job : null };
         }
@@ -1069,7 +1069,7 @@ async function acquireReportJobLockForContinue(job: PojuXhighJob): Promise<Repor
         const latest = await findLatestXhighJobForSession("decision_report", job.session_id);
         abandoned = !(latest && isLiveJob(latest)) && Date.now() - cur.at >= LEGACY_REPORT_LOCK_ORPHAN_MS;
       } else if (cur.lock.holder === "start") {
-        abandoned = Date.now() - cur.lock.touched_at >= REPORT_START_LOCK_IDLE_MS;
+        abandoned = isReportStartLockIdle(cur.lock);
       } else if (cur.lock.job_id === job.job_id) {
         abandoned = true;
       } else {
