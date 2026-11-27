@@ -198,6 +198,12 @@ export interface PojuXhighJob {
    * Commit paths must CAS-validate this generation at the write boundary.
    */
   execution_generation?: number;
+  /**
+   * Unit B — DI2 ↔ Batch2 identity binding (decision_report only).
+   * Persisted on the job record under execution-fence CAS.
+   * Structure-valid ≠ Start; binding does not dispatch Batch2.
+   */
+  batch2_identity_binding?: import("@/lib/poju/decision-intake/decision-report-batch2-identity").Di2Batch2IdentityBinding;
   input:
     | Segment2JobInput
     | Segment2AgendaJobInput
