@@ -163,25 +163,36 @@ function mapPages(
   ji: DecisionReportJobInput,
   page_states: ReportPageRuntimeState[],
 ): DecisionReportPageRecord[] {
-  return page_states.map((st) => ({
-    page_id: st.page_id as DecisionPageId,
-    status: mapPageOutcomeToDi2Status(st.outcome),
-    applicability:
-      st.applicability_status === "not_applicable" ? "not_applicable" : "applies",
-    // Status is not Final Delivery — do not invent DI2 Report Store markdown.
-    content_markdown: "",
-    structured: null,
-    job_id: job.job_id,
-    execution_generation:
-      typeof job.execution_generation === "number" ? job.execution_generation : 0,
-    freeze_id: ji.freeze_id,
-    context_hash: ji.context_hash,
-    report_schema_version: ji.report_schema_version,
-    analysis_id: "",
-    attempts: 0,
-    generated_at: null,
-    error: null,
-  }));
+  return page_states.map((st) => {
+    const page07Insufficient =
+      st.page_id === "07" &&
+      (st.outcome === "insufficient_information" ||
+        st.applicability_status === "insufficient_information");
+    // Status is progress telemetry, not Final Delivery. Page07 II is a terminal
+    // production outcome for the page, but must not be labeled not_applicable
+    // (wrong skip) and must not become a sealed CompletedReport (FD refuses).
+    // DI2 page applicability has only applies | not_applicable — keep applies
+    // with an explicit error marker so callers do not confuse it with a skip.
+    return {
+      page_id: st.page_id as DecisionPageId,
+      status: mapPageOutcomeToDi2Status(st.outcome),
+      applicability:
+        st.applicability_status === "not_applicable" ? "not_applicable" : "applies",
+      // Status is not Final Delivery — do not invent DI2 Report Store markdown.
+      content_markdown: "",
+      structured: null,
+      job_id: job.job_id,
+      execution_generation:
+        typeof job.execution_generation === "number" ? job.execution_generation : 0,
+      freeze_id: ji.freeze_id,
+      context_hash: ji.context_hash,
+      report_schema_version: ji.report_schema_version,
+      analysis_id: "",
+      attempts: 0,
+      generated_at: null,
+      error: page07Insufficient ? "insufficient_information" : null,
+    };
+  });
 }
 
 function mapGenerationToStatus(input: {

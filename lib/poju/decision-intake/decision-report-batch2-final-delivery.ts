@@ -33,7 +33,10 @@ import {
   buildGlossaryAppendix,
   collectUsedTermIdsFromEvidence,
 } from "@/lib/llm/pro/delivery/decision-report-v2/glossary-appendix";
-import { isFace07NotApplicableOmit } from "@/lib/llm/pro/delivery/decision-report-v2/page07/report-inclusion";
+import {
+  isFace07InsufficientInformation,
+  isFace07NotApplicableOmit,
+} from "@/lib/llm/pro/delivery/decision-report-v2/page07/report-inclusion";
 import {
   encodePageSchemaFence,
   pageSchemaToArgumentBodies,
@@ -93,6 +96,8 @@ export type Di2Batch2FinalDeliveryErrorCode =
   | "authority_unavailable"
   | "authority_invalid"
   | "page_incomplete"
+  /** Page07 sealed as insufficient_information — production block, not deliverable. */
+  | "page07_insufficient_information"
   | "page_fingerprint_mismatch"
   | "page_map_failed"
   | "analysis_incomplete"
@@ -257,6 +262,19 @@ export function mapAuthorityOutputToMarkdown(
   throw new Error(`page_${page_id}_unmappable_output`);
 }
 
+/**
+ * Page07 insufficient_information is a production block (see includePage07InUserFacingOrder).
+ * Must not be mapped to applies (would enter full_text) or not_applicable (wrong skip).
+ */
+export function isPage07InsufficientInformationBlock(
+  outcome: string,
+  output: unknown,
+): boolean {
+  return (
+    outcome === "insufficient_information" || isFace07InsufficientInformation(output)
+  );
+}
+
 function pageApplicability(
   page_id: DecisionPageId,
   outcome: string,
@@ -264,6 +282,12 @@ function pageApplicability(
   ji: DecisionReportJobInput,
 ): DecisionReportPageRecord["applicability"] {
   if (page_id === "07") {
+    // Caller must refuse Final Delivery before this for insufficient_information.
+    if (isPage07InsufficientInformationBlock(outcome, output)) {
+      throw new Error(
+        "page07_insufficient_information_must_refuse_delivery",
+      );
+    }
     if (
       outcome === "skipped_not_applicable" ||
       isFace07NotApplicableOmit(output) ||
@@ -840,7 +864,27 @@ async function attemptDi2Batch2FinalDeliveryBody(
 
   for (const g of gated.pages) {
     const page_id = g.page_id as DecisionPageId;
-    const applicability = pageApplicability(page_id, g.outcome, g.output, ji);
+    // Page07 contract: insufficient_information blocks successful report bodies.
+    // Do not map to applies (would enter full_text) or not_applicable (wrong skip).
+    if (page_id === "07" && isPage07InsufficientInformationBlock(g.outcome, g.output)) {
+      return fail(
+        "page07_insufficient_information",
+        "page 07 insufficient_information — production block; refuse Final Delivery (not applies, not not_applicable)",
+      );
+    }
+    let applicability: DecisionReportPageRecord["applicability"];
+    try {
+      applicability = pageApplicability(page_id, g.outcome, g.output, ji);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      if (msg.includes("page07_insufficient_information")) {
+        return fail(
+          "page07_insufficient_information",
+          "page 07 insufficient_information — production block; refuse Final Delivery",
+        );
+      }
+      return fail("page_map_failed", `page ${page_id}: ${msg}`);
+    }
     let content_markdown = "";
     let structured: Record<string, unknown> | null = null;
     try {

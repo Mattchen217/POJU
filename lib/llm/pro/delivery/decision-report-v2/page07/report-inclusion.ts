@@ -15,6 +15,16 @@ export function isFace07NotApplicableOmit(page: unknown): boolean {
 }
 
 /**
+ * True when Face07 V2 is sealed as insufficient_information.
+ * This is a production block for successful report bodies — not a normal skip
+ * and not interchangeable with not_applicable.
+ */
+export function isFace07InsufficientInformation(page: unknown): boolean {
+  if (!isFace07V2(page)) return false;
+  return (page as Face07V2).applicability_status === "insufficient_information";
+}
+
+/**
  * Whether Page07 belongs in the user-facing reading order / shelf / PDF bodies.
  * - not_applicable → false (omit entirely)
  * - applicable → true

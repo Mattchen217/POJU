@@ -395,7 +395,7 @@ async function commitAuthorityPage(input: {
   generation_epoch: number;
   page_id: (typeof REPORT_PAGE_IDS)[number];
   body: string;
-  outcome?: "completed" | "skipped_not_applicable";
+  outcome?: "completed" | "skipped_not_applicable" | "insufficient_information";
 }): Promise<{ output_fingerprint: string; out: unknown }> {
   const def = reportPageDefinition(input.page_id);
   const input_fingerprint = `fp_e_${input.page_id}_${input.body}`;
@@ -427,8 +427,26 @@ async function commitAuthorityPage(input: {
           applicability_status: "not_applicable",
           body: input.body,
         }
-      : { page: input.page_id, body: input.body };
+      : outcome === "insufficient_information"
+        ? {
+            page: "07",
+            face: "07",
+            schema_version: "face07-v2",
+            applicability_status: "insufficient_information",
+            applicability_reason: "Unit F-R1: field facts insufficient for Page07",
+            participants: [],
+            field_units: [],
+            relationship_units: [],
+            body: input.body,
+          }
+        : { page: input.page_id, body: input.body };
   const output_fingerprint = hashCanonicalPayload(out);
+  const page07Applicability =
+    outcome === "skipped_not_applicable"
+      ? "not_applicable"
+      : outcome === "insufficient_information"
+        ? "insufficient_information"
+        : "applicable";
   const committed = await commitPageResult({
     report_id: input.report_id,
     generation_id: input.generation_id,
@@ -443,8 +461,7 @@ async function commitAuthorityPage(input: {
       input_fingerprint,
       ...(input.page_id === "07"
         ? {
-            applicability_status:
-              outcome === "skipped_not_applicable" ? "not_applicable" : "applicable",
+            applicability_status: page07Applicability,
           }
         : {}),
     },
@@ -468,11 +485,17 @@ async function commitAuthorityPage(input: {
   return { output_fingerprint, out };
 }
 
-async function seedAllAuthorityPages(binding: {
-  report_id: string;
-  generation_id: string;
-  batch3_generation_epoch: number;
-}) {
+async function seedAllAuthorityPages(
+  binding: {
+    report_id: string;
+    generation_id: string;
+    batch3_generation_epoch: number;
+  },
+  opts?: {
+    page07_outcome?: "skipped_not_applicable" | "insufficient_information" | "completed";
+  },
+) {
+  const page07_outcome = opts?.page07_outcome ?? "skipped_not_applicable";
   for (const page_id of REPORT_PAGE_IDS) {
     if (page_id === "07") {
       await commitAuthorityPage({
@@ -480,8 +503,13 @@ async function seedAllAuthorityPages(binding: {
         generation_id: binding.generation_id,
         generation_epoch: binding.batch3_generation_epoch,
         page_id,
-        body: "page07_skip",
-        outcome: "skipped_not_applicable",
+        body:
+          page07_outcome === "insufficient_information"
+            ? "page07_insufficient"
+            : page07_outcome === "completed"
+              ? "page07_body"
+              : "page07_skip",
+        outcome: page07_outcome,
       });
       continue;
     }
@@ -572,6 +600,7 @@ async function prepareReadyJob(opts?: {
   skipPages?: boolean;
   skipGrant?: boolean;
   generation?: "completed" | "delivery_failed";
+  page07_outcome?: "skipped_not_applicable" | "insufficient_information" | "completed";
 }) {
   installEventSender();
   resetBatch2JobStoreForTests();
@@ -583,7 +612,7 @@ async function prepareReadyJob(opts?: {
   if (!started.ok) throw new Error("start failed");
   const binding = started.binding;
   if (!opts?.skipPages) {
-    await seedAllAuthorityPages(binding);
+    await seedAllAuthorityPages(binding, { page07_outcome: opts?.page07_outcome });
   }
   if (opts?.generation === "delivery_failed") {
     await markGenerationDeliveryFailed(binding);
@@ -1434,6 +1463,74 @@ async function main() {
     assert.equal(after!.record.analysis_id, analysis_id);
     assert.equal(after!.record.error, "model_quality_exhausted");
   });
+
+  // ── Unit F-R1 — Page07 insufficient_information must not deliver ─────────
+
+  await check(
+    "F-R1: Page07 insufficient_information → Final Delivery refuses (not applies, not not_applicable)",
+    async () => {
+      const { ctx } = await prepareReadyJob({
+        page07_outcome: "insufficient_information",
+      });
+      const delivered = await attemptDi2Batch2FinalDelivery(ctx.job_id);
+      assert.equal(delivered.ok, false, JSON.stringify(delivered));
+      if (delivered.ok) return;
+      assert.equal(delivered.code, "page07_insufficient_information");
+      assert.match(delivered.detail, /insufficient_information/);
+      assert.match(delivered.detail, /not_applicable/);
+      assert.equal(await loadCompletedReport(ctx.session_id, ctx.job_id), null);
+      assert.notEqual((await getXhighJob(ctx.job_id))?.status, "completed");
+    },
+  );
+
+  await check(
+    "F-R1: Page07 insufficient_information → Status does not claim DI2 completed",
+    async () => {
+      const { ctx } = await prepareReadyJob({
+        page07_outcome: "insufficient_information",
+      });
+      const status = await buildDecisionReportStatus({
+        job_id: ctx.job_id,
+        session_id: ctx.session_id,
+      });
+      assert.notEqual(status.status, "completed");
+      assert.equal(status.result, null);
+      assert.equal(status.ok, false);
+      assert.equal(status.failure_reason, "page07_insufficient_information");
+      assert.equal(status.current_stage, "page07_insufficient_information");
+      assert.equal(await loadCompletedReport(ctx.session_id, ctx.job_id), null);
+    },
+  );
+
+  await check(
+    "F-R1: Page07 insufficient_information → Continue fail closed (not ready_for_delivery)",
+    async () => {
+      const { ctx } = await prepareReadyJob({
+        page07_outcome: "insufficient_information",
+      });
+      const cont = await continueWithLock(ctx);
+      assert.equal(cont.ok, false, JSON.stringify(cont));
+      if (cont.ok) return;
+      assert.equal(cont.code, "page07_insufficient_information");
+      assert.equal(await loadCompletedReport(ctx.session_id, ctx.job_id), null);
+    },
+  );
+
+  await check(
+    "F-R1: Page07 not_applicable still delivers (regression vs insufficient_information)",
+    async () => {
+      const { ctx } = await prepareReadyJob({
+        page07_outcome: "skipped_not_applicable",
+      });
+      const delivered = await attemptDi2Batch2FinalDelivery(ctx.job_id);
+      assert.equal(delivered.ok, true, JSON.stringify(delivered));
+      if (!delivered.ok) return;
+      const p07 = delivered.record.pages.find((p) => p.page_id === "07");
+      assert.ok(p07);
+      assert.equal(p07!.applicability, "not_applicable");
+      assert.ok(p07!.content_markdown.trim().length > 0);
+    },
+  );
 
   // ── Unit E R3 — atomic unavailable create vs concurrent in-flight Analysis ─
 

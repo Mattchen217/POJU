@@ -87,7 +87,8 @@ export type Di2Batch2ContinueErrorCode =
   | "cas_failed"
   | "final_delivery_denied"
   | "final_delivery_unconfirmed"
-  | "final_delivery_failed";
+  | "final_delivery_failed"
+  | "page07_insufficient_information";
 
 export type Di2Batch2ContinueResult =
   | {
@@ -652,6 +653,15 @@ async function finalizeReadyForDelivery(input: {
     return {
       ok: false,
       code: "final_delivery_unconfirmed",
+      detail: delivered.detail,
+    };
+  }
+  // Page07 insufficient_information is a production block — not incomplete pages.
+  // Do not stay ready_for_delivery; do not mislabel as not_applicable.
+  if (delivered.code === "page07_insufficient_information") {
+    return {
+      ok: false,
+      code: "page07_insufficient_information",
       detail: delivered.detail,
     };
   }

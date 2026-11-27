@@ -981,6 +981,28 @@ export async function buildDecisionReportStatus(input: {
           error: delivered.detail,
         };
       }
+      // Page07 insufficient_information — production block. Never claim DI2 completed,
+      // never treat as not_applicable skip, never keep silently retrying as incomplete.
+      if (delivered.code === "page07_insufficient_information") {
+        return {
+          ...batch2Status,
+          ok: false,
+          status: "failed",
+          current_stage: "page07_insufficient_information",
+          result: null,
+          pages: [],
+          analysis: {
+            status: "missing",
+            analysis_id: null,
+            attempts: 0,
+            error: null,
+            record: null,
+          },
+          retryable: false,
+          failure_reason: "page07_insufficient_information",
+          error: delivered.detail,
+        };
+      }
       // Pages incomplete / Authority invalid / identity mismatch — stay ready_for_delivery
       // (or surface the Batch2 failure already in batch2Status). Never claim DI2 completed.
     }
