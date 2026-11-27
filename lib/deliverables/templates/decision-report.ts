@@ -20,14 +20,34 @@ export type DecisionReportPane = {
   body: string;
 };
 
-export function decisionReportPanes(topic?: string | null): DecisionReportPane[] {
-  return ["cover", ...readingOrderForTopic(topic)].map((id, index) => {
+export type DecisionReportPanesOpts = {
+  topic?: string | null;
+  /** When set, sole pane authority (DI2 verified order). Topic is ignored. */
+  pageOrder?: readonly string[];
+};
+
+function panesFromIds(ids: readonly string[]): DecisionReportPane[] {
+  return ids.map((id, index) => {
     const num = String(index + 1).padStart(2, "0");
     if (id === "cover") {
       return { id, num, tag: "P0", toc: "SLOT_TOC_COVER", body: "SLOT_BODY_COVER" };
     }
     return { id, num, tag: id, toc: `SLOT_TOC_${id}`, body: `SLOT_BODY_${id}` };
   });
+}
+
+export function decisionReportPanes(
+  topicOrOpts?: string | null | DecisionReportPanesOpts,
+): DecisionReportPane[] {
+  if (topicOrOpts && typeof topicOrOpts === "object") {
+    const order = topicOrOpts.pageOrder;
+    if (order && order.length > 0) {
+      const ids = order[0] === "cover" ? order : ["cover", ...order];
+      return panesFromIds(ids);
+    }
+    return panesFromIds(["cover", ...readingOrderForTopic(topicOrOpts.topic)]);
+  }
+  return panesFromIds(["cover", ...readingOrderForTopic(topicOrOpts)]);
 }
 
 const DEFAULT_PANES = decisionReportPanes(null);
@@ -60,8 +80,16 @@ function pane(
 </section>`;
 }
 
-export function renderDecisionReportTemplate(topic?: string | null): string {
-  const panes = topic == null || topic === "" ? DEFAULT_PANES : decisionReportPanes(topic);
+export function renderDecisionReportTemplate(
+  topicOrOpts?: string | null | DecisionReportPanesOpts,
+): string {
+  if (topicOrOpts && typeof topicOrOpts === "object") {
+    return renderDecisionReportHtml(decisionReportPanes(topicOrOpts));
+  }
+  const panes =
+    topicOrOpts == null || topicOrOpts === ""
+      ? DEFAULT_PANES
+      : decisionReportPanes(topicOrOpts);
   return renderDecisionReportHtml(panes);
 }
 

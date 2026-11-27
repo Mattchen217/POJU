@@ -175,21 +175,37 @@ function mergeShelfBodies(pages: readonly DeliveryBookPage[]): string {
 
 export function buildDeliveryShelfSlots(
   fullText: string | null | undefined,
-  opts: { locale: string; complete?: boolean; topic?: string | null; question?: string | null },
+  opts: {
+    locale: string;
+    complete?: boolean;
+    topic?: string | null;
+    question?: string | null;
+    /**
+     * DI2 verified prose page ids (no cover/toc). When set, sole order authority —
+     * do not re-infer 03/07 from topic signals or invent Page 07 markdown.
+     */
+    verifiedProseOrder?: readonly string[];
+  },
 ): DeliveryShelfSlotState[] {
   const topic = deliveryTopicFromSignals({ topic: opts.topic, question: opts.question });
   const pages = fullText?.trim() ? buildDeliveryBookPages(fullText) : [];
-  // Detect whether appendix 03 content exists before fixing order (SoT: omit empty glossary).
-  let hasAppendix03 = false;
-  for (const page of pages) {
-    if (shelfFaceForPage(page) === "03") {
-      hasAppendix03 = true;
-      break;
+  const di2Prose = opts.verifiedProseOrder?.filter((id) => id !== "cover" && id !== "toc") ?? null;
+  let order: DeliveryShelfSlotId[];
+  if (di2Prose && di2Prose.length > 0) {
+    order = ["cover", "toc", ...(di2Prose as DeliveryShelfSlotId[])];
+  } else {
+    // Detect whether appendix 03 content exists before fixing order (SoT: omit empty glossary).
+    let hasAppendix03 = false;
+    for (const page of pages) {
+      if (shelfFaceForPage(page) === "03") {
+        hasAppendix03 = true;
+        break;
+      }
     }
+    order = [
+      ...deliveryShelfSlotIds(topic, { includeAppendix03: hasAppendix03 }),
+    ] as DeliveryShelfSlotId[];
   }
-  let order = [
-    ...deliveryShelfSlotIds(topic, { includeAppendix03: hasAppendix03 }),
-  ] as DeliveryShelfSlotId[];
   const buckets = new Map<DeliveryShelfSlotId, DeliveryBookPage[]>();
 
   for (const page of pages) {
@@ -209,7 +225,8 @@ export function buildDeliveryShelfSlots(
 
   // Face07 V2 not_applicable → omit from shelf entirely (SoT 2.1).
   // Detect from page_schema fence in bucketed markdown before slot materialization.
-  if (order.includes("07")) {
+  // When DI2 verified order is set, trust that authority (already applied not_applicable).
+  if (!di2Prose && order.includes("07")) {
     const grouped07 = buckets.get("07") ?? [];
     const omit07 = grouped07.some((page) => {
       const schema = extractPageSchemaFromMarkdown(page.body);
@@ -248,24 +265,28 @@ export function buildDeliveryShelfSlots(
     };
   }
 
-  const page07 = composePage07Markdown({ topic, question: opts.question });
-  if (page07 && order.includes("07")) {
-    const schema07 = extractPageSchemaFromMarkdown(page07);
-    if (!(schema07 && isFace07NotApplicableOmit(schema07))) {
-      const idx = order.indexOf("07");
-      const current = slots[idx];
-      if (current && current.kind !== "ready") {
-        slots[idx] = {
-          kind: "ready",
-          slotId: "07",
-          pageNumber: deliveryProsePageNumber("07", order),
-          page: {
-            id: "07",
-            title: proseShelfTitle("07", page07, opts.locale),
-            body: page07,
-            dualLayer: true,
-          },
-        };
+  // Legacy topic path only: may synthesize Page 07 from topic signals.
+  // DI2 verified order must never invent Page 07 here.
+  if (!di2Prose) {
+    const page07 = composePage07Markdown({ topic, question: opts.question });
+    if (page07 && order.includes("07")) {
+      const schema07 = extractPageSchemaFromMarkdown(page07);
+      if (!(schema07 && isFace07NotApplicableOmit(schema07))) {
+        const idx = order.indexOf("07");
+        const current = slots[idx];
+        if (current && current.kind !== "ready") {
+          slots[idx] = {
+            kind: "ready",
+            slotId: "07",
+            pageNumber: deliveryProsePageNumber("07", order),
+            page: {
+              id: "07",
+              title: proseShelfTitle("07", page07, opts.locale),
+              body: page07,
+              dualLayer: true,
+            },
+          };
+        }
       }
     }
   }

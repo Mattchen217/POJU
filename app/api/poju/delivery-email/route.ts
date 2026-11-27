@@ -1,85 +1,77 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
-import { getResendFromReports } from "@/lib/email/from-addresses";
-import { sendEmail } from "@/lib/email/resend-client";
-import {
-  getBaselinePackMailCopy,
-  getDecisionReportMailCopy,
-} from "@/lib/email/report-mail-copy";
+import { sendAuthorizedDi2DeliveryEmail } from "@/lib/deliverables/di2-delivery-email";
 
 /**
- * User-initiated decision-report / baseline email.
- * Body = short fixed copy; substance = interactive HTML attachment only.
+ * User-initiated DI2 decision-report email.
+ * Body copy is short fixed text; substance is the server-built HTML attachment
+ * from a verified CompletedReport. Client html_attachment is never trusted.
  */
 
 const BodySchema = z.object({
   to: z.string().email().max(320),
-  title: z.string().min(1).max(500),
-  /** @deprecated Ignored for delivery packs — report lives in the attachment. */
-  body_text: z.string().max(100_000).optional(),
+  title: z.string().min(1).max(500).optional(),
   locale: z.string().max(16).optional(),
-  /** Interactive offline HTML (TOC + details); required for successful send. */
-  html_attachment: z.string().max(10_000_000).optional(),
+  session_id: z.string().min(1).max(200),
+  job_id: z.string().min(1).max(200),
+  writer_token: z.string().min(1).max(500),
+  expected_execution_generation: z.number().int().optional(),
+  expected_report_job_id: z.string().max(200).optional(),
+  expected_freeze_id: z.string().max(200).optional(),
+  expected_context_hash: z.string().max(200).optional(),
   /**
-   * Pack chrome for email subject / attachment name.
-   * baseline = Personal baseline profile (vault matrix pack).
-   * delivery (default) = Eastern OS decision report.
+   * @deprecated Ignored. Kept so older clients do not fail schema validation.
+   * Server always builds the attachment from CompletedReport.
    */
+  html_attachment: z.string().max(10_000_000).optional(),
+  /** @deprecated Ignored for delivery packs. */
+  body_text: z.string().max(100_000).optional(),
   pack: z.enum(["baseline", "delivery"]).optional(),
 });
-
-function escapeHtml(s: string): string {
-  return s
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
-}
 
 export async function POST(req: Request) {
   const raw = (await req.json().catch(() => null)) as unknown;
   const parsed = BodySchema.safeParse(raw);
   if (!parsed.success) {
-    return NextResponse.json({ ok: false, error: "invalid_request" }, { status: 400 });
+    return NextResponse.json({ ok: false, error: "invalid_request", code: "invalid_request" }, { status: 400 });
   }
 
-  const { to, title, locale, html_attachment, pack } = parsed.data;
-  const isBaseline = pack === "baseline";
-  const attachment = html_attachment?.trim() ?? "";
-
-  if (attachment.length < 100) {
-    return NextResponse.json({ ok: false, error: "attachment_required" }, { status: 400 });
+  const body = parsed.data;
+  if (body.pack === "baseline") {
+    // Baseline pack remains a separate path; this route now only closes DI2 delivery.
+    return NextResponse.json(
+      { ok: false, error: "baseline_not_supported", code: "baseline_not_supported" },
+      { status: 400 },
+    );
   }
 
-  const copy = isBaseline
-    ? getBaselinePackMailCopy(locale, title)
-    : getDecisionReportMailCopy(locale, title);
-
-  const html = `<div style="font-family:Arial,sans-serif;color:#1a1525;max-width:720px">
-  <h1 style="font-size:20px;margin:0 0 8px">${escapeHtml(title)}</h1>
-  <p style="color:#444;font-size:14px;line-height:1.65;margin:0 0 20px">${copy.introHtml}</p>
-  <p style="color:#999;font-size:11px;margin-top:28px">${escapeHtml(copy.footerHtml)}</p>
-</div>`;
-
-  const result = await sendEmail({
-    from: getResendFromReports(),
-    to,
-    subject: copy.subject,
-    html,
-    text: `${title}\n\n${copy.introText}\n\n${copy.footerText}`,
-    attachments: [
-      {
-        filename: copy.filename,
-        content: attachment,
-      },
-    ],
-    logTag: "delivery-email",
+  const result = await sendAuthorizedDi2DeliveryEmail({
+    session_id: body.session_id,
+    job_id: body.job_id,
+    writer_token: body.writer_token,
+    locale: body.locale || "en",
+    to: body.to,
+    title: body.title,
+    html_attachment: body.html_attachment,
+    expected_execution_generation: body.expected_execution_generation,
+    expected_report_job_id: body.expected_report_job_id,
+    expected_freeze_id: body.expected_freeze_id,
+    expected_context_hash: body.expected_context_hash,
   });
 
   if (!result.ok) {
-    return NextResponse.json({ ok: false, error: "send_failed" }, { status: 502 });
+    return NextResponse.json(
+      { ok: false, error: result.error, code: result.code },
+      { status: result.status },
+    );
   }
 
-  return NextResponse.json({ ok: true, mocked: result.mocked === true });
+  return NextResponse.json({
+    ok: true,
+    report_job_id: result.report_job_id,
+    execution_generation: result.execution_generation,
+    template_version: result.template_version,
+    mocked: result.send.ok && "mocked" in result.send ? result.send.mocked : undefined,
+  });
 }

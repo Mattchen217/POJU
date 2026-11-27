@@ -102,6 +102,8 @@ export type DeliveryBookStageProps = {
   networkSlot?: ReactNode;
   /** 换场 / 迁移 / 合伙 / 亲密 / joint 才把 07 插进书架。 */
   topic?: string | null;
+  /** DI2 verified prose page ids — sole shelf order when set. */
+  verifiedProseOrder?: readonly string[] | null;
 };
 
 function isProseSlot(id: DeliveryShelfSlotId): boolean {
@@ -224,13 +226,21 @@ export function DeliveryBookStage({
   interruptedSlot,
   networkSlot,
   topic = null,
+  verifiedProseOrder = null,
 }: DeliveryBookStageProps) {
   const t = useTranslations("workspace.deliveryShelf");
   const zh = locale.startsWith("zh");
 
   const slots = useMemo(
-    () => buildDeliveryShelfSlots(fullText, { locale, complete, topic, question: originalQuestion }),
-    [fullText, locale, complete, topic, originalQuestion],
+    () =>
+      buildDeliveryShelfSlots(fullText, {
+        locale,
+        complete,
+        topic,
+        question: originalQuestion,
+        verifiedProseOrder: verifiedProseOrder ?? undefined,
+      }),
+    [fullText, locale, complete, topic, originalQuestion, verifiedProseOrder],
   );
 
   const readyById = useMemo(() => {

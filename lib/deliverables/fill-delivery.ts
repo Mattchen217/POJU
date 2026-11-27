@@ -34,8 +34,13 @@ import {
 /** Default download chapters. 07 is absent until decisionReportSlotIds(topic) inserts it. */
 export const DECISION_REPORT_SLOT_IDS = decisionReportPanes(null).map((pane) => pane.id);
 
-export function decisionReportSlotIds(topic?: string | null): readonly string[] {
-  return decisionReportPanes(topic).map((pane) => pane.id);
+export function decisionReportSlotIds(
+  topicOrOpts?: string | null | { topic?: string | null; pageOrder?: readonly string[] },
+): readonly string[] {
+  if (topicOrOpts && typeof topicOrOpts === "object") {
+    return decisionReportPanes(topicOrOpts).map((pane) => pane.id);
+  }
+  return decisionReportPanes(topicOrOpts).map((pane) => pane.id);
 }
 
 export type DecisionReportSlotId = string;
@@ -76,15 +81,24 @@ export function buildDeliverySlotMap(
   opts?: BuildDeliveryInteractiveHtmlOptions,
 ): Record<string, string> {
   const zh = locale.startsWith("zh");
-  const topic = deliveryTopicFromSignals({ topic: opts?.topic, question: opts?.originalQuestion });
+  const explicitOrder = opts?.pageOrder?.filter((id) => id && id !== "toc") ?? null;
+  const topic = explicitOrder
+    ? null
+    : deliveryTopicFromSignals({ topic: opts?.topic, question: opts?.originalQuestion });
   const pages = buildDeliveryBookPages(fullText);
   const shelf = buildDeliveryShelfSlots(fullText, {
     locale,
     complete: true,
     topic,
     question: opts?.originalQuestion,
+    // HTML pane order without cover → shelf prose authority when DI2 pageOrder is set.
+    verifiedProseOrder: explicitOrder
+      ? explicitOrder.filter((id) => id !== "cover")
+      : undefined,
   });
-  const slotIds = decisionReportSlotIds(topic);
+  const slotIds = explicitOrder?.length
+    ? decisionReportSlotIds({ pageOrder: explicitOrder })
+    : decisionReportSlotIds(topic);
   const evidenceLabel = deliveryEvidenceLabelPlain(locale);
   const evidenceTerms = collectDeliveryEvidenceTerms(fullText, locale);
   const appendixCopy = deliveryAppendixCopy(locale);
@@ -188,8 +202,13 @@ export function fillDecisionReportHtml(
   locale: string,
   opts?: BuildDeliveryInteractiveHtmlOptions,
 ): string {
-  const topic = deliveryTopicFromSignals({ topic: opts?.topic, question: opts?.originalQuestion });
-  const template = renderDecisionReportTemplate(topic);
+  const explicitOrder = opts?.pageOrder?.filter((id) => id && id !== "toc") ?? null;
+  const topic = explicitOrder
+    ? null
+    : deliveryTopicFromSignals({ topic: opts?.topic, question: opts?.originalQuestion });
+  const template = explicitOrder?.length
+    ? renderDecisionReportTemplate({ pageOrder: explicitOrder })
+    : renderDecisionReportTemplate(topic);
   const slots = buildDeliverySlotMap(fullText, locale, opts);
   const html = fillDeliverableHtml(template, slots);
   maybeAssertSkeleton(template, html);

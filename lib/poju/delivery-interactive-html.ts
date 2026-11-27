@@ -44,8 +44,16 @@ export type DeliveryInteractiveHtmlMeta = {
   reportDate?: string;
   /** Cover / document title override. */
   title?: string;
-  /** Shelf topic. Opens HTML pane 07 only when the topic gate matches. */
+  /**
+   * Legacy shelf topic. Opens HTML pane 07 only when the topic gate matches.
+   * Ignored when `pageOrder` is provided (DI2 verified page set is sole authority).
+   */
   topic?: string | null;
+  /**
+   * Explicit pane order for the offline HTML template (e.g. cover, 01, …, 03).
+   * When set, HTML export must not re-infer pages from topic signals.
+   */
+  pageOrder?: readonly string[];
 };
 
 export type BuildDeliveryInteractiveHtmlOptions = DeliveryInteractiveHtmlMeta & {
