@@ -286,9 +286,13 @@ export function WorkspaceDocVaultModal({ item, onClose }: Props) {
       const html = await runLiveBaselineExport();
       if (!html) throw new Error("empty live export");
       const title = tPortrait("title");
+      const prepareSession = prepare?.session ?? null;
+      const writerToken = prepareSession?.dc_ledger?.writer_token?.trim() ?? "";
+      const sessionIdForAuth = prepareSession?.session_id?.trim() ?? "";
       const res = await fetch("/api/poju/delivery-email", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
         body: JSON.stringify({
           to,
           title,
@@ -296,6 +300,10 @@ export function WorkspaceDocVaultModal({ item, onClose }: Props) {
           locale,
           html_attachment: html,
           pack: "baseline",
+          // Optional POJU Session writer when an active ledger session exists.
+          ...(sessionIdForAuth && writerToken
+            ? { session_id: sessionIdForAuth, writer_token: writerToken }
+            : {}),
         }),
       });
       const data = (await res.json()) as { ok?: boolean; error?: string };

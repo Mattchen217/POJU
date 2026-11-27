@@ -11,6 +11,7 @@ import { ensureDeliveryFilledHtml } from "@/lib/deliverables";
 import {
   DI2_HTML_TEMPLATE_VERSION,
   Di2HtmlExportError,
+  normalizeDi2HtmlPackTitle,
   readDi2HtmlPackCache,
   resolveDi2HtmlProseOrder,
   writeDi2HtmlPackCache,
@@ -246,16 +247,22 @@ export function DeliveryShelfView({
       );
     }
 
-    const cachedIdentity = lastServerPackIdentityRef.current;
+    const titleNorm = normalizeDi2HtmlPackTitle(coverTitle);
+    const lookupIdentity: Di2HtmlPackIdentity | null = lastServerPackIdentityRef.current
+      ? {
+          ...lastServerPackIdentityRef.current,
+          title: titleNorm,
+          locale,
+        }
+      : null;
     if (
-      cachedIdentity &&
-      cachedIdentity.report_job_id === di2Authority.report_job_id &&
-      cachedIdentity.execution_generation === di2Authority.execution_generation &&
-      cachedIdentity.locale === locale
+      lookupIdentity &&
+      lookupIdentity.report_job_id === di2Authority.report_job_id &&
+      lookupIdentity.execution_generation === di2Authority.execution_generation
     ) {
-      const cached = readDi2HtmlPackCache(packCacheRef.current, cachedIdentity);
+      const cached = readDi2HtmlPackCache(packCacheRef.current, lookupIdentity);
       if (cached) {
-        return { html: cached, reportDate: new Date().toISOString().slice(0, 10) };
+        return { html: cached.html, reportDate: cached.report_date };
       }
     }
 
@@ -282,6 +289,7 @@ export function DeliveryShelfView({
       code?: string;
       identity?: Di2HtmlPackIdentity;
       report_date?: string;
+      title?: string;
     };
     if (!res.ok || !data.ok || !data.html) {
       throw new Di2HtmlExportError(
@@ -290,15 +298,21 @@ export function DeliveryShelfView({
       );
     }
 
+    const reportDate = data.report_date?.trim() || "";
+    if (!reportDate) {
+      throw new Di2HtmlExportError("report_date_missing", "server HTML missing report_date");
+    }
+
     const identity: Di2HtmlPackIdentity = data.identity ?? {
       report_job_id: di2Authority.report_job_id,
       execution_generation: di2Authority.execution_generation,
       content_identity: "server",
       locale,
       template_version: DI2_HTML_TEMPLATE_VERSION,
+      title: normalizeDi2HtmlPackTitle(data.title ?? coverTitle),
     };
     lastServerPackIdentityRef.current = identity;
-    packCacheRef.current = writeDi2HtmlPackCache(identity, data.html);
+    packCacheRef.current = writeDi2HtmlPackCache(identity, data.html, reportDate);
 
     try {
       const session =
@@ -322,7 +336,7 @@ export function DeliveryShelfView({
 
     return {
       html: data.html,
-      reportDate: data.report_date || new Date().toISOString().slice(0, 10),
+      reportDate,
     };
   };
 

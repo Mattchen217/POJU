@@ -96,7 +96,14 @@ export type Di2HtmlPackIdentity = {
   content_identity: string;
   locale: string;
   template_version: string;
+  /** Normalized title used when building HTML — title change must miss cache. */
+  title: string;
 };
+
+/** Normalize title for pack identity / cache keys. */
+export function normalizeDi2HtmlPackTitle(title: string | undefined | null): string {
+  return (title ?? "").trim();
+}
 
 export function di2HtmlPackIdentityKey(id: Di2HtmlPackIdentity): string {
   return [
@@ -105,6 +112,7 @@ export function di2HtmlPackIdentityKey(id: Di2HtmlPackIdentity): string {
     id.content_identity,
     id.locale.trim().toLowerCase().slice(0, 8),
     id.template_version,
+    normalizeDi2HtmlPackTitle(id.title),
   ].join("|");
 }
 
@@ -119,23 +127,30 @@ export function sameDi2HtmlPackIdentity(
 export type Di2HtmlPackCacheEntry = {
   identity: Di2HtmlPackIdentity;
   html: string;
+  /** Server CompletedReport.committed_at date (YYYY-MM-DD) — never invent "today" on hit. */
+  report_date: string;
 };
 
-/** Return cached HTML only when every identity field matches. */
+/** Return cached pack only when every identity field matches (incl. title). */
 export function readDi2HtmlPackCache(
   cache: Di2HtmlPackCacheEntry | null | undefined,
   identity: Di2HtmlPackIdentity,
-): string | null {
+): { html: string; report_date: string } | null {
   if (!cache?.html) return null;
   if (!sameDi2HtmlPackIdentity(cache.identity, identity)) return null;
-  return cache.html;
+  return { html: cache.html, report_date: cache.report_date };
 }
 
 export function writeDi2HtmlPackCache(
   identity: Di2HtmlPackIdentity,
   html: string,
+  report_date: string,
 ): Di2HtmlPackCacheEntry {
-  return { identity, html };
+  return {
+    identity: { ...identity, title: normalizeDi2HtmlPackTitle(identity.title) },
+    html,
+    report_date,
+  };
 }
 
 export function fillDi2AuthorityHtml(

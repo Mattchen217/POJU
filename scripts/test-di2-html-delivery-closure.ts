@@ -16,6 +16,7 @@ import {
   Di2HtmlExportError,
   di2HtmlContentIdentity,
   fillDi2AuthorityHtml,
+  normalizeDi2HtmlPackTitle,
   readDi2HtmlPackCache,
   resolveDi2HtmlProseOrder,
   resolveDi2HtmlSlotIds,
@@ -28,6 +29,11 @@ import {
   __setDi2HtmlArtifactDepsForTests,
   buildAuthorizedDi2HtmlArtifact,
 } from "../lib/deliverables/di2-html-artifact";
+import {
+  __setBaselineDeliveryEmailDepsForTests,
+  isBaselineDeliverableHtml,
+  sendAuthorizedBaselineDeliveryEmail,
+} from "../lib/deliverables/baseline-delivery-email";
 import {
   __setDi2DeliveryEmailDepsForTests,
   sendAuthorizedDi2DeliveryEmail,
@@ -229,7 +235,7 @@ function artifactDeps(record: CompletedReportRecord | null, overrides: Record<st
 }
 
 async function main() {
-  console.log("Unit F-R2-R3 — DI2 HTML Artifact Authority Closure\n");
+  console.log("Unit F-R2-R4 — DI2 HTML + Baseline Auth Closure\n");
 
   await check("Page 03 present → HTML includes pane 03", async () => {
     const { pages, fullText } = fullSet({ page03: true, page07: "not_applicable" });
@@ -300,33 +306,53 @@ async function main() {
 
   // ── Cache identity ────────────────────────────────────────────────────────
 
-  await check("Cache reuse when identity identical", () => {
+  await check("Cache reuse when identity identical (incl. title)", () => {
     const identity: Di2HtmlPackIdentity = {
       report_job_id: "r1",
       execution_generation: 1,
       content_identity: di2HtmlContentIdentity("body-a"),
       locale: "zh",
       template_version: DI2_HTML_TEMPLATE_VERSION,
+      title: normalizeDi2HtmlPackTitle(" 同一份 "),
     };
-    const entry = writeDi2HtmlPackCache(identity, "<html>A</html>");
-    assert.equal(readDi2HtmlPackCache(entry, identity), "<html>A</html>");
-    assert.equal(sameDi2HtmlPackIdentity(identity, { ...identity }), true);
+    const entry = writeDi2HtmlPackCache(identity, "<html>A</html>", "2026-11-27");
+    const hit = readDi2HtmlPackCache(entry, identity);
+    assert.equal(hit?.html, "<html>A</html>");
+    assert.equal(hit?.report_date, "2026-11-27");
+    assert.equal(sameDi2HtmlPackIdentity(identity, { ...identity, title: "同一份" }), true);
   });
 
-  await check("Cache miss on report_job_id / generation / content / locale / template", () => {
+  await check("Cache miss on report_job_id / generation / content / locale / template / title", () => {
     const base: Di2HtmlPackIdentity = {
       report_job_id: "r1",
       execution_generation: 1,
       content_identity: "cid1",
       locale: "zh",
       template_version: DI2_HTML_TEMPLATE_VERSION,
+      title: "标题A",
     };
-    const entry = writeDi2HtmlPackCache(base, "<html>A</html>");
+    const entry = writeDi2HtmlPackCache(base, "<html>A</html>", "2026-11-27");
     assert.equal(readDi2HtmlPackCache(entry, { ...base, report_job_id: "r2" }), null);
     assert.equal(readDi2HtmlPackCache(entry, { ...base, execution_generation: 2 }), null);
     assert.equal(readDi2HtmlPackCache(entry, { ...base, content_identity: "cid2" }), null);
     assert.equal(readDi2HtmlPackCache(entry, { ...base, locale: "en" }), null);
     assert.equal(readDi2HtmlPackCache(entry, { ...base, template_version: "other" }), null);
+    assert.equal(readDi2HtmlPackCache(entry, { ...base, title: "标题B" }), null);
+  });
+
+  await check("Cache hit preserves server report_date (not today)", () => {
+    const identity: Di2HtmlPackIdentity = {
+      report_job_id: "r1",
+      execution_generation: 1,
+      content_identity: "cid1",
+      locale: "zh",
+      template_version: DI2_HTML_TEMPLATE_VERSION,
+      title: "报告",
+    };
+    const entry = writeDi2HtmlPackCache(identity, "<html>A</html>", "2026-01-15");
+    const hit = readDi2HtmlPackCache(entry, identity);
+    assert.equal(hit?.report_date, "2026-01-15");
+    assert.notEqual(hit?.report_date, new Date().toISOString().slice(0, 10));
   });
 
   // ── Email authorization ───────────────────────────────────────────────────
@@ -720,9 +746,197 @@ async function main() {
     __setDi2HtmlArtifactDepsForTests(null);
   });
 
+  await check("Artifact identity includes normalized title", async () => {
+    const { pages, fullText } = fullSet({ page03: true });
+    const sealed = await sealedRecord(pages, fullText);
+    __setDi2HtmlArtifactDepsForTests(artifactDeps(sealed));
+    const a = await buildAuthorizedDi2HtmlArtifact({
+      session_id: "sess_html_1",
+      job_id: "job_html_1",
+      writer_token: "wt",
+      locale: "zh",
+      title: " 标题A ",
+    });
+    const b = await buildAuthorizedDi2HtmlArtifact({
+      session_id: "sess_html_1",
+      job_id: "job_html_1",
+      writer_token: "wt",
+      locale: "zh",
+      title: "标题B",
+    });
+    assert.equal(a.ok, true);
+    assert.equal(b.ok, true);
+    if (!a.ok || !b.ok) return;
+    assert.equal(a.identity.title, "标题A");
+    assert.equal(b.identity.title, "标题B");
+    assert.equal(sameDi2HtmlPackIdentity(a.identity, b.identity), false);
+    assert.notEqual(a.html, b.html);
+    __setDi2HtmlArtifactDepsForTests(null);
+  });
+
+  // ── F-R2-R4: Baseline email authorization ────────────────────────────────
+
+  const baselineHtml = `<!DOCTYPE html><html><head>
+<meta name="eastern-os-deliverable" content="baseline-profile-live"/>
+<title>Baseline</title></head><body>${"x".repeat(120)}</body></html>`;
+
+  await check("Baseline marker helper accepts live/blank deliverables", () => {
+    assert.equal(isBaselineDeliverableHtml(baselineHtml), true);
+    assert.equal(isBaselineDeliverableHtml("<html>no marker</html>" + "y".repeat(100)), false);
+  });
+
+  await check("Baseline: unauthenticated request refused", async () => {
+    let sent = false;
+    __setBaselineDeliveryEmailDepsForTests({
+      getUser: async () => null,
+      isAuthConfigured: () => true,
+      assertWriter: async () => {
+        throw new Error("should not reach writer");
+      },
+      sendEmail: async () => {
+        sent = true;
+        return { ok: true, mocked: true };
+      },
+    });
+    const res = await sendAuthorizedBaselineDeliveryEmail({
+      to: "a@example.com",
+      title: "个人基础画像",
+      html_attachment: baselineHtml,
+    });
+    assert.equal(res.ok, false);
+    if (!res.ok) assert.equal(res.code, "unauthorized");
+    assert.equal(sent, false);
+    __setBaselineDeliveryEmailDepsForTests(null);
+  });
+
+  await check("Baseline: unauthorized Session writer refused", async () => {
+    let sent = false;
+    let writerChecked = false;
+    __setBaselineDeliveryEmailDepsForTests({
+      getUser: async () => ({ id: "u1", email: "a@example.com" }),
+      isAuthConfigured: () => true,
+      assertWriter: async () => {
+        writerChecked = true;
+        throw new Error("forbidden");
+      },
+      sendEmail: async () => {
+        sent = true;
+        return { ok: true, mocked: true };
+      },
+    });
+    const res = await sendAuthorizedBaselineDeliveryEmail({
+      to: "a@example.com",
+      title: "个人基础画像",
+      html_attachment: baselineHtml,
+      session_id: "sess_other",
+      writer_token: "bad_token",
+    });
+    assert.equal(writerChecked, true);
+    assert.equal(res.ok, false);
+    if (!res.ok) assert.equal(res.code, "session_forbidden");
+    assert.equal(sent, false);
+    __setBaselineDeliveryEmailDepsForTests(null);
+  });
+
+  await check("Baseline: authorized user can send (no DI2 CompletedReport)", async () => {
+    let sentAttachment: string | null = null;
+    __setBaselineDeliveryEmailDepsForTests({
+      getUser: async () => ({ id: "u1", email: "owner@example.com" }),
+      isAuthConfigured: () => true,
+      assertWriter: async () => {
+        throw new Error("writer should not be required when session omitted");
+      },
+      sendEmail: async (params) => {
+        sentAttachment =
+          typeof params.attachments?.[0]?.content === "string"
+            ? params.attachments[0].content
+            : null;
+        return { ok: true, mocked: true };
+      },
+    });
+    const res = await sendAuthorizedBaselineDeliveryEmail({
+      to: "owner@example.com",
+      title: "个人基础画像",
+      locale: "zh",
+      html_attachment: baselineHtml,
+    });
+    assert.equal(res.ok, true, JSON.stringify(res));
+    assert.equal(sentAttachment, baselineHtml);
+    const fs = await import("node:fs");
+    const path = await import("node:path");
+    const src = fs.readFileSync(
+      path.join(process.cwd(), "lib/deliverables/baseline-delivery-email.ts"),
+      "utf8",
+    );
+    assert.equal(src.includes("decision-report-store"), false);
+    assert.equal(src.includes("buildAuthorizedDi2HtmlArtifact"), false);
+    assert.equal(src.includes("loadCompletedReport"), false);
+    __setBaselineDeliveryEmailDepsForTests(null);
+  });
+
+  await check("Baseline: authorized Session writer can send", async () => {
+    let writerOk = false;
+    __setBaselineDeliveryEmailDepsForTests({
+      getUser: async () => ({ id: "u1", email: "a@example.com" }),
+      isAuthConfigured: () => true,
+      assertWriter: async (sid, wt) => {
+        assert.equal(sid, "sess_ok");
+        assert.equal(wt, "wt_ok");
+        writerOk = true;
+        return "ok";
+      },
+      sendEmail: async () => ({ ok: true, mocked: true }),
+    });
+    const res = await sendAuthorizedBaselineDeliveryEmail({
+      to: "a@example.com",
+      title: "个人基础画像",
+      html_attachment: baselineHtml,
+      session_id: "sess_ok",
+      writer_token: "wt_ok",
+    });
+    assert.equal(writerOk, true);
+    assert.equal(res.ok, true, JSON.stringify(res));
+    __setBaselineDeliveryEmailDepsForTests(null);
+  });
+
+  await check("Baseline: recipient must match account email", async () => {
+    __setBaselineDeliveryEmailDepsForTests({
+      getUser: async () => ({ id: "u1", email: "owner@example.com" }),
+      isAuthConfigured: () => true,
+      assertWriter: async () => "ok",
+      sendEmail: async () => ({ ok: true, mocked: true }),
+    });
+    const res = await sendAuthorizedBaselineDeliveryEmail({
+      to: "other@example.com",
+      title: "个人基础画像",
+      html_attachment: baselineHtml,
+    });
+    assert.equal(res.ok, false);
+    if (!res.ok) assert.equal(res.code, "recipient_forbidden");
+    __setBaselineDeliveryEmailDepsForTests(null);
+  });
+
+  await check("Baseline: arbitrary HTML without deliverable marker refused", async () => {
+    __setBaselineDeliveryEmailDepsForTests({
+      getUser: async () => ({ id: "u1", email: "a@example.com" }),
+      isAuthConfigured: () => true,
+      assertWriter: async () => "ok",
+      sendEmail: async () => ({ ok: true, mocked: true }),
+    });
+    const res = await sendAuthorizedBaselineDeliveryEmail({
+      to: "a@example.com",
+      title: "spam",
+      html_attachment: `<html><body>${"z".repeat(200)}</body></html>`,
+    });
+    assert.equal(res.ok, false);
+    if (!res.ok) assert.equal(res.code, "attachment_not_baseline");
+    __setBaselineDeliveryEmailDepsForTests(null);
+  });
+
   __setDi2DeliveryEmailDepsForTests(null);
   __setDi2HtmlArtifactDepsForTests(null);
-  console.log(`\nF-R2-R3 HTML Artifact Closure results: ${passed} passed, ${failed} failed`);
+  __setBaselineDeliveryEmailDepsForTests(null);
+  console.log(`\nF-R2-R4 HTML / Baseline Closure results: ${passed} passed, ${failed} failed`);
   process.exit(failed > 0 ? 1 : 0);
 }
 

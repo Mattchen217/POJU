@@ -20,6 +20,7 @@ import {
   Di2HtmlExportError,
   di2HtmlContentIdentity,
   fillDi2AuthorityHtml,
+  normalizeDi2HtmlPackTitle,
   type Di2HtmlPackIdentity,
 } from "@/lib/deliverables/di2-html-authority";
 
@@ -251,6 +252,7 @@ export async function buildAuthorizedDi2HtmlArtifact(
     content_identity: di2HtmlContentIdentity(fullText),
     locale,
     template_version: DI2_HTML_TEMPLATE_VERSION,
+    title: normalizeDi2HtmlPackTitle(title),
   };
 
   return {
