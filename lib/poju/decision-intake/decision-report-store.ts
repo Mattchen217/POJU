@@ -173,6 +173,68 @@ export async function saveAnalysis(next: StoredAnalysis): Promise<StoredAnalysis
   return next;
 }
 
+/**
+ * Unit E R3 — atomically create an `unavailable` Personal Analysis only when the
+ * Analysis key is absent (KV NX). Does not change saveAnalysis semantics for
+ * other writers. Pending/running/completed/failed keys are never overwritten here.
+ */
+export type CreateUnavailableAnalysisResult =
+  | { ok: true; created: true; stored: StoredAnalysis }
+  | { ok: true; created: false; stored: StoredAnalysis }
+  | { ok: false; reason: "unreadable" | "absent_after_conflict" | "invalid_candidate" };
+
+/** @internal tests only — runs after NX is about to fire (post initial null read). */
+let __beforeCreateUnavailableAnalysisNxForTests:
+  | ((idempotency_key: string) => void | Promise<void>)
+  | null = null;
+
+/** @internal tests only */
+export function __setBeforeCreateUnavailableAnalysisNxForTests(
+  fn: typeof __beforeCreateUnavailableAnalysisNxForTests,
+): void {
+  __beforeCreateUnavailableAnalysisNxForTests = fn;
+}
+
+export async function createUnavailableAnalysisIfAbsent(
+  next: StoredAnalysis,
+): Promise<CreateUnavailableAnalysisResult> {
+  if (next.record.status !== "unavailable" || next.record.analysis_result != null) {
+    return { ok: false, reason: "invalid_candidate" };
+  }
+  const key = di2AnalysisKey(next.record.idempotency_key);
+  if (__beforeCreateUnavailableAnalysisNxForTests) {
+    await __beforeCreateUnavailableAnalysisNxForTests(next.record.idempotency_key);
+  }
+  let set: "OK" | null | unknown;
+  try {
+    set = await kv.set(key, next, { ex: RETENTION, nx: true });
+  } catch {
+    return { ok: false, reason: "unreadable" };
+  }
+  if (set === "OK") {
+    // Confirm durable read-back under the same key identity.
+    let back: StoredAnalysis | null;
+    try {
+      back = await loadAnalysis(next.record.idempotency_key);
+    } catch {
+      return { ok: false, reason: "unreadable" };
+    }
+    if (!back || back.record.status !== "unavailable") {
+      return { ok: false, reason: "unreadable" };
+    }
+    return { ok: true, created: true, stored: back };
+  }
+
+  let cur: StoredAnalysis | null;
+  try {
+    cur = await loadAnalysis(next.record.idempotency_key);
+  } catch {
+    return { ok: false, reason: "unreadable" };
+  }
+  if (!cur) return { ok: false, reason: "absent_after_conflict" };
+  return { ok: true, created: false, stored: cur };
+}
+
 // ─── Page records ──────────────────────────────────────────────────────────
 
 export type StoredPage = {

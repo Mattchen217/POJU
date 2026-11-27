@@ -63,14 +63,13 @@ import {
 import { completedReportDraft } from "./decision-report-runner";
 import {
   commitCompletedReport,
+  createUnavailableAnalysisIfAbsent,
   DecisionReportStoreError,
   loadAnalysis,
   loadCompletedReport,
-  saveAnalysis,
   savePage,
   verifyCompletedReportRecord,
   type CompletedReportRecord,
-  type StoredAnalysis,
 } from "./decision-report-store";
 import {
   isDecisionReportJobInput,
@@ -360,66 +359,13 @@ function analysisIdentityMatches(
 }
 
 /**
- * Resolve Personal Analysis for Final Delivery.
- *
- * - completed + full identity + analysis_result → reuse
- * - pending / running → do not overwrite; retryable fail (analysis still in flight)
- * - failed → fail closed; do not rewrite as unavailable
- * - unavailable + full identity + null result → reuse
- * - no record → honest unavailable seal (never forge completed)
- * - identity mismatch on durable records → fail closed (never silent rewrite)
+ * Apply status rules for an already-loaded Personal Analysis record.
+ * Never writes / overwrites Analysis Store.
  */
-async function ensureAnalysisForDelivery(
-  job: PojuXhighJob,
+function resolveLoadedAnalysisForDelivery(
+  rec: PersonalAnalysisRecord,
   ji: DecisionReportJobInput,
-): Promise<{ ok: true; analysis: PersonalAnalysisRecord } | Di2Batch2FinalDeliveryResult> {
-  void job;
-  const existing = await loadAnalysis(ji.analysis_key).catch(() => null);
-
-  if (!existing) {
-    // No mappable PersonalAnalysisArtifact in Batch2 Authority page outputs.
-    const t = nowIso();
-    const record: PersonalAnalysisRecord = {
-      analysis_id: `pa_${ji.freeze_id.replace(/[^a-zA-Z0-9]/g, "")}_${ji.profile_hash.slice(0, 12)}`,
-      idempotency_key: ji.analysis_key,
-      session_id: ji.session_id,
-      freeze_id: ji.freeze_id,
-      context_id: ji.context_id,
-      context_version: ji.context_version,
-      context_hash: ji.context_hash,
-      profile_id: ji.profile_id,
-      profile_hash: ji.profile_hash,
-      analysis_schema_version: ji.analysis_schema_version,
-      status: "unavailable",
-      attempts: 0,
-      generated_at: null,
-      updated_at: t,
-      analysis_result: null,
-      error: "personal_analysis_not_generated_for_batch2_final_delivery",
-      retryable: false,
-      model: null,
-      tokens_used: 0,
-    };
-    const saved = await saveAnalysis({ record, projection: null });
-    if (saved.record.status === "completed" && saved.record.analysis_result) {
-      if (analysisIdentityMatches(saved.record, ji)) {
-        return { ok: true, analysis: saved.record };
-      }
-      return fail("analysis_incomplete", "concurrent Personal Analysis identity mismatch");
-    }
-    if (saved.record.status !== "unavailable" || saved.record.analysis_result != null) {
-      return fail("analysis_incomplete", "Personal Analysis unavailable seal failed", {
-        retryable: true,
-      });
-    }
-    if (!analysisIdentityMatches(saved.record, ji)) {
-      return fail("analysis_incomplete", "Personal Analysis unavailable seal identity mismatch");
-    }
-    return { ok: true, analysis: saved.record };
-  }
-
-  const rec = existing.record;
-
+): { ok: true; analysis: PersonalAnalysisRecord } | Di2Batch2FinalDeliveryResult {
   if (rec.status === "pending" || rec.status === "running") {
     return fail(
       "analysis_incomplete",
@@ -471,6 +417,66 @@ async function ensureAnalysisForDelivery(
     "analysis_incomplete",
     `Personal Analysis status=${String(rec.status)} is not deliverable`,
   );
+}
+
+/**
+ * Resolve Personal Analysis for Final Delivery.
+ *
+ * - completed + full identity + analysis_result → reuse
+ * - pending / running → do not overwrite; retryable fail (analysis still in flight)
+ * - failed → fail closed; do not rewrite as unavailable
+ * - unavailable + full identity + null result → reuse
+ * - no record → atomic NX create of honest unavailable (never forge completed)
+ * - identity mismatch on durable records → fail closed (never silent rewrite)
+ */
+async function ensureAnalysisForDelivery(
+  job: PojuXhighJob,
+  ji: DecisionReportJobInput,
+): Promise<{ ok: true; analysis: PersonalAnalysisRecord } | Di2Batch2FinalDeliveryResult> {
+  void job;
+  const existing = await loadAnalysis(ji.analysis_key).catch(() => null);
+
+  if (!existing) {
+    // No mappable PersonalAnalysisArtifact in Batch2 Authority page outputs.
+    // Create-if-absent only — concurrent pending/running must win the key.
+    const t = nowIso();
+    const record: PersonalAnalysisRecord = {
+      analysis_id: `pa_${ji.freeze_id.replace(/[^a-zA-Z0-9]/g, "")}_${ji.profile_hash.slice(0, 12)}`,
+      idempotency_key: ji.analysis_key,
+      session_id: ji.session_id,
+      freeze_id: ji.freeze_id,
+      context_id: ji.context_id,
+      context_version: ji.context_version,
+      context_hash: ji.context_hash,
+      profile_id: ji.profile_id,
+      profile_hash: ji.profile_hash,
+      analysis_schema_version: ji.analysis_schema_version,
+      status: "unavailable",
+      attempts: 0,
+      generated_at: null,
+      updated_at: t,
+      analysis_result: null,
+      error: "personal_analysis_not_generated_for_batch2_final_delivery",
+      retryable: false,
+      model: null,
+      tokens_used: 0,
+    };
+    const created = await createUnavailableAnalysisIfAbsent({ record, projection: null });
+    if (!created.ok) {
+      return fail(
+        "analysis_incomplete",
+        `Personal Analysis unavailable NX create failed (${created.reason})`,
+        { retryable: created.reason === "unreadable" },
+      );
+    }
+    if (created.created) {
+      return resolveLoadedAnalysisForDelivery(created.stored.record, ji);
+    }
+    // NX lost: another writer holds the key — apply existing state rules (no overwrite).
+    return resolveLoadedAnalysisForDelivery(created.stored.record, ji);
+  }
+
+  return resolveLoadedAnalysisForDelivery(existing.record, ji);
 }
 
 type GatedPage = {

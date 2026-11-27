@@ -41,6 +41,7 @@ import {
   type ChargeAuthorization,
 } from "../lib/poju/decision-intake/decision-report-charge";
 import {
+  __setBeforeCreateUnavailableAnalysisNxForTests,
   loadAnalysis,
   loadCompletedReport,
   saveAnalysis,
@@ -1434,10 +1435,63 @@ async function main() {
     assert.equal(after!.record.error, "model_quality_exhausted");
   });
 
+  // ── Unit E R3 — atomic unavailable create vs concurrent in-flight Analysis ─
+
+  for (const inflight of ["pending", "running"] as const) {
+    await check(
+      `R3: null→${inflight} before unavailable NX → preserve ${inflight}, no report`,
+      async () => {
+        const { ctx } = await prepareReadyJob();
+        const job = await getXhighJob(ctx.job_id);
+        assert.ok(job);
+        const ji = job!.input as DecisionReportJobInput;
+        assert.equal(await loadAnalysis(ji.analysis_key), null);
+
+        const analysis_id = `pa_race_${inflight}_${uniq("r3")}`;
+        const model = inflight === "running" ? "worker_in_flight" : null;
+        __setBeforeCreateUnavailableAnalysisNxForTests(async (key) => {
+          assert.equal(key, ji.analysis_key);
+          await saveAnalysis({
+            record: analysisBase(ji, {
+              analysis_id,
+              status: inflight,
+              error: null,
+              retryable: true,
+              model,
+            }),
+            projection: null,
+          });
+        });
+
+        try {
+          const delivered = await attemptDi2Batch2FinalDelivery(ctx.job_id);
+          assert.equal(delivered.ok, false);
+          if (delivered.ok) return;
+          assert.equal(delivered.code, "analysis_incomplete");
+          assert.equal(delivered.retryable, true);
+          assert.equal(await loadCompletedReport(ctx.session_id, ctx.job_id), null);
+
+          const after = await loadAnalysis(ji.analysis_key);
+          assert.ok(after);
+          assert.equal(after!.record.status, inflight);
+          assert.equal(after!.record.analysis_id, analysis_id);
+          assert.equal(after!.record.model, model);
+          assert.equal(after!.record.idempotency_key, ji.analysis_key);
+          assert.equal(after!.record.session_id, ji.session_id);
+          assert.equal(after!.record.freeze_id, ji.freeze_id);
+          assert.notEqual(after!.record.status, "unavailable");
+        } finally {
+          __setBeforeCreateUnavailableAnalysisNxForTests(null);
+        }
+      },
+    );
+  }
+
   console.log(`\nUnit E results: ${passed} passed, ${failed} failed`);
   __setDi2Batch2FinalDeliveryAuthoritySnapshotForTests(null);
   __setDi2Batch2FinalDeliveryCommitHookForTests(null);
   __setDi2Batch2ContinueAuthoritySnapshotForTests(null);
+  __setBeforeCreateUnavailableAnalysisNxForTests(null);
   process.exit(failed > 0 ? 1 : 0);
 }
 
