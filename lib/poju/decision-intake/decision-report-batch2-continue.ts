@@ -1,11 +1,14 @@
 /**
- * Unit D — DI2 Continue / Recovery → Batch2/3 (recovery only).
+ * Unit D / R1 — DI2 Continue / Recovery → Batch2/3 (recovery only).
  *
  * Resumes the persisted Batch2 Generation / Job for a DI2 decision_report job.
  * Does NOT: allocate identity, create Generation, send full ORCHESTRATE,
  * write DI2 Report Store, or fall back to the legacy DI2 eight-page runner.
  *
  * Reuses Unit B binding + Unit C Session Lock / lease (holder "start").
+ * R1: recomputes di2ReportJobId / generation_id; verifies Freeze/Profile/Context
+ * against authority (or test snapshot). Status must not use legacy DI2 lease
+ * to interrupt Batch2-bound jobs (see buildDecisionReportStatus).
  */
 
 import {
@@ -23,13 +26,21 @@ import {
   readGeneration,
 } from "@/lib/llm/pro/delivery/decision-report-v2/batch3/generation-store";
 import {
+  di2Batch2GenerationId,
   evaluateExistingDi2Batch2Binding,
   type Di2Batch2IdentityBinding,
 } from "@/lib/poju/decision-intake/decision-report-batch2-identity";
 import {
+  di2ReportJobId,
   isDecisionReportJobInput,
   type DecisionReportJobInput,
 } from "@/lib/poju/decision-intake/decision-report-types";
+import { loadVerifiedFreezeRecord } from "@/lib/poju/decision-authority/server/freeze-authority";
+import { loadVerifiedProfileRecord } from "@/lib/poju/decision-authority/server/profile-authority";
+import type {
+  FreezeRecord,
+  ProfileRecord,
+} from "@/lib/poju/decision-authority/types";
 import {
   assertDeliveryExecutionAuthority,
   DeliveryExecutionRevokedError,
@@ -56,6 +67,7 @@ export type Di2Batch2ContinueErrorCode =
   | "binding_missing"
   | "binding_invalid"
   | "identity_mismatch"
+  | "identity_unverified"
   | "job_revoked"
   | "generation_missing"
   | "generation_stale"
@@ -195,8 +207,36 @@ async function requireContinueAuthority(input: {
 }
 
 /**
- * Validate binding against the live DI2 job input (Freeze / Profile / context / gen).
- * Does not allocate or rewrite binding.
+ * @internal tests only — inject Freeze/Profile authority snapshot so Continue
+ * identity checks can run without sealing a full ledger Freeze in MemoryKv.
+ */
+let __authoritySnapshotForTests: {
+  freeze: Pick<
+    FreezeRecord,
+    | "session_id"
+    | "freeze_id"
+    | "context_id"
+    | "context_version"
+    | "context_hash"
+    | "profile_hash"
+  >;
+  profile: Pick<
+    ProfileRecord,
+    "session_id" | "freeze_id" | "profile_id" | "profile_hash"
+  >;
+} | null = null;
+
+/** @internal tests only */
+export function __setDi2Batch2ContinueAuthoritySnapshotForTests(
+  snapshot: typeof __authoritySnapshotForTests,
+): void {
+  __authoritySnapshotForTests = snapshot;
+}
+
+/**
+ * Validate binding against the live DI2 job input.
+ * Recomputes di2ReportJobId / generation_id — does not treat string equality alone
+ * as proof. Does not allocate or rewrite binding.
  */
 export function validateDi2Batch2ContinueIdentity(input: {
   job: PojuXhighJob;
@@ -207,19 +247,11 @@ export function validateDi2Batch2ContinueIdentity(input: {
     return { ok: false, code: "wrong_phase", detail: "not a decision_report job" };
   }
   const reportInput = job.input as DecisionReportJobInput;
-  if (binding.report_id !== reportInput.report_job_id.trim()) {
-    return {
-      ok: false,
-      code: "identity_mismatch",
-      detail: "binding.report_id ≠ job report_job_id",
-    };
-  }
-  if (binding.di2_execution_generation !== job.execution_generation) {
-    return {
-      ok: false,
-      code: "identity_mismatch",
-      detail: "binding.di2_execution_generation ≠ job.execution_generation",
-    };
+  if (
+    typeof job.execution_generation !== "number" ||
+    !Number.isFinite(job.execution_generation)
+  ) {
+    return { ok: false, code: "job_revoked", detail: "execution_generation missing" };
   }
   if (job.session_id !== reportInput.session_id) {
     return {
@@ -228,8 +260,6 @@ export function validateDi2Batch2ContinueIdentity(input: {
       detail: "job.session_id ≠ input.session_id",
     };
   }
-  // Binding is keyed by report_job_id which embeds freeze/profile/generation;
-  // require durable job fields present for diagnostics.
   if (!reportInput.freeze_id?.trim()) {
     return { ok: false, code: "identity_mismatch", detail: "freeze_id missing on job input" };
   }
@@ -257,6 +287,46 @@ export function validateDi2Batch2ContinueIdentity(input: {
       detail: "profile identity missing on job input",
     };
   }
+
+  // Recompute stable report identity from authorized job fields (Unit B formula).
+  const expectedReportJobId = di2ReportJobId({
+    session_id: reportInput.session_id,
+    freeze_id: reportInput.freeze_id,
+    profile_hash: reportInput.profile_hash,
+    execution_generation: job.execution_generation,
+    report_schema_version: reportInput.report_schema_version,
+  });
+  if (reportInput.report_job_id.trim() !== expectedReportJobId) {
+    return {
+      ok: false,
+      code: "identity_mismatch",
+      detail:
+        `report_job_id does not match recomputed di2ReportJobId ` +
+        `(stored=${reportInput.report_job_id.trim()} expected=${expectedReportJobId})`,
+    };
+  }
+  if (binding.report_id !== expectedReportJobId) {
+    return {
+      ok: false,
+      code: "identity_mismatch",
+      detail: "binding.report_id ≠ recomputed di2ReportJobId",
+    };
+  }
+  if (binding.di2_execution_generation !== job.execution_generation) {
+    return {
+      ok: false,
+      code: "identity_mismatch",
+      detail: "binding.di2_execution_generation ≠ job.execution_generation",
+    };
+  }
+  const expectedGid = di2Batch2GenerationId(expectedReportJobId);
+  if (binding.generation_id !== expectedGid) {
+    return {
+      ok: false,
+      code: "identity_mismatch",
+      detail: `binding.generation_id ≠ recomputed ${expectedGid}`,
+    };
+  }
   if (
     job.batch2_production_state &&
     (job.batch2_production_state.report_id !== binding.report_id ||
@@ -268,6 +338,137 @@ export function validateDi2Batch2ContinueIdentity(input: {
       detail: "batch2_production_state identity ≠ binding",
     };
   }
+  return { ok: true };
+}
+
+/**
+ * Verify Freeze / Profile / Context against durable authority records (or a
+ * test-injected snapshot). Presence on the job alone is not consistency.
+ */
+export async function verifyDi2Batch2ContinueAuthorityIdentity(input: {
+  job: PojuXhighJob;
+  binding: Di2Batch2IdentityBinding;
+}): Promise<{ ok: true } | { ok: false; code: Di2Batch2ContinueErrorCode; detail: string }> {
+  const base = validateDi2Batch2ContinueIdentity(input);
+  if (!base.ok) return base;
+  const reportInput = input.job.input as DecisionReportJobInput;
+
+  let freeze: {
+    session_id: string;
+    freeze_id: string;
+    context_id: string;
+    context_version: number;
+    context_hash: string;
+    profile_hash: string | null;
+  };
+  let profile: {
+    session_id: string;
+    freeze_id: string;
+    profile_id: string;
+    profile_hash: string;
+  };
+
+  if (__authoritySnapshotForTests) {
+    const snapProfile = __authoritySnapshotForTests.profile;
+    if (!snapProfile.profile_id?.trim() || !snapProfile.profile_hash?.trim()) {
+      return {
+        ok: false,
+        code: "identity_unverified",
+        detail: "authority snapshot profile_id/profile_hash missing",
+      };
+    }
+    freeze = {
+      ...__authoritySnapshotForTests.freeze,
+      profile_hash: __authoritySnapshotForTests.freeze.profile_hash ?? null,
+    };
+    profile = {
+      session_id: snapProfile.session_id,
+      freeze_id: snapProfile.freeze_id,
+      profile_id: snapProfile.profile_id,
+      profile_hash: snapProfile.profile_hash,
+    };
+  } else {
+    try {
+      const fr = await loadVerifiedFreezeRecord(
+        reportInput.session_id,
+        reportInput.freeze_id,
+      );
+      freeze = {
+        session_id: fr.session_id,
+        freeze_id: fr.freeze_id,
+        context_id: fr.context_id,
+        context_version: fr.context_version,
+        context_hash: fr.context_hash,
+        profile_hash: fr.profile_hash,
+      };
+      const pr = await loadVerifiedProfileRecord({
+        session_id: reportInput.session_id,
+        freeze: fr,
+        profile_hash: reportInput.profile_hash,
+      });
+      if (!pr.profile_id?.trim() || !pr.profile_hash?.trim()) {
+        return {
+          ok: false,
+          code: "identity_unverified",
+          detail: "Profile authority missing profile_id/profile_hash",
+        };
+      }
+      profile = {
+        session_id: pr.session_id,
+        freeze_id: pr.freeze_id,
+        profile_id: pr.profile_id,
+        profile_hash: pr.profile_hash,
+      };
+    } catch (e) {
+      return {
+        ok: false,
+        code: "identity_unverified",
+        detail:
+          e instanceof Error
+            ? e.message
+            : "Freeze/Profile authority could not be verified for Continue",
+      };
+    }
+  }
+
+  if (freeze.session_id !== reportInput.session_id || freeze.freeze_id !== reportInput.freeze_id) {
+    return {
+      ok: false,
+      code: "identity_mismatch",
+      detail: "Freeze authority session/freeze_id ≠ job input",
+    };
+  }
+  if (
+    freeze.context_id !== reportInput.context_id ||
+    freeze.context_version !== reportInput.context_version ||
+    freeze.context_hash !== reportInput.context_hash
+  ) {
+    return {
+      ok: false,
+      code: "identity_mismatch",
+      detail: "Freeze authority context identity ≠ job input",
+    };
+  }
+  if (freeze.profile_hash && freeze.profile_hash !== reportInput.profile_hash) {
+    return {
+      ok: false,
+      code: "identity_mismatch",
+      detail: "Freeze sealed profile_hash ≠ job input profile_hash",
+    };
+  }
+  if (
+    profile.session_id !== reportInput.session_id ||
+    profile.freeze_id !== reportInput.freeze_id ||
+    profile.profile_id !== reportInput.profile_id ||
+    profile.profile_hash !== reportInput.profile_hash
+  ) {
+    return {
+      ok: false,
+      code: "identity_mismatch",
+      detail: "Profile authority identity ≠ job input",
+    };
+  }
+  void input.binding;
   return { ok: true };
 }
 
@@ -421,7 +622,7 @@ async function runContinueUnderLease(
   }
   const binding = bindingEval.binding;
 
-  const idCheck = validateDi2Batch2ContinueIdentity({ job, binding });
+  const idCheck = await verifyDi2Batch2ContinueAuthorityIdentity({ job, binding });
   if (!idCheck.ok) return idCheck;
 
   if (

@@ -26,14 +26,34 @@ import {
 import {
   __di2Batch2ContinueSideEffectCountsForTests,
   __resetDi2Batch2ContinueSideEffectCountsForTests,
+  __setDi2Batch2ContinueAuthoritySnapshotForTests,
   __setDi2Batch2ContinueLeaseProbeForTests,
   continueDi2Batch2Production,
   validateDi2Batch2ContinueIdentity,
 } from "../lib/poju/decision-intake/decision-report-batch2-continue";
+import { buildDecisionReportStatus } from "../lib/poju/decision-intake/decision-report-service";
+import { kv } from "../lib/kv/client";
+import { xhighJobKey } from "../lib/poju/xhigh-job-types";
+import {
+  loadJob,
+} from "../lib/llm/pro/delivery/decision-report-v2/batch2/job-store";
 import {
   di2Batch2GenerationId,
   evaluateExistingDi2Batch2Binding,
 } from "../lib/poju/decision-intake/decision-report-batch2-identity";
+import {
+  commitPageResult,
+  ensurePageFence,
+  fenceAndClaimPageTask,
+  readGeneration,
+  resetBatch3KeysForTests,
+  runReportBatch3Recovery,
+  transitionGenerationStatus,
+} from "../lib/llm/pro/delivery/decision-report-v2/batch3";
+import {
+  hashCanonicalPayload,
+  reportPageDefinition,
+} from "../lib/llm/pro/delivery/decision-report-v2/orchestration";
 import {
   newReportLockOwner,
   readReportSessionLock,
@@ -46,6 +66,7 @@ import {
   DI2_REPORT_SCHEMA_VERSION,
   PERSONAL_ANALYSIS_SCHEMA_VERSION,
   di2ReportJobId,
+  isDecisionReportJobInput,
   type DecisionReportJobInput,
 } from "../lib/poju/decision-intake/decision-report-types";
 import { supersedeFinalDeliveryJobForRegenerate } from "../lib/poju/final-delivery-execution-authority";
@@ -64,11 +85,6 @@ import {
   setReportBatch2EventSenderForTests,
 } from "../lib/llm/pro/delivery/decision-report-v2/batch2/dispatch";
 import { REPORT_BATCH2_EVENTS } from "../lib/llm/pro/delivery/decision-report-v2/batch2/events";
-import {
-  readGeneration,
-  resetBatch3KeysForTests,
-  transitionGenerationStatus,
-} from "../lib/llm/pro/delivery/decision-report-v2/batch3";
 import type { BirthInfo } from "../lib/profile/types";
 
 let passed = 0;
@@ -298,12 +314,35 @@ async function acquireStartLock(
   return owner;
 }
 
+function installAuthoritySnapshot(ctx: {
+  freeze: FreezeRecord;
+  profile: ProfileRecord;
+}) {
+  __setDi2Batch2ContinueAuthoritySnapshotForTests({
+    freeze: {
+      session_id: ctx.freeze.session_id,
+      freeze_id: ctx.freeze.freeze_id,
+      context_id: ctx.freeze.context_id,
+      context_version: ctx.freeze.context_version,
+      context_hash: ctx.freeze.context_hash,
+      profile_hash: ctx.freeze.profile_hash ?? ctx.profile.profile_hash,
+    },
+    profile: {
+      session_id: ctx.profile.session_id,
+      freeze_id: ctx.profile.freeze_id,
+      profile_id: ctx.profile.profile_id,
+      profile_hash: ctx.profile.profile_hash,
+    },
+  });
+}
+
 async function startThen(ctx: {
   job_id: string;
   session_id: string;
   freeze: FreezeRecord;
   profile: ProfileRecord;
 }) {
+  installAuthoritySnapshot(ctx);
   const owner = await acquireStartLock(ctx.session_id, ctx.job_id);
   try {
     const res = await startDi2Batch2Production({
@@ -335,10 +374,11 @@ async function continueWithLock(ctx: {
 }
 
 async function main() {
-  console.log("Unit D — DI2 Continue / Recovery → Batch2/3");
+  console.log("Unit D / R1 — DI2 Continue / Recovery → Batch2/3");
   installEventSender();
   __resetDi2Batch2ContinueSideEffectCountsForTests();
   __setDi2Batch2ContinueLeaseProbeForTests(null);
+  __setDi2Batch2ContinueAuthoritySnapshotForTests(null);
   await resetBatch3KeysForTests();
   await resetBatch2JobStoreForTests();
 
@@ -370,7 +410,7 @@ async function main() {
     assert.ok(sentEvents.some((e) => e.name === REPORT_BATCH2_EVENTS.RECOVER));
   });
 
-  await check("partial pages / incomplete job → RECOVER only, same Generation", async () => {
+  await check("partial pages: completed page survives Continue RECOVER", async () => {
     installEventSender();
     __resetDi2Batch2ContinueSideEffectCountsForTests();
     const ctx = await createDi2Job();
@@ -378,13 +418,118 @@ async function main() {
     assert.equal(started.ok, true);
     if (!started.ok) return;
     const gid = started.binding.generation_id;
+    const gen = await readGeneration(ctx.report_job_id, gid);
+    assert.equal(gen.ok && Boolean(gen.value), true);
+    if (!gen.ok || !gen.value) return;
+    const generation_epoch = gen.value.generation_epoch;
+    const page_id = "01" as const;
+    const def = reportPageDefinition(page_id);
+    const input_fingerprint = "fp_partial_page01";
+
+    await ensurePageFence({
+      report_id: ctx.report_job_id,
+      generation_id: gid,
+      generation_epoch,
+      page_id,
+    });
+    const claimed = await fenceAndClaimPageTask({
+      report_id: ctx.report_job_id,
+      generation_id: gid,
+      generation_epoch,
+      page_id,
+      task_type: "generate",
+      input_fingerprint,
+      upstream_output_fingerprints: {},
+      worker_id: "w_unit_d_r1_partial",
+    });
+    assert.equal(claimed.ok, true, JSON.stringify(claimed));
+    if (!claimed.ok) return;
+    const out = { page: "01", body: "partial_done" };
+    const output_fingerprint = hashCanonicalPayload(out);
+    const committed = await commitPageResult({
+      report_id: ctx.report_job_id,
+      generation_id: gid,
+      generation_epoch,
+      page_id,
+      attempt_id: claimed.value.attempt_id,
+      task_key: claimed.value.task_key,
+      output: out,
+      output_fingerprint,
+      state_patch: { outcome: "completed", input_fingerprint },
+      provenance: {
+        report_id: ctx.report_job_id,
+        generation_id: gid,
+        generation_epoch,
+        page_id,
+        input_fingerprint,
+        upstream_output_fingerprints: {},
+        page_contract_version: def.production_version,
+        prompt_version: def.prompt_version,
+        validator_version: def.validator_version,
+        output_fingerprint,
+        attempt_id: claimed.value.attempt_id,
+        task_key: claimed.value.task_key,
+        validity_rev: claimed.value.validity_rev,
+      },
+    });
+    assert.equal(committed.ok, true, JSON.stringify(committed));
+
+    const before = await loadJob(ctx.report_job_id, gid);
+    assert.equal(before.ok, true);
+    if (!before.ok || !before.value) return;
+    const page01Before = before.value.page_states.find((p) => p.page_id === "01");
+    assert.equal(page01Before?.outcome, "completed");
+    assert.equal(page01Before?.output_fingerprint, output_fingerprint);
+    assert.ok(before.value.page_outputs["01"]);
+    const page02Before = before.value.page_states.find((p) => p.page_id === "02");
+    assert.notEqual(page02Before?.outcome, "completed");
+
+    sentEvents = [];
     const cont = await continueWithLock(ctx);
     assert.equal(cont.ok, true);
     if (!cont.ok) return;
     assert.equal(cont.binding.generation_id, gid);
-    const blob = await loadJobRawBlobs(ctx.report_job_id, gid);
-    assert.equal(blob.ok && blob.value?.meta.generation_id, gid);
+    assert.equal(cont.recover_sent, true);
     assert.equal(__di2Batch2ContinueSideEffectCountsForTests.create_job, 0);
+    assert.ok(sentEvents.some((e) => e.name === REPORT_BATCH2_EVENTS.RECOVER));
+    assert.equal(
+      sentEvents.filter((e) => e.name === REPORT_BATCH2_EVENTS.ORCHESTRATE).length,
+      0,
+    );
+
+    // Drive RECOVER: completed page must be skipped, not regenerated.
+    sentEvents = [];
+    const recovered = await runReportBatch3Recovery({
+      report_id: ctx.report_job_id,
+      generation_id: gid,
+      generation_epoch,
+      locale: "zh",
+    });
+    assert.equal(recovered.ok, true, JSON.stringify(recovered));
+    if (!recovered.ok) return;
+    assert.ok(
+      recovered.value.actions.some(
+        (a) => a.kind === "skipped_completed" && a.page_id === "01",
+      ),
+      JSON.stringify(recovered.value.actions),
+    );
+    assert.equal(
+      sentEvents.filter(
+        (e) => e.name === REPORT_BATCH2_EVENTS.GENERATE && e.data.page_id === "01",
+      ).length,
+      0,
+    );
+
+    const after = await loadJob(ctx.report_job_id, gid);
+    assert.equal(after.ok, true);
+    if (!after.ok || !after.value) return;
+    const page01After = after.value.page_states.find((p) => p.page_id === "01");
+    assert.equal(page01After?.outcome, "completed");
+    assert.equal(page01After?.output_fingerprint, output_fingerprint);
+    assert.deepEqual(after.value.page_outputs["01"], out);
+    const page02 = after.value.page_states.find((p) => p.page_id === "02");
+    assert.ok(page02);
+    assert.notEqual(page02?.outcome, "completed");
   });
 
   await check("Generation completed → ready_for_delivery, no RECOVER / page gen", async () => {
@@ -590,6 +735,95 @@ async function main() {
     if (!cont.ok) assert.equal(cont.code, "job_revoked");
   });
 
+  await check("R1: Status with Batch2 binding + no DI2 lease + aged updated_at → not interrupted", async () => {
+    const ctx = await createDi2Job();
+    await startThen(ctx);
+    const job = await getXhighJob(ctx.job_id);
+    assert.ok(job?.batch2_identity_binding);
+    // Age the DI2 job past the legacy 6-minute stale-no-lease window while
+    // leaving Batch2 production healthy and without a DI2 continue lease.
+    const aged = {
+      ...job!,
+      status: "running" as const,
+      updated_at: Date.now() - 7 * 60_000,
+    };
+    await kv.set(xhighJobKey(ctx.job_id), aged, { ex: 60 * 60 });
+    const status = await buildDecisionReportStatus({
+      job_id: ctx.job_id,
+      session_id: ctx.session_id,
+    });
+    assert.notEqual(status.status, "failed");
+    assert.notEqual(status.failure_reason, "interrupted");
+    const again = await getXhighJob(ctx.job_id);
+    assert.ok(again);
+    assert.notEqual(again!.failure_reason, "interrupted");
+    assert.ok(again!.status === "pending" || again!.status === "running");
+  });
+
+  await check("R1: recomputed report_job_id mismatch → no RECOVER", async () => {
+    installEventSender();
+    __resetDi2Batch2ContinueSideEffectCountsForTests();
+    const ctx = await createDi2Job();
+    await startThen(ctx);
+    const job = await getXhighJob(ctx.job_id);
+    assert.ok(job && isDecisionReportJobInput(job.input));
+    const tampered = {
+      ...job!,
+      input: {
+        ...(job!.input as DecisionReportJobInput),
+        // Tamper a field that feeds di2ReportJobId without updating report_job_id.
+        profile_hash: "tampered_profile_hash_xxxxx",
+      },
+    };
+    await kv.set(xhighJobKey(ctx.job_id), tampered, { ex: 60 * 60 });
+    const id = validateDi2Batch2ContinueIdentity({
+      job: tampered,
+      binding: job!.batch2_identity_binding!,
+    });
+    assert.equal(id.ok, false);
+    if (!id.ok) assert.equal(id.code, "identity_mismatch");
+    sentEvents = [];
+    const cont = await continueWithLock(ctx);
+    assert.equal(cont.ok, false);
+    if (!cont.ok) {
+      assert.ok(
+        cont.code === "identity_mismatch" || cont.code === "identity_unverified",
+      );
+    }
+    assert.equal(__di2Batch2ContinueSideEffectCountsForTests.recover_send, 0);
+    assert.equal(sentEvents.length, 0);
+  });
+
+  await check("R1: Freeze context mismatch vs authority → no RECOVER", async () => {
+    installEventSender();
+    __resetDi2Batch2ContinueSideEffectCountsForTests();
+    const ctx = await createDi2Job();
+    await startThen(ctx);
+    // Authority snapshot still has original context; job input context_hash differs.
+    const job = await getXhighJob(ctx.job_id);
+    assert.ok(job && isDecisionReportJobInput(job.input));
+    const ji = job!.input as DecisionReportJobInput;
+    const tampered = {
+      ...job!,
+      input: {
+        ...ji,
+        context_hash: "tampered_context_hash",
+        // Keep report_job_id valid (context not in di2ReportJobId).
+      },
+    };
+    await kv.set(xhighJobKey(ctx.job_id), tampered, { ex: 60 * 60 });
+    installAuthoritySnapshot(ctx); // original freeze context
+    sentEvents = [];
+    const cont = await continueWithLock({
+      job_id: ctx.job_id,
+      session_id: ctx.session_id,
+    });
+    assert.equal(cont.ok, false);
+    if (!cont.ok) assert.equal(cont.code, "identity_mismatch");
+    assert.equal(__di2Batch2ContinueSideEffectCountsForTests.recover_send, 0);
+    assert.equal(sentEvents.length, 0);
+  });
+
   await check("completed Generation path does not trigger page generate side effects", async () => {
     installEventSender();
     const ctx = await createDi2Job();
@@ -634,6 +868,7 @@ async function main() {
   });
 
   __setDi2Batch2ContinueLeaseProbeForTests(null);
+  __setDi2Batch2ContinueAuthoritySnapshotForTests(null);
   await resetBatch3KeysForTests();
   await resetBatch2JobStoreForTests();
   setReportBatch2EventSenderForTests(null);

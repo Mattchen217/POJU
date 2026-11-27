@@ -913,17 +913,26 @@ export async function buildDecisionReportStatus(input: {
   }
 
   if (job.status === "pending" || job.status === "running") {
-    const lease = await loadDeliveryContinueLease(job.job_id).catch(() => null);
-    const leaseLive = Boolean(lease && lease.expires_at > Date.now());
-    if (!leaseLive && Date.now() - job.updated_at > STALE_NO_LEASE_MS) {
-      await failXhighJob(job.job_id, "STOP: report worker stopped without a live lease", {
-        retryable: true,
-        failure_reason: "interrupted",
-        current_stage: job.current_stage,
-        accumulated_content: "failed:stale_no_lease",
-      }).catch(() => undefined);
-      await releaseReportJobLock(job.session_id, job.job_id).catch(() => undefined);
-      job = (await getXhighJob(job.job_id)) ?? job;
+    // Unit D R1: Batch2-bound jobs must not be judged by the legacy DI2
+    // delivery-stage continue lease. Batch2 workers do not hold that lease;
+    // using it marks healthy Batch2 production as interrupted.
+    const batch2Bound =
+      job.batch2_identity_binding != null &&
+      typeof job.batch2_identity_binding === "object" &&
+      (job.batch2_identity_binding as { status?: unknown }).status === "bound";
+    if (!batch2Bound) {
+      const lease = await loadDeliveryContinueLease(job.job_id).catch(() => null);
+      const leaseLive = Boolean(lease && lease.expires_at > Date.now());
+      if (!leaseLive && Date.now() - job.updated_at > STALE_NO_LEASE_MS) {
+        await failXhighJob(job.job_id, "STOP: report worker stopped without a live lease", {
+          retryable: true,
+          failure_reason: "interrupted",
+          current_stage: job.current_stage,
+          accumulated_content: "failed:stale_no_lease",
+        }).catch(() => undefined);
+        await releaseReportJobLock(job.session_id, job.job_id).catch(() => undefined);
+        job = (await getXhighJob(job.job_id)) ?? job;
+      }
     }
   }
 
