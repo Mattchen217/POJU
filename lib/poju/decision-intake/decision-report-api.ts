@@ -61,8 +61,11 @@ import {
 } from "./decision-report-charge";
 import {
   newReportLockOwner,
+  readReportSessionLock,
   releaseOwnedReportLock,
   reportLockOwnerOf,
+  REPORT_START_LOCK_IDLE_MS,
+  takeOverReportLock,
   updateOwnedReportLock,
   type ReportLockOwner,
   type ReportSessionLock,
@@ -235,32 +238,48 @@ async function continueAction(job_id: string, session_id: string, deps: Decision
   return json(200, { ok: true, job_id: cont.job.job_id, status: "running", worker: "dispatched", stage: cont.stage });
 }
 
+function batch2StartFailureReply(
+  started: { ok: false; code: string; detail: string },
+  job_id: string,
+  execution_generation: number | null | undefined,
+): DecisionReportApiReply {
+  return json(started.code === "dispatch_uncertain" ? 503 : 409, {
+    ok: false,
+    code: started.code,
+    error: started.detail,
+    retryable:
+      started.code === "dispatch_uncertain" ||
+      started.code === "kv_unavailable" ||
+      started.code === "inngest_unavailable" ||
+      started.code === "cas_failed" ||
+      started.code === "session_lock_lost",
+    job_id,
+    execution_generation: execution_generation ?? null,
+  });
+}
+
 async function startReusedJob(
   job: PojuXhighJob,
   plan: DecisionReportStartPlan,
   birth_info: unknown,
   deps: DecisionReportApiDeps,
+  lock_owner: ReportLockOwner,
 ): Promise<DecisionReportApiReply> {
   void deps;
-  // Unit C: reused Start resumes Batch2 production — never the legacy DI2 runner.
+  // Unit C R2: reused Start resumes Batch2 only while holding session start lock.
   const started = await startDi2Batch2Production({
     job_id: job.job_id,
     freeze: plan.freezeRec,
     profile: plan.profile,
     birth_info,
+    lock_owner,
   });
   if (!started.ok) {
-    return json(started.code === "dispatch_uncertain" ? 503 : 409, {
-      ok: false,
-      code: started.code,
-      error: started.detail,
-      retryable:
-        started.code === "dispatch_uncertain" ||
-        started.code === "kv_unavailable" ||
-        started.code === "inngest_unavailable" ||
-        started.code === "cas_failed",
-      job_id: job.job_id,
-    });
+    return batch2StartFailureReply(
+      started,
+      job.job_id,
+      job.execution_generation,
+    );
   }
   if (job.status === "completed" || started.job.status === "completed") {
     const delivery = await verifyDecisionReportDelivery(started.job);
@@ -348,7 +367,35 @@ async function followStart(
   } catch {
     return chargeUnconfirmed(job.job_id, "authorization_unreadable");
   }
-  if (rec?.state === "authorized") return startReusedJob(job, plan, birth_info, deps);
+  if (rec?.state === "authorized") {
+    // R2: take the job-held session lock into holder "start" so Batch2 reuse
+    // remains mutually exclusive with Regenerate supersede.
+    const owner = newReportLockOwner(plan.session_id);
+    let handedOff = false;
+    try {
+      const cur = await readReportSessionLock(plan.session_id);
+      if (cur.kind !== "owned") {
+        return lockUnconfirmed("follow_lock_unreadable");
+      }
+      if (
+        cur.lock.holder === "start" &&
+        Date.now() - cur.lock.touched_at < REPORT_START_LOCK_IDLE_MS
+      ) {
+        return busyReply();
+      }
+      const taken = await takeOverReportLock(cur.raw, owner, "start", job.job_id);
+      if (!taken) return busyReply();
+      const reply = await startReusedJob(job, plan, birth_info, deps, owner);
+      const handed = await updateOwnedReportLock(owner, {
+        holder: "job",
+        job_id: job.job_id,
+      }).catch(() => null);
+      if (handed) handedOff = true;
+      return reply;
+    } finally {
+      if (!handedOff) await releaseOwnedReportLock(owner).catch(() => undefined);
+    }
+  }
   if (rec?.state === "abort_claimed") {
     const r = await resumeRefusalAbortRecord(rec);
     if (abortOwnsSession(r)) return abortResumeReply(r);
@@ -472,30 +519,54 @@ async function lockedStart(
     return unauthorizedReply(job.job_id, settled);
   }
 
-  // Authorized: the lock passes to the job before anything can run it.
-  await runReportStartHook("before_handoff", ctx);
-  const handed = await updateOwnedReportLock(owner, { holder: "job", job_id: job.job_id }).catch(() => null);
-  if (!handed) {
-    // A later start owns the session; it (or status polling) carries this paid job on.
-    return json(200, {
-      ok: true,
-      job_id: job.job_id,
-      status: job.status,
-      reused: prepared.reused,
-      worker: "none",
-      execution_generation: job.execution_generation ?? null,
-    });
-  }
-  exit.handedOff = true;
-
+  // Authorized: keep holder "start" through Batch2 critical side effects so
+  // Regenerate (supersede under createOrReuse) cannot interleave. Hand off to
+  // job only after Batch2 Start returns.
   const birth_info = body.birth_info ?? undefined;
 
-  if (prepared.reused) return startReusedJob(job, plan, birth_info, deps);
+  if (prepared.reused) {
+    try {
+      const reusedReply = await startReusedJob(job, plan, birth_info, deps, owner);
+      const handed = await updateOwnedReportLock(owner, {
+        holder: "job",
+        job_id: job.job_id,
+      }).catch(() => null);
+      if (handed) exit.handedOff = true;
+      else {
+        // Paid job exists; later start/status may carry it. Do not release into void.
+        exit.handedOff = true;
+      }
+      return reusedReply;
+    } catch (e) {
+      console.error("[decision-report] Batch2 reused start threw", {
+        job_id: job.job_id,
+        e,
+      });
+      const handed = await updateOwnedReportLock(owner, {
+        holder: "job",
+        job_id: job.job_id,
+      }).catch(() => null);
+      if (handed) exit.handedOff = true;
+      return json(503, {
+        ok: false,
+        code: "BATCH2_START_UNCERTAIN",
+        error: e instanceof Error ? e.message : String(e),
+        retryable: true,
+        job_id: job.job_id,
+        execution_generation: job.execution_generation ?? null,
+      });
+    }
+  }
 
   const granted = await grantDecisionReportExecution((await getXhighJob(job.job_id)) ?? job);
   if (!granted.ok) {
     // The session is paid; the job just could not be granted yet — Continue recovers it.
     console.error("[decision-report] grant after charge failed", { job_id: job.job_id, reason: granted.reason });
+    const handed = await updateOwnedReportLock(owner, {
+      holder: "job",
+      job_id: job.job_id,
+    }).catch(() => null);
+    if (handed) exit.handedOff = true;
     return json(200, {
       ok: true,
       job_id: job.job_id,
@@ -506,32 +577,33 @@ async function lockedStart(
     });
   }
 
-  // Unit C — Batch2 production engine only (legacy DI2 runner disconnected from Start).
+  // Unit C R2 — Batch2 under session start lock (legacy DI2 runner disconnected).
   try {
     const started = await startDi2Batch2Production({
       job_id: job.job_id,
       freeze: plan.freezeRec,
       profile: plan.profile,
       birth_info,
+      lock_owner: owner,
     });
+    const handed = await updateOwnedReportLock(owner, {
+      holder: "job",
+      job_id: job.job_id,
+    }).catch(() => null);
+    if (handed) exit.handedOff = true;
+    else exit.handedOff = true; // paid; avoid releasing another owner's lock
+
     if (!started.ok) {
       console.error("[decision-report] Batch2 start failed", {
         job_id: job.job_id,
         code: started.code,
         detail: started.detail,
       });
-      return json(started.code === "dispatch_uncertain" ? 503 : 409, {
-        ok: false,
-        code: started.code,
-        error: started.detail,
-        retryable:
-          started.code === "dispatch_uncertain" ||
-          started.code === "kv_unavailable" ||
-          started.code === "inngest_unavailable" ||
-          started.code === "cas_failed",
-        job_id: job.job_id,
-        execution_generation: job.execution_generation ?? null,
-      });
+      return batch2StartFailureReply(
+        started,
+        job.job_id,
+        job.execution_generation,
+      );
     }
     return json(200, {
       ok: true,
@@ -546,6 +618,12 @@ async function lockedStart(
   } catch (e) {
     // Do not fall back to the legacy DI2 runner. Leave recoverable job state.
     console.error("[decision-report] Batch2 start threw", { job_id: job.job_id, e });
+    const handed = await updateOwnedReportLock(owner, {
+      holder: "job",
+      job_id: job.job_id,
+    }).catch(() => null);
+    if (handed) exit.handedOff = true;
+    else exit.handedOff = true;
     return json(503, {
       ok: false,
       code: "BATCH2_START_UNCERTAIN",

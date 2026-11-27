@@ -616,9 +616,36 @@ export type CommitUnderFenceResult =
   | { ok: false; reason: "missing" | "revoked" | "cas_conflict" | "cas_unavailable" };
 
 /**
+ * @internal tests only — fires after Session Fence is read and before the
+ * Job KV generation CAS (the residual cross-KV TOCTOU window).
+ */
+let __commitFenceRaceProbe:
+  | ((ctx: {
+      job_id: string;
+      session_id: string;
+      expected_generation: number;
+    }) => void | Promise<void>)
+  | null = null;
+
+/** @internal tests only */
+export function __setCommitUnderFenceRaceProbeForTests(
+  fn:
+    | ((ctx: {
+        job_id: string;
+        session_id: string;
+        expected_generation: number;
+      }) => void | Promise<void>)
+    | null,
+): void {
+  __commitFenceRaceProbe = fn;
+}
+
+/**
  * Commit a job mutation only if the expected execution generation still owns
- * both the session fence and the job record at the write boundary (CAS).
- * Read-check then independent write is intentionally NOT used.
+ * both the session fence and the job record at the write boundary.
+ * Note: fence read and job CAS are sequential — callers that need mutual
+ * exclusion with Regenerate must hold the DI2 Report Session Lock across this
+ * call (Unit C R2). Do not describe this as a cross-KV atomic Fence CAS.
  */
 export async function commitXhighJobUnderExecutionFence(
   job_id: string,
@@ -650,6 +677,22 @@ export async function commitXhighJobUnderExecutionFence(
     !fence ||
     fence.generation !== expected_generation ||
     fence.authorized_job_id !== job_id
+  ) {
+    return { ok: false, reason: "revoked" };
+  }
+
+  await __commitFenceRaceProbe?.({
+    job_id,
+    session_id: job.session_id,
+    expected_generation,
+  });
+
+  // Re-check fence after the probe / concurrent window before Job CAS.
+  const fenceAgain = await getFdExecutionFence(job.session_id);
+  if (
+    !fenceAgain ||
+    fenceAgain.generation !== expected_generation ||
+    fenceAgain.authorized_job_id !== job_id
   ) {
     return { ok: false, reason: "revoked" };
   }

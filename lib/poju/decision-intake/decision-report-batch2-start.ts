@@ -9,16 +9,15 @@
  * - Never falls back to the legacy DI2 eight-page runner
  * - Never accepts client-submitted ZFP objects
  *
- * Execution Fence side-effect closure (R1):
- * DI2 fence CAS only covers the DI2 job record — it cannot atomically wrap
- * Batch3/Batch2 KV writes. Minimal protocol using existing fence:
- *   1) fence-CAS advance batch2_start_gate before each side-effect class
- *   2) assertDeliveryExecutionAuthority immediately before the external call
- *   3) dispatch requires a successful fence-CAS "dispatch_authorized" ticket
- *      BEFORE send — stampProductionState alone is NOT the start gate
- * Residual TOCTOU between a successful dispatch ticket CAS and the network
- * send is inherent to split KV namespaces; Fail Closed if authority is
- * uncertain at any gate.
+ * Execution authority closure (R1 + R2):
+ * Job-only fence CAS is NOT cross-KV atomic with Session Fence (R1 residual).
+ * R2: Batch2 Start side effects run only while the caller holds the DI2
+ * Report Session Lock (holder "start"). DI2 Regenerate calls
+ * supersedeFinalDeliveryJobForRegenerate only under that same lock in
+ * createOrReuseDecisionReportJob — so Start and Regenerate are mutually
+ * exclusive for the critical window. Before each side effect we
+ * updateOwnedReportLock (touch + ownership check); lock loss → Fail Closed.
+ * Fence assert + start_gate remain as defense in depth, not the sole mutex.
  */
 
 import {
@@ -60,6 +59,11 @@ import {
   assertDeliveryExecutionAuthority,
   DeliveryExecutionRevokedError,
 } from "@/lib/poju/final-delivery-execution-authority";
+import {
+  isReportLockOwnedBy,
+  updateOwnedReportLock,
+  type ReportLockOwner,
+} from "@/lib/poju/decision-intake/decision-report-lock";
 import {
   commitXhighJobUnderExecutionFence,
   getXhighJob,
@@ -106,11 +110,30 @@ type StartSideEffectProbe = (
 
 let __startSideEffectProbe: StartSideEffectProbe | null = null;
 
+/**
+ * @internal tests only — inject between lock refresh and the next side effect
+ * (e.g. steal lock / supersede while Start still believes it holds authority).
+ */
+export type Di2Batch2StartLockRaceProbe = (ctx: {
+  job_id: string;
+  execution_generation: number;
+  gate: Di2Batch2StartSideEffectGate | "before_claim";
+}) => void | Promise<void>;
+
+let __lockRaceProbe: Di2Batch2StartLockRaceProbe | null = null;
+
 /** @internal tests only */
 export function __setDi2Batch2StartSideEffectProbeForTests(
   fn: StartSideEffectProbe | null,
 ): void {
   __startSideEffectProbe = fn;
+}
+
+/** @internal tests only */
+export function __setDi2Batch2StartLockRaceProbeForTests(
+  fn: Di2Batch2StartLockRaceProbe | null,
+): void {
+  __lockRaceProbe = fn;
 }
 
 /** @internal tests only — reset between cases */
@@ -148,7 +171,9 @@ export type Di2Batch2StartErrorCode =
   | "activate_failed"
   | "job_create_failed"
   | "dispatch_uncertain"
-  | "cas_failed";
+  | "cas_failed"
+  | "session_lock_lost"
+  | "session_lock_required";
 
 export type Di2Batch2StartResult =
   | {
@@ -371,6 +396,63 @@ async function requireLiveExecutionFence(
 }
 
 /**
+ * R2 mutual exclusion: DI2 Regenerate supersedes only under the same Session
+ * Start lock. Refresh ownership + touched_at; Fail Closed if lock is gone or
+ * no longer held by this start owner as holder "start".
+ */
+async function assertHeldStartLock(
+  lock_owner: ReportLockOwner,
+): Promise<{ ok: true } | { ok: false; code: Di2Batch2StartErrorCode; detail: string }> {
+  try {
+    const updated = await updateOwnedReportLock(lock_owner);
+    if (!updated) {
+      return {
+        ok: false,
+        code: "session_lock_lost",
+        detail: "DI2 session start lock no longer owned — refusing Batch2 side effects",
+      };
+    }
+    if (updated.holder !== "start") {
+      return {
+        ok: false,
+        code: "session_lock_lost",
+        detail: `session lock holder=${updated.holder} (expected start) — refusing Batch2 side effects`,
+      };
+    }
+    if (!isReportLockOwnedBy(updated, lock_owner)) {
+      return {
+        ok: false,
+        code: "session_lock_lost",
+        detail: "session lock ownership mismatch",
+      };
+    }
+    return { ok: true };
+  } catch (e) {
+    return {
+      ok: false,
+      code: "session_lock_lost",
+      detail: e instanceof Error ? e.message : String(e),
+    };
+  }
+}
+
+async function requireStartAuthority(input: {
+  job_id: string;
+  execution_generation: number;
+  lock_owner: ReportLockOwner;
+  gate: Di2Batch2StartSideEffectGate | "before_claim";
+}): Promise<{ ok: true } | { ok: false; code: Di2Batch2StartErrorCode; detail: string }> {
+  await __lockRaceProbe?.({
+    job_id: input.job_id,
+    execution_generation: input.execution_generation,
+    gate: input.gate,
+  });
+  const lock = await assertHeldStartLock(input.lock_owner);
+  if (!lock.ok) return lock;
+  return requireLiveExecutionFence(input.job_id, input.execution_generation);
+}
+
+/**
  * Advance batch2_start_gate under DI2 execution-fence CAS.
  * Failure means this Start no longer holds authority — do not continue side effects.
  */
@@ -436,6 +518,7 @@ async function runSideEffectProbe(
 async function dispatchOrchestrateOrRecover(input: {
   job_id: string;
   execution_generation: number;
+  lock_owner: ReportLockOwner;
   report_id: string;
   generation_id: string;
   generation_epoch: number;
@@ -450,19 +533,25 @@ async function dispatchOrchestrateOrRecover(input: {
     execution_generation: input.execution_generation,
   });
 
-  const live = await requireLiveExecutionFence(
-    input.job_id,
-    input.execution_generation,
-  );
-  if (!live.ok) return live;
+  const auth = await requireStartAuthority({
+    job_id: input.job_id,
+    execution_generation: input.execution_generation,
+    lock_owner: input.lock_owner,
+    gate: "before_dispatch",
+  });
+  if (!auth.ok) return auth;
 
-  // Dispatch ticket: fence CAS must succeed BEFORE any event send.
+  // Defense in depth: job fence gate before send (not a cross-KV atomic mutex).
   const ticket = await advanceStartGateUnderFence({
     job_id: input.job_id,
     execution_generation: input.execution_generation,
     phase: "dispatch_authorized",
   });
   if (!ticket.ok) return ticket;
+
+  // Re-confirm session lock immediately before enqueue/send.
+  const lockAgain = await assertHeldStartLock(input.lock_owner);
+  if (!lockAgain.ok) return lockAgain;
 
   const { enqueueDispatchIntent, markIntentFailed, markIntentSent } = await import(
     "@/lib/llm/pro/delivery/decision-report-v2/batch3/dispatch-intent"
@@ -516,18 +605,22 @@ async function dispatchOrchestrateOrRecover(input: {
   __di2Batch2StartSideEffectCountsForTests.orchestrate_send += 1;
   if (!send.ok) {
     await markIntentFailed(intent.value, send.detail);
-    // Re-check fence before RECOVER send — revoked Start must not heal via recover.
-    const stillLive = await requireLiveExecutionFence(
-      input.job_id,
-      input.execution_generation,
-    );
-    if (!stillLive.ok) return stillLive;
+    // Re-check session lock + fence before RECOVER — revoked Start must not heal.
+    const stillAuth = await requireStartAuthority({
+      job_id: input.job_id,
+      execution_generation: input.execution_generation,
+      lock_owner: input.lock_owner,
+      gate: "before_dispatch",
+    });
+    if (!stillAuth.ok) return stillAuth;
     const recoverTicket = await advanceStartGateUnderFence({
       job_id: input.job_id,
       execution_generation: input.execution_generation,
       phase: "dispatch_authorized",
     });
     if (!recoverTicket.ok) return recoverTicket;
+    const lockForRecover = await assertHeldStartLock(input.lock_owner);
+    if (!lockForRecover.ok) return lockForRecover;
     const recover = await sendReportBatch2Events([
       buildRecoverPayload({
         report_id: input.report_id,
@@ -560,6 +653,11 @@ export async function startDi2Batch2Production(input: {
   job_id: string;
   freeze: FreezeRecord;
   profile: ProfileRecord;
+  /**
+   * Caller must hold the DI2 Report Session Lock as holder "start" for the
+   * entire critical Start→Batch2 window (mutual exclusion with Regenerate).
+   */
+  lock_owner: ReportLockOwner;
   /** Required when Profile.ziwei_status indicates computed Ziwei. */
   birth_info?: unknown;
   /**
@@ -576,6 +674,14 @@ export async function startDi2Batch2Production(input: {
     };
   }
 
+  if (!input.lock_owner?.session_id || !input.lock_owner.lock_token) {
+    return {
+      ok: false,
+      code: "session_lock_required",
+      detail: "Batch2 Start requires DI2 session start lock owner",
+    };
+  }
+
   if (!isReportBatch2SharedStoreAvailable()) {
     return {
       ok: false,
@@ -589,6 +695,18 @@ export async function startDi2Batch2Production(input: {
       code: "inngest_unavailable",
       detail: "Batch2 Inngest unavailable and no test sender",
     };
+  }
+
+  const lock_owner = input.lock_owner;
+
+  await __lockRaceProbe?.({
+    job_id: input.job_id,
+    execution_generation: 0,
+    gate: "before_claim",
+  });
+  {
+    const lockOnly = await assertHeldStartLock(lock_owner);
+    if (!lockOnly.ok) return lockOnly;
   }
 
   const job = await getXhighJob(input.job_id);
@@ -612,6 +730,15 @@ export async function startDi2Batch2Production(input: {
       code: "job_revoked",
       detail: "execution_generation missing",
     };
+  }
+
+  // Fence before binding — superseded jobs must not allocate / rewrite identity.
+  {
+    const live = await requireLiveExecutionFence(
+      input.job_id,
+      job.execution_generation,
+    );
+    if (!live.ok) return live;
   }
 
   const bound = await ensureDi2Batch2IdentityBinding({ job_id: input.job_id });
@@ -705,7 +832,14 @@ export async function startDi2Batch2Production(input: {
   const execution_generation = job.execution_generation;
   const locale = job.locale || reportInput.locale || "en";
 
-  // Claim Start under fence BEFORE any Batch2/Batch3 side effect.
+  // Claim Start under session lock + fence BEFORE any Batch2/Batch3 side effect.
+  const beforeClaim = await requireStartAuthority({
+    job_id: input.job_id,
+    execution_generation,
+    lock_owner,
+    gate: "before_claim",
+  });
+  if (!beforeClaim.ok) return beforeClaim;
   const claimed = await advanceStartGateUnderFence({
     job_id: input.job_id,
     execution_generation,
@@ -754,6 +888,7 @@ export async function startDi2Batch2Production(input: {
       const dispatched = await dispatchOrchestrateOrRecover({
         job_id: input.job_id,
         execution_generation,
+        lock_owner,
         report_id: binding.report_id,
         generation_id: binding.generation_id,
         generation_epoch: epoch,
@@ -793,16 +928,18 @@ export async function startDi2Batch2Production(input: {
     };
   }
 
-  // Fresh Start: fence gate → activate → fence gate → createJob → dispatch ticket → send.
+  // Fresh Start under session lock: activate → createJob → dispatch → send.
   // Do NOT call allocateGeneration again (Unit B already created the record).
   await runSideEffectProbe("before_activate", {
     job_id: input.job_id,
     execution_generation,
   });
-  const beforeActivate = await requireLiveExecutionFence(
-    input.job_id,
+  const beforeActivate = await requireStartAuthority({
+    job_id: input.job_id,
     execution_generation,
-  );
+    lock_owner,
+    gate: "before_activate",
+  });
   if (!beforeActivate.ok) return beforeActivate;
   const activateGate = await advanceStartGateUnderFence({
     job_id: input.job_id,
@@ -828,10 +965,12 @@ export async function startDi2Batch2Production(input: {
     job_id: input.job_id,
     execution_generation,
   });
-  const beforeCreate = await requireLiveExecutionFence(
-    input.job_id,
+  const beforeCreate = await requireStartAuthority({
+    job_id: input.job_id,
     execution_generation,
-  );
+    lock_owner,
+    gate: "before_create_job",
+  });
   if (!beforeCreate.ok) return beforeCreate;
   const createGate = await advanceStartGateUnderFence({
     job_id: input.job_id,
@@ -849,12 +988,13 @@ export async function startDi2Batch2Production(input: {
     generation_epoch: binding.batch3_generation_epoch,
   });
   if (!created.ok) {
-    // Race: another Start created the job — re-enter idempotent path (still fence-gated).
+    // Race: another Start created the job — re-enter idempotent path (still gated).
     const raced = await loadJobRawBlobs(binding.report_id, binding.generation_id);
     if (raced.ok && raced.value) {
       const dispatched = await dispatchOrchestrateOrRecover({
         job_id: input.job_id,
         execution_generation,
+        lock_owner,
         report_id: binding.report_id,
         generation_id: binding.generation_id,
         generation_epoch: binding.batch3_generation_epoch,
@@ -906,6 +1046,7 @@ export async function startDi2Batch2Production(input: {
   const dispatched = await dispatchOrchestrateOrRecover({
     job_id: input.job_id,
     execution_generation,
+    lock_owner,
     report_id: binding.report_id,
     generation_id: binding.generation_id,
     generation_epoch: binding.batch3_generation_epoch,

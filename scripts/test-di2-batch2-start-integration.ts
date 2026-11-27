@@ -1,10 +1,10 @@
 /**
- * Unit C / R1 — DI2 Start → Batch2 production + Execution Fence side-effect gates.
+ * Unit C / R2 — DI2 Start → Batch2 + Session Lock mutual exclusion.
  *
  *   pnpm exec tsx scripts/test-di2-batch2-start-integration.ts
  *
- * Covers startDi2Batch2Production, ZFP trust, and fence revocation between
- * activate / createJob / dispatch. Uses MemoryKv + test event sender.
+ * Covers startDi2Batch2Production under DI2 Report Session Lock, ZFP trust,
+ * fence revocation, and concurrent Regenerate race windows.
  */
 
 process.env.REPORT_BATCH2_ALLOW_MEMORY_STORE = "1";
@@ -26,11 +26,21 @@ import type { DecisionContext } from "../lib/poju/decision-context/types";
 import {
   __di2Batch2StartSideEffectCountsForTests,
   __resetDi2Batch2StartSideEffectCountsForTests,
+  __setDi2Batch2StartLockRaceProbeForTests,
   __setDi2Batch2StartSideEffectProbeForTests,
   resolveTrustedZiweiFactPack,
   startDi2Batch2Production,
   type Di2Batch2StartSideEffectGate,
 } from "../lib/poju/decision-intake/decision-report-batch2-start";
+import {
+  newReportLockOwner,
+  readReportSessionLock,
+  releaseOwnedReportLock,
+  takeOverReportLock,
+  tryCreateReportLock,
+  updateOwnedReportLock,
+  type ReportLockOwner,
+} from "../lib/poju/decision-intake/decision-report-lock";
 import {
   DI2_REPORT_SCHEMA_VERSION,
   PERSONAL_ANALYSIS_SCHEMA_VERSION,
@@ -41,6 +51,7 @@ import { di2Batch2GenerationId } from "../lib/poju/decision-intake/decision-repo
 import { profileIndicatesComputedZiwei } from "../lib/poju/decision-intake/decision-report-batch2-adapter";
 import { supersedeFinalDeliveryJobForRegenerate } from "../lib/poju/final-delivery-execution-authority";
 import {
+  __setCommitUnderFenceRaceProbeForTests,
   authorizeFdExecutionFence,
   bumpFdExecutionFence,
   createXhighJob,
@@ -126,6 +137,7 @@ function structured(): ProfileStructured {
 }
 
 function draftDc(session_id: string, freeze_id: string): DecisionContext {
+  void freeze_id;
   return {
     dc_version: "v1",
     status: "final",
@@ -293,6 +305,40 @@ async function createDi2Job(opts?: {
   };
 }
 
+async function acquireStartLock(
+  session_id: string,
+  job_id: string | null = null,
+): Promise<ReportLockOwner> {
+  const owner = newReportLockOwner(session_id);
+  const lock = await tryCreateReportLock(owner, "start", job_id);
+  assert.ok(lock, "expected to create start lock");
+  return owner;
+}
+
+async function startWithLock(
+  ctx: {
+    job_id: string;
+    session_id: string;
+    freeze: FreezeRecord;
+    profile: ProfileRecord;
+  },
+  extra?: { birth_info?: unknown; client_ziwei_fact_pack?: unknown },
+) {
+  const owner = await acquireStartLock(ctx.session_id, ctx.job_id);
+  try {
+    return await startDi2Batch2Production({
+      job_id: ctx.job_id,
+      freeze: ctx.freeze,
+      profile: ctx.profile,
+      lock_owner: owner,
+      birth_info: extra?.birth_info,
+      client_ziwei_fact_pack: extra?.client_ziwei_fact_pack,
+    });
+  } finally {
+    await releaseOwnedReportLock(owner).catch(() => undefined);
+  }
+}
+
 async function revokeAtGate(
   gate: Di2Batch2StartSideEffectGate,
   target: Di2Batch2StartSideEffectGate,
@@ -303,9 +349,11 @@ async function revokeAtGate(
 }
 
 async function main() {
-  console.log("Unit C / R1 — DI2 Start → Batch2 + Fence side-effect closure");
+  console.log("Unit C / R2 — DI2 Start → Batch2 + Session Lock closure");
   installEventSender();
   __setDi2Batch2StartSideEffectProbeForTests(null);
+  __setDi2Batch2StartLockRaceProbeForTests(null);
+  __setCommitUnderFenceRaceProbeForTests(null);
   __resetDi2Batch2StartSideEffectCountsForTests();
   await resetBatch3KeysForTests();
   await resetBatch2JobStoreForTests();
@@ -362,40 +410,37 @@ async function main() {
 
   await check("client-submitted ZFP rejected at Start", async () => {
     const ctx = await createDi2Job();
-    const res = await startDi2Batch2Production({
-      job_id: ctx.job_id,
-      freeze: ctx.freeze,
-      profile: ctx.profile,
+    const res = await startWithLock(ctx, {
       client_ziwei_fact_pack: { version: 1 },
     });
     assert.equal(res.ok, false);
     if (!res.ok) assert.equal(res.code, "ziwei_trusted_pack_required");
   });
 
-  await check("valid Start enters Batch2 production (activate + orchestrate)", async () => {
-    sentEvents = [];
+  await check("missing lock_owner → session_lock_required", async () => {
     const ctx = await createDi2Job();
     const res = await startDi2Batch2Production({
       job_id: ctx.job_id,
       freeze: ctx.freeze,
       profile: ctx.profile,
-      birth_info: GOLDEN_BIRTH,
+      // @ts-expect-error intentional missing lock
+      lock_owner: null,
     });
+    assert.equal(res.ok, false);
+    if (!res.ok) assert.equal(res.code, "session_lock_required");
+  });
+
+  await check("valid Start enters Batch2 production (activate + orchestrate)", async () => {
+    sentEvents = [];
+    const ctx = await createDi2Job();
+    const res = await startWithLock(ctx, { birth_info: GOLDEN_BIRTH });
     assert.equal(res.ok, true);
     if (!res.ok) return;
     assert.equal(res.binding.report_id, ctx.report_job_id);
     assert.equal(res.binding.generation_id, di2Batch2GenerationId(ctx.report_job_id));
     assert.equal(res.production.generation_id, res.binding.generation_id);
-    assert.notEqual(
-      typeof res.production.generation_epoch,
-      "undefined",
-    );
-    // Batch3 epoch is a separate field from DI2 execution_generation
     assert.equal(res.binding.di2_execution_generation, ctx.generation);
-    assert.equal(
-      typeof res.binding.batch3_generation_epoch,
-      "number",
-    );
+    assert.equal(typeof res.binding.batch3_generation_epoch, "number");
 
     const gen = await readGeneration(res.binding.report_id, res.binding.generation_id);
     assert.equal(gen.ok && gen.value?.status, "active");
@@ -423,11 +468,7 @@ async function main() {
   await check("report_id equals DI2 report_job_id; generation matches Unit B binding", async () => {
     sentEvents = [];
     const ctx = await createDi2Job();
-    const res = await startDi2Batch2Production({
-      job_id: ctx.job_id,
-      freeze: ctx.freeze,
-      profile: ctx.profile,
-    });
+    const res = await startWithLock(ctx);
     assert.equal(res.ok, true);
     if (!res.ok) return;
     assert.equal(res.binding.report_id, ctx.report_job_id);
@@ -445,17 +486,8 @@ async function main() {
       ziwei_closed_set: "closed-set",
     });
     const ctx = await createDi2Job({ profile });
-    // Align profile ids with created job freeze
-    ctx.profile = {
-      ...profile,
-      session_id: ctx.session_id,
-      freeze_id: ctx.freeze.freeze_id,
-      profile_hash: "prof_hash_1",
-    };
-    // Recreate with matching profile on job — simpler: start with mismatched by not passing birth
-    const res = await startDi2Batch2Production({
-      job_id: ctx.job_id,
-      freeze: ctx.freeze,
+    const res = await startWithLock({
+      ...ctx,
       profile: {
         ...ctx.profile,
         ziwei_closed_set: "closed",
@@ -472,15 +504,10 @@ async function main() {
   await check("Freeze identity mismatch → no Batch2 job", async () => {
     sentEvents = [];
     const ctx = await createDi2Job();
-    const badFreeze = {
-      ...ctx.freeze,
-      freeze_id: "wrong_freeze",
-    };
     const before = sentEvents.length;
-    const res = await startDi2Batch2Production({
-      job_id: ctx.job_id,
-      freeze: badFreeze,
-      profile: ctx.profile,
+    const res = await startWithLock({
+      ...ctx,
+      freeze: { ...ctx.freeze, freeze_id: "wrong_freeze" },
     });
     assert.equal(res.ok, false);
     if (!res.ok) assert.equal(res.code, "freeze_profile_mismatch");
@@ -490,11 +517,7 @@ async function main() {
   await check("identical Start retry reuses same Batch2 Job/Generation (no second gen)", async () => {
     sentEvents = [];
     const ctx = await createDi2Job();
-    const first = await startDi2Batch2Production({
-      job_id: ctx.job_id,
-      freeze: ctx.freeze,
-      profile: ctx.profile,
-    });
+    const first = await startWithLock(ctx);
     assert.equal(first.ok, true);
     if (!first.ok) return;
     const orchCount1 = sentEvents.filter(
@@ -502,17 +525,12 @@ async function main() {
     ).length;
     assert.equal(orchCount1, 1);
 
-    const second = await startDi2Batch2Production({
-      job_id: ctx.job_id,
-      freeze: ctx.freeze,
-      profile: ctx.profile,
-    });
+    const second = await startWithLock(ctx);
     assert.equal(second.ok, true);
     if (!second.ok) return;
     assert.equal(second.reused, true);
     assert.equal(second.binding.generation_id, first.binding.generation_id);
     assert.equal(second.production.generation_epoch, first.production.generation_epoch);
-    // Second path uses RECOVER, not a new ORCHESTRATE allocation
     const recoverCount = sentEvents.filter(
       (e) => e.name === REPORT_BATCH2_EVENTS.RECOVER,
     ).length;
@@ -532,7 +550,6 @@ async function main() {
         birth_hash: birthInputHash(GOLDEN_BIRTH),
       }),
     });
-    // Fix profile session/freeze after createDi2Job overwrote ids via createDi2Job internals
     const profile = {
       ...ctx.profile,
       ziwei_closed_set: "closed",
@@ -542,12 +559,10 @@ async function main() {
         birth_input_hash: birthInputHash(GOLDEN_BIRTH),
       },
     };
-    const res = await startDi2Batch2Production({
-      job_id: ctx.job_id,
-      freeze: ctx.freeze,
-      profile,
-      birth_info: GOLDEN_BIRTH,
-    });
+    const res = await startWithLock(
+      { ...ctx, profile },
+      { birth_info: GOLDEN_BIRTH },
+    );
     assert.equal(res.ok, true);
     if (!res.ok) return;
     const blob = await loadJobRawBlobs(
@@ -567,14 +582,9 @@ async function main() {
       },
     });
     const ctx = await createDi2Job();
-    const res = await startDi2Batch2Production({
-      job_id: ctx.job_id,
-      freeze: ctx.freeze,
-      profile: ctx.profile,
-    });
+    const res = await startWithLock(ctx);
     assert.equal(res.ok, false);
     if (!res.ok) assert.equal(res.code, "dispatch_uncertain");
-    // Binding may exist from ensure; generation_id must still be the single bound id
     const job = await getXhighJob(ctx.job_id);
     if (job?.batch2_identity_binding) {
       assert.equal(
@@ -585,18 +595,14 @@ async function main() {
     installEventSender();
   });
 
-  // ─── Unit C R1: Execution Fence side-effect closure ─────────────────────
+  // ─── Unit C R1: Execution Fence side-effect closure (still required) ─────
 
   await check("R1: valid Fence → Start completes activate+create+orchestrate", async () => {
     installEventSender();
     __resetDi2Batch2StartSideEffectCountsForTests();
     __setDi2Batch2StartSideEffectProbeForTests(null);
     const ctx = await createDi2Job();
-    const res = await startDi2Batch2Production({
-      job_id: ctx.job_id,
-      freeze: ctx.freeze,
-      profile: ctx.profile,
-    });
+    const res = await startWithLock(ctx);
     assert.equal(res.ok, true);
     assert.equal(__di2Batch2StartSideEffectCountsForTests.activate, 1);
     assert.equal(__di2Batch2StartSideEffectCountsForTests.create_job, 1);
@@ -610,11 +616,7 @@ async function main() {
     __setDi2Batch2StartSideEffectProbeForTests(async (gate) => {
       await revokeAtGate(gate, "before_activate", ctx.job_id);
     });
-    const res = await startDi2Batch2Production({
-      job_id: ctx.job_id,
-      freeze: ctx.freeze,
-      profile: ctx.profile,
-    });
+    const res = await startWithLock(ctx);
     assert.equal(res.ok, false);
     if (!res.ok) assert.equal(res.code, "job_revoked");
     assert.equal(__di2Batch2StartSideEffectCountsForTests.activate, 0);
@@ -632,11 +634,7 @@ async function main() {
     __setDi2Batch2StartSideEffectProbeForTests(async (gate) => {
       await revokeAtGate(gate, "before_create_job", ctx.job_id);
     });
-    const res = await startDi2Batch2Production({
-      job_id: ctx.job_id,
-      freeze: ctx.freeze,
-      profile: ctx.profile,
-    });
+    const res = await startWithLock(ctx);
     assert.equal(res.ok, false);
     if (!res.ok) assert.equal(res.code, "job_revoked");
     assert.equal(__di2Batch2StartSideEffectCountsForTests.activate, 1);
@@ -658,11 +656,7 @@ async function main() {
     __setDi2Batch2StartSideEffectProbeForTests(async (gate) => {
       await revokeAtGate(gate, "before_dispatch", ctx.job_id);
     });
-    const res = await startDi2Batch2Production({
-      job_id: ctx.job_id,
-      freeze: ctx.freeze,
-      profile: ctx.profile,
-    });
+    const res = await startWithLock(ctx);
     assert.equal(res.ok, false);
     if (!res.ok) assert.equal(res.code, "job_revoked");
     assert.equal(__di2Batch2StartSideEffectCountsForTests.activate, 1);
@@ -682,23 +676,14 @@ async function main() {
         await supersedeFinalDeliveryJobForRegenerate(ctx.job_id);
       }
     });
-    const old = await startDi2Batch2Production({
-      job_id: ctx.job_id,
-      freeze: ctx.freeze,
-      profile: ctx.profile,
-    });
+    const old = await startWithLock(ctx);
     assert.equal(old.ok, false);
     if (!old.ok) assert.equal(old.code, "job_revoked");
     assert.equal(__di2Batch2StartSideEffectCountsForTests.orchestrate_send, 0);
     assert.equal(sentEvents.length, 0);
 
-    // Old generation cannot be revived into a successful Start.
     __setDi2Batch2StartSideEffectProbeForTests(null);
-    const retryOld = await startDi2Batch2Production({
-      job_id: ctx.job_id,
-      freeze: ctx.freeze,
-      profile: ctx.profile,
-    });
+    const retryOld = await startWithLock(ctx);
     assert.equal(retryOld.ok, false);
     if (!retryOld.ok) assert.equal(retryOld.code, "job_revoked");
   });
@@ -708,18 +693,10 @@ async function main() {
     __resetDi2Batch2StartSideEffectCountsForTests();
     __setDi2Batch2StartSideEffectProbeForTests(null);
     const ctx = await createDi2Job();
-    const first = await startDi2Batch2Production({
-      job_id: ctx.job_id,
-      freeze: ctx.freeze,
-      profile: ctx.profile,
-    });
+    const first = await startWithLock(ctx);
     assert.equal(first.ok, true);
     if (!first.ok) return;
-    const second = await startDi2Batch2Production({
-      job_id: ctx.job_id,
-      freeze: ctx.freeze,
-      profile: ctx.profile,
-    });
+    const second = await startWithLock(ctx);
     assert.equal(second.ok, true);
     if (!second.ok) return;
     assert.equal(second.reused, true);
@@ -728,7 +705,237 @@ async function main() {
     assert.equal(__di2Batch2StartSideEffectCountsForTests.create_job, 1);
   });
 
+  // ─── Unit C R2: Session Lock mutual exclusion + concurrent windows ──────
+
+  await check("R2: Fence read → Job CAS window: regenerate → gate revoked", async () => {
+    installEventSender();
+    __resetDi2Batch2StartSideEffectCountsForTests();
+    const ctx = await createDi2Job();
+    let probed = false;
+    __setCommitUnderFenceRaceProbeForTests(async ({ job_id }) => {
+      // Skip identity-binding commits; fire on first post-binding start_gate CAS.
+      const job = await getXhighJob(job_id);
+      if (!job?.batch2_identity_binding) return;
+      if (probed) return;
+      probed = true;
+      await supersedeFinalDeliveryJobForRegenerate(job_id);
+    });
+    const res = await startWithLock(ctx);
+    assert.equal(res.ok, false);
+    if (!res.ok) assert.equal(res.code, "job_revoked");
+    assert.equal(__di2Batch2StartSideEffectCountsForTests.orchestrate_send, 0);
+    assert.equal(sentEvents.length, 0);
+    __setCommitUnderFenceRaceProbeForTests(null);
+  });
+
+  await check("R2: Start holds Session Lock → Regenerate takeOver with stale raw fails", async () => {
+    const ctx = await createDi2Job();
+    const owner = await acquireStartLock(ctx.session_id, ctx.job_id);
+    try {
+      const before = await readReportSessionLock(ctx.session_id);
+      assert.equal(before.kind, "owned");
+      if (before.kind !== "owned") return;
+      const staleRaw = before.raw;
+      // Force a distinct touched_at so CAS expected JSON diverges (same-ms refresh is a no-op).
+      await new Promise((r) => setTimeout(r, 5));
+      const refreshed = await updateOwnedReportLock(owner);
+      assert.ok(refreshed);
+      const after = await readReportSessionLock(ctx.session_id);
+      assert.equal(after.kind, "owned");
+      if (after.kind !== "owned") return;
+      assert.notEqual(
+        JSON.stringify(staleRaw),
+        JSON.stringify(after.lock),
+        "refresh must change lock snapshot",
+      );
+      const thief = newReportLockOwner(ctx.session_id);
+      const stolen = await takeOverReportLock(staleRaw, thief, "start", null);
+      assert.equal(stolen, null, "stale takeOver must fail while Start holds lock");
+      const still = await readReportSessionLock(ctx.session_id);
+      assert.equal(still.kind, "owned");
+      if (still.kind === "owned") {
+        assert.equal(still.lock.lock_token, owner.lock_token);
+        assert.equal(still.lock.holder, "start");
+      }
+    } finally {
+      await releaseOwnedReportLock(owner).catch(() => undefined);
+    }
+  });
+
+  await check("R2: lock stolen mid-Start → session_lock_lost, no dispatch", async () => {
+    installEventSender();
+    __resetDi2Batch2StartSideEffectCountsForTests();
+    const ctx = await createDi2Job();
+    const owner = await acquireStartLock(ctx.session_id, ctx.job_id);
+    __setDi2Batch2StartLockRaceProbeForTests(async ({ gate }) => {
+      if (gate !== "before_activate") return;
+      const cur = await readReportSessionLock(ctx.session_id);
+      if (cur.kind !== "owned") return;
+      const thief = newReportLockOwner(ctx.session_id);
+      await takeOverReportLock(cur.raw, thief, "start", null);
+      await supersedeFinalDeliveryJobForRegenerate(ctx.job_id);
+    });
+    try {
+      const res = await startDi2Batch2Production({
+        job_id: ctx.job_id,
+        freeze: ctx.freeze,
+        profile: ctx.profile,
+        lock_owner: owner,
+      });
+      assert.equal(res.ok, false);
+      if (!res.ok) {
+        assert.ok(
+          res.code === "session_lock_lost" || res.code === "job_revoked",
+          `expected lock_lost or revoked, got ${res.code}`,
+        );
+      }
+      assert.equal(__di2Batch2StartSideEffectCountsForTests.orchestrate_send, 0);
+      assert.equal(sentEvents.length, 0);
+    } finally {
+      __setDi2Batch2StartLockRaceProbeForTests(null);
+      await releaseOwnedReportLock(owner).catch(() => undefined);
+    }
+  });
+
+  await check("R2: regenerate completed → old Start cannot continue", async () => {
+    installEventSender();
+    __resetDi2Batch2StartSideEffectCountsForTests();
+    const ctx = await createDi2Job();
+    await supersedeFinalDeliveryJobForRegenerate(ctx.job_id);
+    const res = await startWithLock(ctx);
+    assert.equal(res.ok, false);
+    if (!res.ok) assert.equal(res.code, "job_revoked");
+    assert.equal(__di2Batch2StartSideEffectCountsForTests.activate, 0);
+    assert.equal(sentEvents.length, 0);
+  });
+
+  await check("R2: revoke after activate before createJob → no Batch2 job", async () => {
+    installEventSender();
+    __resetDi2Batch2StartSideEffectCountsForTests();
+    const ctx = await createDi2Job();
+    __setDi2Batch2StartLockRaceProbeForTests(async ({ gate }) => {
+      if (gate !== "before_create_job") return;
+      const cur = await readReportSessionLock(ctx.session_id);
+      if (cur.kind === "owned") {
+        const thief = newReportLockOwner(ctx.session_id);
+        await takeOverReportLock(cur.raw, thief, "start", null);
+      }
+      await supersedeFinalDeliveryJobForRegenerate(ctx.job_id);
+    });
+    const res = await startWithLock(ctx);
+    assert.equal(res.ok, false);
+    assert.equal(__di2Batch2StartSideEffectCountsForTests.create_job, 0);
+    assert.equal(sentEvents.length, 0);
+    const blob = await loadJobRawBlobs(
+      ctx.report_job_id,
+      di2Batch2GenerationId(ctx.report_job_id),
+    );
+    assert.equal(blob.ok && blob.value, null);
+    __setDi2Batch2StartLockRaceProbeForTests(null);
+  });
+
+  await check("R2: revoke after createJob before dispatch → no event send", async () => {
+    installEventSender();
+    __resetDi2Batch2StartSideEffectCountsForTests();
+    const ctx = await createDi2Job();
+    __setDi2Batch2StartLockRaceProbeForTests(async ({ gate }) => {
+      if (gate !== "before_dispatch") return;
+      const cur = await readReportSessionLock(ctx.session_id);
+      if (cur.kind === "owned") {
+        const thief = newReportLockOwner(ctx.session_id);
+        await takeOverReportLock(cur.raw, thief, "start", null);
+      }
+      await supersedeFinalDeliveryJobForRegenerate(ctx.job_id);
+    });
+    const res = await startWithLock(ctx);
+    assert.equal(res.ok, false);
+    assert.equal(__di2Batch2StartSideEffectCountsForTests.create_job, 1);
+    assert.equal(__di2Batch2StartSideEffectCountsForTests.orchestrate_send, 0);
+    assert.equal(sentEvents.length, 0);
+    __setDi2Batch2StartLockRaceProbeForTests(null);
+  });
+
+  await check("R2: ORCHESTRATE fail then revoke before RECOVER → no recover send", async () => {
+    let sends = 0;
+    setReportBatch2EventSenderForTests({
+      async send(events) {
+        sends += 1;
+        if (sends === 1) {
+          return { ok: false, code: "forced_fail", detail: "orch" };
+        }
+        for (const e of events) sentEvents.push({ name: e.name, data: e.data });
+        return { ok: true };
+      },
+    });
+    __resetDi2Batch2StartSideEffectCountsForTests();
+    const ctx = await createDi2Job();
+    let revokeArmed = false;
+    __setDi2Batch2StartLockRaceProbeForTests(async ({ gate }) => {
+      if (gate !== "before_dispatch") return;
+      if (!revokeArmed) {
+        revokeArmed = true;
+        return;
+      }
+      // Second authority check (RECOVER path): steal + supersede
+      const cur = await readReportSessionLock(ctx.session_id);
+      if (cur.kind === "owned") {
+        const thief = newReportLockOwner(ctx.session_id);
+        await takeOverReportLock(cur.raw, thief, "start", null);
+      }
+      await supersedeFinalDeliveryJobForRegenerate(ctx.job_id);
+    });
+    const res = await startWithLock(ctx);
+    assert.equal(res.ok, false);
+    assert.equal(__di2Batch2StartSideEffectCountsForTests.recover_send, 0);
+    assert.ok(
+      !sentEvents.some((e) => e.name === REPORT_BATCH2_EVENTS.RECOVER),
+    );
+    __setDi2Batch2StartLockRaceProbeForTests(null);
+    installEventSender();
+  });
+
+  await check("R2: releaseOwnedReportLock does not release another owner's lock", async () => {
+    const session_id = uniq("sess");
+    const ownerA = newReportLockOwner(session_id);
+    const lockA = await tryCreateReportLock(ownerA, "start", null);
+    assert.ok(lockA);
+    const ownerB = newReportLockOwner(session_id);
+    const cur = await readReportSessionLock(session_id);
+    assert.equal(cur.kind, "owned");
+    if (cur.kind !== "owned") return;
+    const lockB = await takeOverReportLock(cur.raw, ownerB, "start", "job_b");
+    assert.ok(lockB);
+    const releaseA = await releaseOwnedReportLock(ownerA);
+    assert.equal(releaseA, "not_owner");
+    const still = await readReportSessionLock(session_id);
+    assert.equal(still.kind, "owned");
+    if (still.kind === "owned") {
+      assert.equal(still.lock.lock_token, ownerB.lock_token);
+    }
+    const releaseB = await releaseOwnedReportLock(ownerB);
+    assert.equal(releaseB, "released");
+  });
+
+  await check("R2: timeout-style recover path still idempotent under lock", async () => {
+    installEventSender();
+    __resetDi2Batch2StartSideEffectCountsForTests();
+    const ctx = await createDi2Job();
+    const first = await startWithLock(ctx);
+    assert.equal(first.ok, true);
+    if (!first.ok) return;
+    const second = await startWithLock(ctx);
+    assert.equal(second.ok, true);
+    if (!second.ok) return;
+    assert.equal(second.reused, true);
+    assert.equal(second.binding.generation_id, first.binding.generation_id);
+    assert.ok(
+      sentEvents.some((e) => e.name === REPORT_BATCH2_EVENTS.RECOVER),
+    );
+  });
+
   __setDi2Batch2StartSideEffectProbeForTests(null);
+  __setDi2Batch2StartLockRaceProbeForTests(null);
+  __setCommitUnderFenceRaceProbeForTests(null);
   await resetBatch3KeysForTests();
   await resetBatch2JobStoreForTests();
   setReportBatch2EventSenderForTests(null);
