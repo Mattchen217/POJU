@@ -1,15 +1,18 @@
 /**
- * Unit A — DI2 → Batch 2 input adapter (mapping only).
+ * Unit A / R1 — DI2 → Batch 2 input adapter (mapping only).
  *
  * Receives already-verified Freeze / Profile / optional packs and produces
  * ReportBatch2JobInputs. Does not authorize, create jobs, lock sessions,
  * charge, dispatch orchestrators, or call models.
  *
- * Schema gap (documented, not invented):
+ * Schema gaps (documented, not invented):
  * - BookJudgmentPack ≠ ProfileRecord. Pack is only accepted when the caller
  *   supplies a schema-valid pack; Profile is never cast to BookJudgmentPack.
- * - ZiweiFactPack cannot be rebuilt from ProfileRecord (raw birth is not
- *   stored — only birth_input_hash + ziwei_closed_set prompt text).
+ * - ProfileRecord stores ziwei_closed_set (prompt text) + ziwei_status, not a
+ *   structured ZiweiFactPack, and does not retain raw birth. When Ziwei was
+ *   successfully computed (ziwei_status=ok or closed_set present), the caller
+ *   MUST supply a structurally valid ZiweiFactPack — we refuse to silently
+ *   drop computed Ziwei by reporting ziwei_available=false.
  */
 
 import {
@@ -49,7 +52,9 @@ export type Di2Batch2AdapterSource = {
    */
   book_judgment_pack?: BookJudgmentPack | null;
   /**
-   * Optional verified ZiweiFactPack. Cannot be derived from Profile alone.
+   * Structured ZiweiFactPack. Required when Profile indicates Ziwei was
+   * computed successfully; optional when ziwei_status is not_available/failed
+   * and ziwei_closed_set is empty.
    */
   ziwei_fact_pack?: ZiweiFactPack | null;
   /**
@@ -67,8 +72,10 @@ export type Di2Batch2AdapterErrorCode =
   | "profile_identity_mismatch"
   | "context_hash_mismatch"
   | "invalid_book_judgment_pack"
+  | "profile_day_master_missing"
   | "chart_fact_pack_build_failed"
-  | "ziwei_fact_pack_invalid";
+  | "ziwei_fact_pack_invalid"
+  | "ziwei_structured_pack_required";
 
 export type Di2Batch2AdapterResult =
   | {
@@ -88,12 +95,10 @@ export type Di2Batch2FieldProvenance = {
   pack:
     | "caller.book_judgment_pack"
     | "absent→null (Profile≠BookJudgmentPack)";
-  chart_fact_pack:
-    | "buildChartFactPack(profile.chart_structure)"
-    | "absent→null (no day_master)";
+  chart_fact_pack: "buildChartFactPack(profile.chart_structure)";
   ziwei_fact_pack:
     | "caller.ziwei_fact_pack"
-    | "absent→null (no raw birth on ProfileRecord)";
+    | "absent→null (ziwei not computed on Profile)";
   report_id: "identity.report_job_id";
   bazi_available: "derived from chart_fact_pack";
   ziwei_available: "derived from ziwei_fact_pack";
@@ -102,6 +107,208 @@ export type Di2Batch2FieldProvenance = {
 
 function nonEmpty(s: string | null | undefined): s is string {
   return typeof s === "string" && s.trim().length > 0;
+}
+
+function isPlainObject(v: unknown): v is Record<string, unknown> {
+  return typeof v === "object" && v !== null && !Array.isArray(v);
+}
+
+function isStringArray(v: unknown): v is string[] {
+  return Array.isArray(v) && v.every((x) => typeof x === "string");
+}
+
+function isSihuaHit(v: unknown): boolean {
+  if (!isPlainObject(v)) return false;
+  return (
+    typeof v.mutagen === "string" &&
+    typeof v.star === "string" &&
+    typeof v.palace === "string"
+  );
+}
+
+/**
+ * Runtime structural gate for ZiweiFactPack.
+ * Not a Zod schema (none exists in-repo); checks required keys + nested shape
+ * so `{ version: 1 }` and partial objects cannot mark ziwei_available=true.
+ */
+export function assertZiweiFactPackStructure(
+  raw: unknown,
+): { ok: true; pack: ZiweiFactPack } | { ok: false; detail: string } {
+  if (!isPlainObject(raw)) {
+    return { ok: false, detail: "ziwei_fact_pack must be a non-null object" };
+  }
+
+  const requiredTop = [
+    "topicPalace",
+    "sihua",
+    "daxian",
+    "mingShen",
+    "otherChart",
+    "patternHits",
+    "palaces",
+    "source",
+  ] as const;
+  for (const key of requiredTop) {
+    if (!(key in raw)) {
+      return { ok: false, detail: `missing required field: ${key}` };
+    }
+  }
+
+  if (raw.otherChart !== null) {
+    return { ok: false, detail: "otherChart must be null" };
+  }
+
+  const topic = raw.topicPalace;
+  if (!isPlainObject(topic)) {
+    return { ok: false, detail: "topicPalace must be an object" };
+  }
+  for (const key of [
+    "role",
+    "palace",
+    "heavenlyStem",
+    "earthlyBranch",
+    "majorStars",
+    "oppositePalace",
+    "oppositeMajorStars",
+  ] as const) {
+    if (!(key in topic)) {
+      return { ok: false, detail: `topicPalace missing ${key}` };
+    }
+  }
+  if (topic.role !== "ming") {
+    return { ok: false, detail: 'topicPalace.role must be "ming"' };
+  }
+  if (!isStringArray(topic.majorStars) || !isStringArray(topic.oppositeMajorStars)) {
+    return { ok: false, detail: "topicPalace star lists must be string[]" };
+  }
+
+  if (!Array.isArray(raw.sihua) || !raw.sihua.every(isSihuaHit)) {
+    return { ok: false, detail: "sihua must be an array of {mutagen,star,palace}" };
+  }
+
+  const daxian = raw.daxian;
+  if (!isPlainObject(daxian)) {
+    return { ok: false, detail: "daxian must be an object" };
+  }
+  for (const key of [
+    "palace",
+    "heavenlyStem",
+    "earthlyBranch",
+    "startAge",
+    "endAge",
+    "majorStars",
+    "sihua",
+    "liunian",
+  ] as const) {
+    if (!(key in daxian)) {
+      return { ok: false, detail: `daxian missing ${key}` };
+    }
+  }
+  if (typeof daxian.startAge !== "number" || typeof daxian.endAge !== "number") {
+    return { ok: false, detail: "daxian ages must be numbers" };
+  }
+  if (!isStringArray(daxian.majorStars) || !Array.isArray(daxian.sihua) || !daxian.sihua.every(isSihuaHit)) {
+    return { ok: false, detail: "daxian.majorStars/sihua shape invalid" };
+  }
+  const liunian = daxian.liunian;
+  if (!isPlainObject(liunian)) {
+    return { ok: false, detail: "daxian.liunian must be an object" };
+  }
+  for (const key of [
+    "year",
+    "heavenlyStem",
+    "earthlyBranch",
+    "palace",
+    "sihua",
+  ] as const) {
+    if (!(key in liunian)) {
+      return { ok: false, detail: `daxian.liunian missing ${key}` };
+    }
+  }
+  if (typeof liunian.year !== "number" || !Array.isArray(liunian.sihua) || !liunian.sihua.every(isSihuaHit)) {
+    return { ok: false, detail: "daxian.liunian shape invalid" };
+  }
+
+  const mingShen = raw.mingShen;
+  if (!isPlainObject(mingShen)) {
+    return { ok: false, detail: "mingShen must be an object" };
+  }
+  for (const key of [
+    "soul",
+    "body",
+    "mingBranch",
+    "shenBranch",
+    "shenPalace",
+    "fiveElementsClass",
+  ] as const) {
+    if (typeof mingShen[key] !== "string") {
+      return { ok: false, detail: `mingShen.${key} must be string` };
+    }
+  }
+
+  if (!Array.isArray(raw.patternHits)) {
+    return { ok: false, detail: "patternHits must be an array" };
+  }
+
+  if (!Array.isArray(raw.palaces) || raw.palaces.length === 0) {
+    return { ok: false, detail: "palaces must be a non-empty array" };
+  }
+  for (const [i, p] of raw.palaces.entries()) {
+    if (!isPlainObject(p)) {
+      return { ok: false, detail: `palaces[${i}] must be an object` };
+    }
+    if (
+      typeof p.name !== "string" ||
+      typeof p.heavenlyStem !== "string" ||
+      typeof p.earthlyBranch !== "string" ||
+      !isStringArray(p.majorStars) ||
+      typeof p.isBodyPalace !== "boolean" ||
+      !Array.isArray(p.decadalRange) ||
+      p.decadalRange.length !== 2 ||
+      typeof p.decadalRange[0] !== "number" ||
+      typeof p.decadalRange[1] !== "number"
+    ) {
+      return { ok: false, detail: `palaces[${i}] shape invalid` };
+    }
+  }
+
+  const source = raw.source;
+  if (!isPlainObject(source)) {
+    return { ok: false, detail: "source must be an object" };
+  }
+  for (const key of [
+    "library",
+    "version",
+    "license",
+    "solarDate",
+    "timeIndex",
+    "gender",
+    "fixLeap",
+    "clock",
+    "asOf",
+  ] as const) {
+    if (!(key in source)) {
+      return { ok: false, detail: `source missing ${key}` };
+    }
+  }
+  if (typeof source.version !== "string" || typeof source.solarDate !== "string") {
+    return { ok: false, detail: "source.version/solarDate must be strings" };
+  }
+  if (typeof source.timeIndex !== "number") {
+    return { ok: false, detail: "source.timeIndex must be a number" };
+  }
+  if (source.fixLeap !== true) {
+    return { ok: false, detail: "source.fixLeap must be true" };
+  }
+
+  return { ok: true, pack: raw as ZiweiFactPack };
+}
+
+/** True when Profile indicates Ziwei was successfully computed (must not be dropped). */
+export function profileIndicatesComputedZiwei(profile: ProfileRecord): boolean {
+  if (profile.source?.ziwei_status === "ok") return true;
+  if (nonEmpty(profile.ziwei_closed_set)) return true;
+  return false;
 }
 
 function assertFreezeMatchesIdentity(
@@ -151,7 +358,6 @@ function assertFreezeMatchesIdentity(
       detail: "freeze.frozen_dc missing",
     };
   }
-  // Prefer DC's own content_hash when present; must match sealed Freeze hash.
   if (nonEmpty(dc.content_hash) && dc.content_hash !== identity.context_hash) {
     return {
       ok: false,
@@ -202,8 +408,6 @@ function resolvePack(
       provenance: "absent→null (Profile≠BookJudgmentPack)",
     };
   }
-  // Schema-only gate — do not run full quota/validate (that belongs to pack
-  // generation). Reject empty objects and Profile-shaped casts.
   const parsed = BookJudgmentPackSchema.safeParse(raw);
   if (!parsed.success) {
     return {
@@ -227,16 +431,19 @@ function resolveChartFactPack(
 ):
   | {
       ok: true;
-      chart_fact_pack: string | null;
+      chart_fact_pack: string;
       provenance: Di2Batch2FieldProvenance["chart_fact_pack"];
     }
   | { ok: false; code: Di2Batch2AdapterErrorCode; detail: string } {
   const structured = profile.chart_structure;
+  // Server Profile computation already requires day_master; absence here is
+  // corrupt / non-contract Profile — never treat as optional Bazi unavailability.
   if (!structured?.day_master?.trim()) {
     return {
-      ok: true,
-      chart_fact_pack: null,
-      provenance: "absent→null (no day_master)",
+      ok: false,
+      code: "profile_day_master_missing",
+      detail:
+        "verified DI2 Profile must include chart_structure.day_master (server compute contract)",
     };
   }
   try {
@@ -246,9 +453,9 @@ function resolveChartFactPack(
     const text = built.text?.trim() ?? "";
     if (!text) {
       return {
-        ok: true,
-        chart_fact_pack: null,
-        provenance: "absent→null (no day_master)",
+        ok: false,
+        code: "chart_fact_pack_build_failed",
+        detail: "buildChartFactPack returned empty text for Profile with day_master",
       };
     }
     return {
@@ -266,6 +473,7 @@ function resolveChartFactPack(
 }
 
 function resolveZiweiFactPack(
+  profile: ProfileRecord,
   raw: ZiweiFactPack | null | undefined,
 ):
   | {
@@ -274,24 +482,38 @@ function resolveZiweiFactPack(
       provenance: Di2Batch2FieldProvenance["ziwei_fact_pack"];
     }
   | { ok: false; code: Di2Batch2AdapterErrorCode; detail: string } {
+  const computed = profileIndicatesComputedZiwei(profile);
+
   if (raw == null) {
+    if (computed) {
+      return {
+        ok: false,
+        code: "ziwei_structured_pack_required",
+        detail:
+          "Profile indicates computed Ziwei (ziwei_status=ok and/or ziwei_closed_set) " +
+          "but no structurally valid ZiweiFactPack was supplied. " +
+          "ProfileRecord does not store structured ZFP or raw birth — " +
+          "refusing to silently drop computed Ziwei as unavailable.",
+      };
+    }
     return {
       ok: true,
       ziwei_fact_pack: null,
-      provenance: "absent→null (no raw birth on ProfileRecord)",
+      provenance: "absent→null (ziwei not computed on Profile)",
     };
   }
-  // Minimal structural gate — full ZFP rebuild requires birth (not on Profile).
-  if (typeof raw !== "object" || Array.isArray(raw)) {
+
+  const checked = assertZiweiFactPackStructure(raw);
+  if (!checked.ok) {
     return {
       ok: false,
       code: "ziwei_fact_pack_invalid",
-      detail: "ziwei_fact_pack must be a non-null object",
+      detail: checked.detail,
     };
   }
   return {
     ok: true,
-    ziwei_fact_pack: raw,
+    ziwei_fact_pack: checked.pack,
     provenance: "caller.ziwei_fact_pack",
   };
 }
@@ -335,11 +557,10 @@ export function buildBatch2InputsFromDI2(
   const chartRes = resolveChartFactPack(source.profile);
   if (!chartRes.ok) return chartRes;
 
-  const ziweiRes = resolveZiweiFactPack(source.ziwei_fact_pack);
+  const ziweiRes = resolveZiweiFactPack(source.profile, source.ziwei_fact_pack);
   if (!ziweiRes.ok) return ziweiRes;
 
-  const authorized =
-    source.authorized_partner_profile === true ? true : false;
+  const authorized = source.authorized_partner_profile === true;
 
   const inputs: ReportBatch2JobInputs = {
     dc,
@@ -347,7 +568,7 @@ export function buildBatch2InputsFromDI2(
     chart_fact_pack: chartRes.chart_fact_pack,
     ziwei_fact_pack: ziweiRes.ziwei_fact_pack,
     report_id: identity.report_job_id.trim(),
-    bazi_available: Boolean(chartRes.chart_fact_pack),
+    bazi_available: true,
     ziwei_available: Boolean(ziweiRes.ziwei_fact_pack),
     authorized_partner_profile: authorized,
   };

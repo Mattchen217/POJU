@@ -1,5 +1,5 @@
 /**
- * Unit A — DI2 → Batch 2 input adapter (no Start wiring, no model calls).
+ * Unit A / R1 — DI2 → Batch 2 input adapter (no Start wiring, no model calls).
  *
  *   pnpm exec tsx scripts/test-di2-batch2-input-adapter.ts
  */
@@ -16,7 +16,9 @@ import {
 } from "../lib/poju/decision-authority/types";
 import type { DecisionContext } from "../lib/poju/decision-context/types";
 import {
+  assertZiweiFactPackStructure,
   buildBatch2InputsFromDI2,
+  profileIndicatesComputedZiwei,
   type Di2Batch2AdapterIdentity,
   type Di2Batch2AdapterSource,
 } from "../lib/poju/decision-intake/decision-report-batch2-adapter";
@@ -39,6 +41,86 @@ function check(label: string, fn: () => void) {
 }
 
 const NOW = "2026-11-26T18:00:00.000Z";
+
+/** Minimal structurally complete ZiweiFactPack (not a cast of {version:1}). */
+function validZiweiFactPack(
+  overrides?: Partial<ZiweiFactPack>,
+): ZiweiFactPack {
+  const base: ZiweiFactPack = {
+    topicPalace: {
+      role: "ming",
+      palace: "命宫",
+      heavenlyStem: "甲",
+      earthlyBranch: "子",
+      majorStars: ["紫微"],
+      oppositePalace: "迁移",
+      oppositeMajorStars: ["天机"],
+    },
+    sihua: [{ mutagen: "禄", star: "紫微", palace: "命宫" }],
+    daxian: {
+      palace: "财帛",
+      heavenlyStem: "乙",
+      earthlyBranch: "丑",
+      startAge: 12,
+      endAge: 21,
+      majorStars: ["武曲"],
+      sihua: [{ mutagen: "权", star: "武曲", palace: "财帛" }],
+      liunian: {
+        year: 2026,
+        heavenlyStem: "丙",
+        earthlyBranch: "午",
+        palace: "官禄",
+        sihua: [{ mutagen: "科", star: "天同", palace: "官禄" }],
+      },
+    },
+    mingShen: {
+      soul: "贪狼",
+      body: "天相",
+      mingBranch: "子",
+      shenBranch: "午",
+      shenPalace: "迁移",
+      fiveElementsClass: "水二局",
+    },
+    otherChart: null,
+    patternHits: [
+      {
+        name: "紫微在命",
+        level: "good",
+        palaces: ["命宫"],
+      },
+    ],
+    palaces: [
+      {
+        name: "命宫",
+        heavenlyStem: "甲",
+        earthlyBranch: "子",
+        majorStars: ["紫微"],
+        isBodyPalace: false,
+        decadalRange: [2, 11],
+      },
+      {
+        name: "兄弟",
+        heavenlyStem: "乙",
+        earthlyBranch: "丑",
+        majorStars: [],
+        isBodyPalace: false,
+        decadalRange: [12, 21],
+      },
+    ],
+    source: {
+      library: "iztro",
+      version: "1.0.0-test",
+      license: "MIT",
+      solarDate: "2000-8-16",
+      timeIndex: 2,
+      gender: "女",
+      fixLeap: true,
+      clock: "civil",
+      asOf: NOW,
+    },
+  };
+  return { ...base, ...overrides };
+}
 
 function draftDc(overrides?: Partial<DecisionContext>): DecisionContext {
   return {
@@ -221,7 +303,7 @@ function minimalValidPack(): BookJudgmentPack {
 }
 
 function main() {
-  console.log("Unit A — DI2 → Batch2 input adapter");
+  console.log("Unit A / R1 — DI2 → Batch2 input adapter");
 
   check("dc+profile with day_master → ok; pack null; chart mapped", () => {
     const res = buildBatch2InputsFromDI2(baseSource());
@@ -250,20 +332,23 @@ function main() {
     assert.equal(res.provenance.pack, "caller.book_judgment_pack");
   });
 
-  check("ziwei_fact_pack when provided sets availability", () => {
-    const zfp = { version: 1 } as unknown as ZiweiFactPack;
+  check("structurally valid ziwei_fact_pack sets availability", () => {
+    const zfp = validZiweiFactPack();
+    const structure = assertZiweiFactPackStructure(zfp);
+    assert.equal(structure.ok, true);
     const res = buildBatch2InputsFromDI2(baseSource({ ziwei_fact_pack: zfp }));
     assert.equal(res.ok, true);
     if (!res.ok) return;
     assert.equal(res.inputs.ziwei_fact_pack, zfp);
     assert.equal(res.inputs.ziwei_available, true);
+    assert.equal(res.provenance.ziwei_fact_pack, "caller.ziwei_fact_pack");
   });
 
-  check("bazi+ziwei together", () => {
+  check("bazi+ziwei together with full ZFP", () => {
     const res = buildBatch2InputsFromDI2(
       baseSource({
         book_judgment_pack: minimalValidPack(),
-        ziwei_fact_pack: { version: 1 } as unknown as ZiweiFactPack,
+        ziwei_fact_pack: validZiweiFactPack(),
         authorized_partner_profile: true,
       }),
     );
@@ -352,26 +437,25 @@ function main() {
     assert.equal(res.code, "invalid_book_judgment_pack");
   });
 
-  check("optional bazi missing (no day_master) → chart null, not error", () => {
+  // R1 P1 — day_master missing is corrupt Profile, not optional Bazi absence
+  check("Profile without day_master → Fail Closed (profile_day_master_missing)", () => {
     const res = buildBatch2InputsFromDI2(
       baseSource({ profile: profileRec(structuredEmptyDayMaster()) }),
     );
-    assert.equal(res.ok, true);
-    if (!res.ok) return;
-    assert.equal(res.inputs.chart_fact_pack, null);
-    assert.equal(res.inputs.bazi_available, false);
+    assert.equal(res.ok, false);
+    if (res.ok) return;
+    assert.equal(res.code, "profile_day_master_missing");
   });
 
-  check("optional ziwei missing → null, not error", () => {
+  // R1 — Ziwei not computed → null OK
+  check("ziwei not computed on Profile → null, not error", () => {
     const res = buildBatch2InputsFromDI2(baseSource());
     assert.equal(res.ok, true);
     if (!res.ok) return;
     assert.equal(res.inputs.ziwei_fact_pack, null);
     assert.equal(res.inputs.ziwei_available, false);
-    assert.match(
-      res.provenance.ziwei_fact_pack,
-      /absent→null/,
-    );
+    assert.match(res.provenance.ziwei_fact_pack, /absent→null/);
+    assert.equal(profileIndicatesComputedZiwei(baseSource().profile), false);
   });
 
   check("invalid ziwei_fact_pack type fails (not silent null)", () => {
@@ -381,6 +465,130 @@ function main() {
     assert.equal(res.ok, false);
     if (res.ok) return;
     assert.equal(res.code, "ziwei_fact_pack_invalid");
+  });
+
+  // R1 P1 — incomplete ZFP rejected
+  check("{ version: 1 } is rejected as invalid ZFP", () => {
+    const incomplete = { version: 1 } as unknown as ZiweiFactPack;
+    const structure = assertZiweiFactPackStructure(incomplete);
+    assert.equal(structure.ok, false);
+    const res = buildBatch2InputsFromDI2(
+      baseSource({ ziwei_fact_pack: incomplete }),
+    );
+    assert.equal(res.ok, false);
+    if (res.ok) return;
+    assert.equal(res.code, "ziwei_fact_pack_invalid");
+  });
+
+  check("ZFP missing required field (no palaces) rejected", () => {
+    const raw = validZiweiFactPack();
+    const broken = { ...raw } as Record<string, unknown>;
+    delete broken.palaces;
+    const structure = assertZiweiFactPackStructure(broken);
+    assert.equal(structure.ok, false);
+    if (structure.ok) return;
+    assert.match(structure.detail, /palaces/);
+    const res = buildBatch2InputsFromDI2(
+      baseSource({ ziwei_fact_pack: broken as unknown as ZiweiFactPack }),
+    );
+    assert.equal(res.ok, false);
+    if (res.ok) return;
+    assert.equal(res.code, "ziwei_fact_pack_invalid");
+  });
+
+  check("ZFP wrong nested structure (sihua) rejected", () => {
+    const broken = validZiweiFactPack({
+      sihua: [{ mutagen: "禄" } as never],
+    });
+    const structure = assertZiweiFactPackStructure(broken);
+    assert.equal(structure.ok, false);
+    const res = buildBatch2InputsFromDI2(
+      baseSource({ ziwei_fact_pack: broken }),
+    );
+    assert.equal(res.ok, false);
+    if (res.ok) return;
+    assert.equal(res.code, "ziwei_fact_pack_invalid");
+  });
+
+  // R1 P1 — computed Ziwei must not be silently dropped
+  check("ziwei_status=ok without ZFP → Fail Closed (ziwei_structured_pack_required)", () => {
+    const profile = profileRec(structuredWithDayMaster(), {
+      ziwei_closed_set: "【紫微】命宫…",
+      source: {
+        kind: "server_recompute_from_birth",
+        birth_input_hash: "birth_hash",
+        bazi_engine: "shunshi-bazi-core",
+        ziwei_engine: "iztro",
+        used_true_solar_time: true,
+        ziwei_status: "ok",
+      },
+    });
+    assert.equal(profileIndicatesComputedZiwei(profile), true);
+    const res = buildBatch2InputsFromDI2(baseSource({ profile }));
+    assert.equal(res.ok, false);
+    if (res.ok) return;
+    assert.equal(res.code, "ziwei_structured_pack_required");
+  });
+
+  check("non-empty ziwei_closed_set without ZFP → Fail Closed", () => {
+    const profile = profileRec(structuredWithDayMaster(), {
+      ziwei_closed_set: "closed-set text from server",
+      source: {
+        kind: "server_recompute_from_birth",
+        birth_input_hash: "birth_hash",
+        bazi_engine: "shunshi-bazi-core",
+        ziwei_engine: "iztro",
+        used_true_solar_time: true,
+        ziwei_status: "failed",
+      },
+    });
+    assert.equal(profileIndicatesComputedZiwei(profile), true);
+    const res = buildBatch2InputsFromDI2(baseSource({ profile }));
+    assert.equal(res.ok, false);
+    if (res.ok) return;
+    assert.equal(res.code, "ziwei_structured_pack_required");
+  });
+
+  check("ziwei_status=ok + valid ZFP → maps through", () => {
+    const zfp = validZiweiFactPack();
+    const profile = profileRec(structuredWithDayMaster(), {
+      ziwei_closed_set: "【紫微】命宫…",
+      source: {
+        kind: "server_recompute_from_birth",
+        birth_input_hash: "birth_hash",
+        bazi_engine: "shunshi-bazi-core",
+        ziwei_engine: "iztro",
+        used_true_solar_time: true,
+        ziwei_status: "ok",
+      },
+    });
+    const res = buildBatch2InputsFromDI2(
+      baseSource({ profile, ziwei_fact_pack: zfp }),
+    );
+    assert.equal(res.ok, true);
+    if (!res.ok) return;
+    assert.equal(res.inputs.ziwei_available, true);
+    assert.equal(res.inputs.ziwei_fact_pack, zfp);
+  });
+
+  check("ziwei_status=failed + empty closed_set + no ZFP → null OK", () => {
+    const profile = profileRec(structuredWithDayMaster(), {
+      ziwei_closed_set: null,
+      source: {
+        kind: "server_recompute_from_birth",
+        birth_input_hash: "birth_hash",
+        bazi_engine: "shunshi-bazi-core",
+        ziwei_engine: "iztro",
+        used_true_solar_time: true,
+        ziwei_status: "failed",
+      },
+    });
+    assert.equal(profileIndicatesComputedZiwei(profile), false);
+    const res = buildBatch2InputsFromDI2(baseSource({ profile }));
+    assert.equal(res.ok, true);
+    if (!res.ok) return;
+    assert.equal(res.inputs.ziwei_fact_pack, null);
+    assert.equal(res.inputs.ziwei_available, false);
   });
 
   check("unauthorized partner stays false", () => {
@@ -412,7 +620,6 @@ function main() {
   });
 
   check("adapter does not create jobs / side effects (pure)", () => {
-    // Structural: function is sync and returns only Result — no await, no KV.
     const res = buildBatch2InputsFromDI2(baseSource());
     assert.equal(res.ok, true);
     assert.equal(typeof buildBatch2InputsFromDI2, "function");
