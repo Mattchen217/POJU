@@ -167,7 +167,9 @@ export async function saveAnalysis(next: StoredAnalysis): Promise<StoredAnalysis
   if (cur && cur.record.idempotency_key === next.record.idempotency_key && cur.record.status === "completed") {
     return cur;
   }
-  await kv.set(key, next, { ex: next.record.status === "completed" ? RETENTION : TTL });
+  const durable =
+    next.record.status === "completed" || next.record.status === "unavailable";
+  await kv.set(key, next, { ex: durable ? RETENTION : TTL });
   return next;
 }
 
@@ -281,8 +283,6 @@ export function verifyCompletedReportRecord(rec: CompletedReportRecord): void {
   const a = rec.analysis;
   if (
     !a ||
-    a.status !== "completed" ||
-    !a.analysis_result ||
     a.analysis_id !== rec.analysis_id ||
     a.session_id !== rec.session_id ||
     a.freeze_id !== rec.freeze_id ||
@@ -290,6 +290,17 @@ export function verifyCompletedReportRecord(rec: CompletedReportRecord): void {
     a.profile_hash !== rec.profile_hash ||
     a.analysis_schema_version !== rec.analysis_schema_version
   ) {
+    invalid("Personal Analysis is incomplete or bound elsewhere");
+  }
+  // Completed requires a real artifact; unavailable is an honest Batch2 seal
+  // (no Personal Analysis produced — never forge empty completed content).
+  if (a.status === "completed") {
+    if (!a.analysis_result) invalid("Personal Analysis is incomplete or bound elsewhere");
+  } else if (a.status === "unavailable") {
+    if (a.analysis_result != null) {
+      invalid("unavailable Personal Analysis must not carry an analysis_result");
+    }
+  } else {
     invalid("Personal Analysis is incomplete or bound elsewhere");
   }
   if (!Array.isArray(rec.pages) || rec.pages.length !== DECISION_PAGE_IDS.length) invalid("page count");
@@ -334,6 +345,7 @@ function sameReport(a: CompletedReportRecord, b: CompletedReportDraft): boolean 
     a.freeze_receipt_id === b.freeze_receipt_id &&
     a.profile_receipt_id === b.profile_receipt_id &&
     a.analysis_id === b.analysis_id &&
+    a.analysis.status === b.analysis.status &&
     canonicalHash(a.analysis.analysis_result) === canonicalHash(b.analysis.analysis_result) &&
     pageSig(a.pages) === pageSig(b.pages)
   );

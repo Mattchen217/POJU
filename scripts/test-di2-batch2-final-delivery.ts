@@ -521,6 +521,37 @@ async function markGenerationCompleted(binding: {
   await updateJobStatus(binding.report_id, binding.generation_id, "completed");
 }
 
+/** active → finalizing → delivery_failed (Batch3 V3 merge failed; pages may still be Authority-valid). */
+async function markGenerationDeliveryFailed(binding: {
+  report_id: string;
+  generation_id: string;
+  batch3_generation_epoch: number;
+}) {
+  assert.equal(
+    (
+      await transitionGenerationStatus({
+        report_id: binding.report_id,
+        generation_id: binding.generation_id,
+        generation_epoch: binding.batch3_generation_epoch,
+        to: "finalizing",
+      })
+    ).ok,
+    true,
+  );
+  assert.equal(
+    (
+      await transitionGenerationStatus({
+        report_id: binding.report_id,
+        generation_id: binding.generation_id,
+        generation_epoch: binding.batch3_generation_epoch,
+        to: "delivery_failed",
+      })
+    ).ok,
+    true,
+  );
+  await updateJobStatus(binding.report_id, binding.generation_id, "completed");
+}
+
 async function continueWithLock(ctx: { job_id: string; session_id: string }) {
   const owner = await acquireStartLock(ctx.session_id, ctx.job_id);
   try {
@@ -533,7 +564,11 @@ async function continueWithLock(ctx: { job_id: string; session_id: string }) {
   }
 }
 
-async function prepareReadyJob(opts?: { skipPages?: boolean; skipGrant?: boolean }) {
+async function prepareReadyJob(opts?: {
+  skipPages?: boolean;
+  skipGrant?: boolean;
+  generation?: "completed" | "delivery_failed";
+}) {
   installEventSender();
   resetBatch2JobStoreForTests();
   resetBatch3KeysForTests();
@@ -546,7 +581,11 @@ async function prepareReadyJob(opts?: { skipPages?: boolean; skipGrant?: boolean
   if (!opts?.skipPages) {
     await seedAllAuthorityPages(binding);
   }
-  await markGenerationCompleted(binding);
+  if (opts?.generation === "delivery_failed") {
+    await markGenerationDeliveryFailed(binding);
+  } else {
+    await markGenerationCompleted(binding);
+  }
   if (opts?.skipGrant) {
     // revoke after grant from startThen
     const job = await getXhighJob(ctx.job_id);
@@ -575,6 +614,10 @@ async function main() {
     assert.equal(delivered.record.pages.find((p) => p.page_id === "07")?.applicability, "not_applicable");
     assert.equal(delivered.record.pages.find((p) => p.page_id === "03")?.status, "completed");
     assert.ok(delivered.record.result.full_text.trim().length > 0);
+    // R1: no forged completed Personal Analysis when none was produced.
+    assert.equal(delivered.record.analysis.status, "unavailable");
+    assert.equal(delivered.record.analysis.analysis_result, null);
+    assert.notEqual(delivered.record.analysis.model, "batch2_final_delivery_store_bound");
     const job = await getXhighJob(ctx.job_id);
     assert.equal(job?.status, "completed");
     const loaded = await loadCompletedReport(ctx.session_id, ctx.job_id);
@@ -880,6 +923,249 @@ async function main() {
     // Stub bodies have no term markers → not_applicable empty appendix is valid.
     assert.equal(p03!.applicability, "not_applicable");
     assert.equal(p03!.content_markdown, "");
+  });
+
+  // ── Unit E R1 ────────────────────────────────────────────────────────────
+
+  await check("R1: delivery_failed + Authority pages → Status completes Final Delivery", async () => {
+    const { ctx } = await prepareReadyJob({ generation: "delivery_failed" });
+    const status = await buildDecisionReportStatus({
+      job_id: ctx.job_id,
+      session_id: ctx.session_id,
+    });
+    assert.equal(status.status, "completed", JSON.stringify(status));
+    assert.ok(status.result);
+    assert.equal((await getXhighJob(ctx.job_id))?.status, "completed");
+    const loaded = await loadCompletedReport(ctx.session_id, ctx.job_id);
+    assert.ok(loaded);
+  });
+
+  await check("R1: delivery_failed + missing pages → Status not completed", async () => {
+    const { ctx } = await prepareReadyJob({
+      skipPages: true,
+      generation: "delivery_failed",
+    });
+    const status = await buildDecisionReportStatus({
+      job_id: ctx.job_id,
+      session_id: ctx.session_id,
+    });
+    assert.notEqual(status.status, "completed");
+    assert.equal(status.current_stage, "batch2_delivery_failed");
+    assert.equal(await loadCompletedReport(ctx.session_id, ctx.job_id), null);
+  });
+
+  await check("R1: delivery_failed + Authority unavailable → Status not completed", async () => {
+    const { ctx, binding } = await prepareReadyJob({
+      skipPages: true,
+      generation: "delivery_failed",
+    });
+    // Leave pages absent so historical Authority cannot validate a full set.
+    void binding;
+    const status = await buildDecisionReportStatus({
+      job_id: ctx.job_id,
+      session_id: ctx.session_id,
+    });
+    assert.notEqual(status.status, "completed");
+    assert.equal(await loadCompletedReport(ctx.session_id, ctx.job_id), null);
+  });
+
+  await check("R1: Continue + Status reuse same DI2 Store record", async () => {
+    const { ctx } = await prepareReadyJob({ generation: "delivery_failed" });
+    const cont = await continueWithLock(ctx);
+    assert.equal(cont.ok, true, JSON.stringify(cont));
+    if (!cont.ok) return;
+    assert.equal(cont.outcome, "delivered");
+    const afterContinue = await loadCompletedReport(ctx.session_id, ctx.job_id);
+    assert.ok(afterContinue);
+    const status = await buildDecisionReportStatus({
+      job_id: ctx.job_id,
+      session_id: ctx.session_id,
+    });
+    assert.equal(status.status, "completed");
+    const afterStatus = await loadCompletedReport(ctx.session_id, ctx.job_id);
+    assert.ok(afterStatus);
+    assert.equal(afterStatus!.record_hash, afterContinue!.record_hash);
+  });
+
+  await check("R1: superseded / failed / cancelled still refuse delivery", async () => {
+    for (const to of ["superseded", "failed", "cancelled"] as const) {
+      installEventSender();
+      resetBatch2JobStoreForTests();
+      resetBatch3KeysForTests();
+      const ctx = await createDi2Job();
+      const started = await startThen(ctx);
+      assert.equal(started.ok, true);
+      if (!started.ok) return;
+      const binding = started.binding;
+      await seedAllAuthorityPages(binding);
+      assert.equal(
+        (
+          await transitionGenerationStatus({
+            report_id: binding.report_id,
+            generation_id: binding.generation_id,
+            generation_epoch: binding.batch3_generation_epoch,
+            to,
+          })
+        ).ok,
+        true,
+        to,
+      );
+      const delivered = await attemptDi2Batch2FinalDelivery(ctx.job_id);
+      assert.equal(delivered.ok, false, to);
+      if (delivered.ok) return;
+      assert.equal(delivered.code, "generation_stale", to);
+      const status = await buildDecisionReportStatus({
+        job_id: ctx.job_id,
+        session_id: ctx.session_id,
+      });
+      assert.notEqual(status.status, "completed", to);
+      assert.equal(await loadCompletedReport(ctx.session_id, ctx.job_id), null, to);
+    }
+  });
+
+  await check("R1: no real analysis → unavailable seal, never forged completed", async () => {
+    const { ctx } = await prepareReadyJob();
+    const delivered = await attemptDi2Batch2FinalDelivery(ctx.job_id);
+    assert.equal(delivered.ok, true);
+    if (!delivered.ok) return;
+    assert.equal(delivered.record.analysis.status, "unavailable");
+    assert.equal(delivered.record.analysis.analysis_result, null);
+    assert.ok(
+      (delivered.record.analysis.error ?? "").includes("not_generated") ||
+        (delivered.record.analysis.error ?? "").includes("unavailable"),
+    );
+    // Empty section artifact must not appear as completed.
+    assert.notEqual(delivered.record.analysis.status, "completed");
+  });
+
+  await check("R1: valid completed Personal Analysis is reused", async () => {
+    const { ctx } = await prepareReadyJob();
+    const job = await getXhighJob(ctx.job_id);
+    assert.ok(job);
+    const ji = job!.input as DecisionReportJobInput;
+    const { saveAnalysis } = await import("../lib/poju/decision-intake/decision-report-store");
+    const analysis_id = `pa_real_${uniq("r1")}`;
+    await saveAnalysis({
+      record: {
+        analysis_id,
+        idempotency_key: ji.analysis_key,
+        session_id: ji.session_id,
+        freeze_id: ji.freeze_id,
+        context_id: ji.context_id,
+        context_version: ji.context_version,
+        context_hash: ji.context_hash,
+        profile_id: ji.profile_id,
+        profile_hash: ji.profile_hash,
+        analysis_schema_version: ji.analysis_schema_version,
+        status: "completed",
+        attempts: 1,
+        generated_at: NOW,
+        updated_at: NOW,
+        analysis_result: {
+          decision_target: {
+            decision_question: "是否接受新工作",
+            concrete_event: null,
+            desired_outcome: null,
+            stakes: null,
+            goal_priorities: [],
+            unacceptable_outcomes: [],
+          },
+          personal_pattern_analysis: [
+            {
+              item_id: "PA-pattern-1",
+              text: "真实分析条目",
+              traditional_basis: "basis",
+              science_note: null,
+              basis_class: "pattern_judgment",
+              evidence_refs: [],
+            },
+          ],
+          personal_strengths: [],
+          personal_risks: [],
+          decision_tendencies: [],
+          constraint_interaction: [],
+          decision_path_implications: [],
+          unresolved_conditions: [],
+          evidence_references: [],
+          confidence_and_limits: {
+            overall_confidence: "medium",
+            limits: ["test"],
+            information_boundaries: [],
+          },
+        },
+        error: null,
+        retryable: false,
+        model: "test_real_pa",
+        tokens_used: 12,
+      },
+      projection: null,
+    });
+    const delivered = await attemptDi2Batch2FinalDelivery(ctx.job_id);
+    assert.equal(delivered.ok, true, JSON.stringify(delivered));
+    if (!delivered.ok) return;
+    assert.equal(delivered.record.analysis.status, "completed");
+    assert.equal(delivered.record.analysis.analysis_id, analysis_id);
+    assert.equal(delivered.record.analysis.model, "test_real_pa");
+    assert.ok(delivered.record.analysis.analysis_result?.personal_pattern_analysis.length === 1);
+  });
+
+  await check("R1: completed analysis identity mismatch → fail closed", async () => {
+    const { ctx } = await prepareReadyJob();
+    const job = await getXhighJob(ctx.job_id);
+    assert.ok(job);
+    const ji = job!.input as DecisionReportJobInput;
+    const { saveAnalysis } = await import("../lib/poju/decision-intake/decision-report-store");
+    await saveAnalysis({
+      record: {
+        analysis_id: `pa_bad_${uniq("r1")}`,
+        idempotency_key: ji.analysis_key,
+        session_id: ji.session_id,
+        freeze_id: "WRONG_FREEZE",
+        context_id: ji.context_id,
+        context_version: ji.context_version,
+        context_hash: "wrong_hash",
+        profile_id: ji.profile_id,
+        profile_hash: ji.profile_hash,
+        analysis_schema_version: ji.analysis_schema_version,
+        status: "completed",
+        attempts: 1,
+        generated_at: NOW,
+        updated_at: NOW,
+        analysis_result: {
+          decision_target: {
+            decision_question: "x",
+            concrete_event: null,
+            desired_outcome: null,
+            stakes: null,
+            goal_priorities: [],
+            unacceptable_outcomes: [],
+          },
+          personal_pattern_analysis: [],
+          personal_strengths: [],
+          personal_risks: [],
+          decision_tendencies: [],
+          constraint_interaction: [],
+          decision_path_implications: [],
+          unresolved_conditions: [],
+          evidence_references: [],
+          confidence_and_limits: {
+            overall_confidence: "low",
+            limits: ["x"],
+            information_boundaries: [],
+          },
+        },
+        error: null,
+        retryable: false,
+        model: "bad",
+        tokens_used: 0,
+      },
+      projection: null,
+    });
+    const delivered = await attemptDi2Batch2FinalDelivery(ctx.job_id);
+    assert.equal(delivered.ok, false);
+    if (delivered.ok) return;
+    assert.equal(delivered.code, "analysis_incomplete");
+    assert.equal(await loadCompletedReport(ctx.session_id, ctx.job_id), null);
   });
 
   console.log(`\nUnit E results: ${passed} passed, ${failed} failed`);

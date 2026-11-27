@@ -943,7 +943,13 @@ export async function buildDecisionReportStatus(input: {
       return deliveryDeniedPayload(input, jobBinding, delivery);
     }
     const batch2Status = await buildBatch2AuthoritativeDecisionReportStatus(job);
-    if (batch2Status.ok && batch2Status.current_stage === "ready_for_delivery") {
+    // Unit E R1: Generation delivery_failed must not skip Final Delivery solely by
+    // Status mapping — Continue already allows it; Adapter re-checks Authority pages.
+    // Keep superseded/failed/cancelled as hard fails (ok:false, other stages).
+    const attemptFinalDelivery =
+      batch2Status.current_stage === "ready_for_delivery" ||
+      batch2Status.current_stage === "batch2_delivery_failed";
+    if (attemptFinalDelivery) {
       const delivered = await attemptDi2Batch2FinalDelivery(job);
       if (delivered.ok) {
         return statusFromRecord(delivered.record);

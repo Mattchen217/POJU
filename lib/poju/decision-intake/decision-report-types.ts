@@ -154,7 +154,16 @@ export const PERSONAL_ANALYSIS_SECTIONS: readonly PersonalAnalysisSectionKey[] =
   "unresolved_conditions",
 ] as const;
 
-export type PersonalAnalysisStatus = "pending" | "running" | "completed" | "failed";
+/**
+ * `unavailable` — Batch2 Final Delivery may seal a report when no Personal
+ * Analysis artifact was produced; status must not be forged as `completed`.
+ */
+export type PersonalAnalysisStatus =
+  | "pending"
+  | "running"
+  | "completed"
+  | "failed"
+  | "unavailable";
 
 export type PersonalAnalysisRecord = {
   analysis_id: string;

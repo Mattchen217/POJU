@@ -77,7 +77,6 @@ import {
   type DecisionReportJobInput,
   type DecisionReportJobResult,
   type DecisionReportPageRecord,
-  type PersonalAnalysisArtifact,
   type PersonalAnalysisRecord,
 } from "./decision-report-types";
 
@@ -197,18 +196,9 @@ function assertJobIdentity(job: PojuXhighJob, ji: DecisionReportJobInput): Di2Ba
   if (typeof job.execution_generation !== "number" || !Number.isFinite(job.execution_generation)) {
     return fail("invalid_job_input", "execution_generation missing");
   }
-  const required: Array<[keyof DecisionReportJobInput, unknown]> = [
-    ["job_id" as never, job.job_id],
-    ["session_id", ji.session_id],
-    ["freeze_id", ji.freeze_id],
-    ["context_id", ji.context_id],
-    ["context_version", ji.context_version],
-    ["context_hash", ji.context_hash],
-    ["profile_id", ji.profile_id],
-    ["profile_hash", ji.profile_hash],
-    ["report_job_id", ji.report_job_id],
-  ];
-  void required;
+  if (!job.job_id?.trim()) {
+    return fail("invalid_job_input", "job_id missing");
+  }
   if (!ji.session_id || ji.session_id !== job.session_id) {
     return fail("identity_mismatch", "session_id mismatch");
   }
@@ -351,48 +341,47 @@ function buildPage03Record(input: {
   };
 }
 
-function deterministicStoreBoundAnalysis(input: {
-  decision_question: string | null;
-  concrete_event?: string | null;
-  desired_outcome?: string | null;
-  stakes?: string | null;
-  goal_priorities?: string[];
-  unacceptable_outcomes?: string[];
-  information_boundaries?: string[];
-}): PersonalAnalysisArtifact {
-  return {
-    decision_target: {
-      decision_question: input.decision_question,
-      concrete_event: input.concrete_event ?? null,
-      desired_outcome: input.desired_outcome ?? null,
-      stakes: input.stakes ?? null,
-      goal_priorities: [...(input.goal_priorities ?? [])],
-      unacceptable_outcomes: [...(input.unacceptable_outcomes ?? [])],
-    },
-    personal_pattern_analysis: [],
-    personal_strengths: [],
-    personal_risks: [],
-    decision_tendencies: [],
-    constraint_interaction: [],
-    decision_path_implications: [],
-    unresolved_conditions: [],
-    evidence_references: [],
-    confidence_and_limits: {
-      overall_confidence: "low",
-      limits: ["batch2_final_delivery_store_binding"],
-      information_boundaries: [...(input.information_boundaries ?? [])],
-    },
-  };
-}
-
+/**
+ * Resolve Personal Analysis for Final Delivery.
+ *
+ * - Reuse a binding-matched completed record with a real analysis_result.
+ * - Batch2 Authority pages are Face schemas — they are not a PersonalAnalysisArtifact;
+ *   do not invent section fields from page text.
+ * - When no real analysis exists: seal an honest `unavailable` record (not completed).
+ * - Completed-but-wrong-identity → fail closed (never overwrite / never forge).
+ */
 async function ensureAnalysisForDelivery(
   job: PojuXhighJob,
   ji: DecisionReportJobInput,
 ): Promise<{ ok: true; analysis: PersonalAnalysisRecord } | Di2Batch2FinalDeliveryResult> {
+  void job;
   const existing = await loadAnalysis(ji.analysis_key).catch(() => null);
+
+  if (existing?.record.status === "completed") {
+    if (!existing.record.analysis_result) {
+      return fail(
+        "analysis_incomplete",
+        "Personal Analysis marked completed but analysis_result is missing",
+      );
+    }
+    if (
+      existing.record.session_id !== ji.session_id ||
+      existing.record.freeze_id !== ji.freeze_id ||
+      existing.record.context_hash !== ji.context_hash ||
+      existing.record.profile_hash !== ji.profile_hash ||
+      existing.record.context_id !== ji.context_id
+    ) {
+      return fail(
+        "analysis_incomplete",
+        "Personal Analysis identity ≠ DI2 Job (Freeze/Context/Profile/session)",
+      );
+    }
+    return { ok: true, analysis: existing.record };
+  }
+
   if (
-    existing?.record.status === "completed" &&
-    existing.record.analysis_result &&
+    existing?.record.status === "unavailable" &&
+    existing.record.analysis_result == null &&
     existing.record.session_id === ji.session_id &&
     existing.record.freeze_id === ji.freeze_id &&
     existing.record.context_hash === ji.context_hash &&
@@ -401,37 +390,8 @@ async function ensureAnalysisForDelivery(
     return { ok: true, analysis: existing.record };
   }
 
-  let decision_question: string | null = null;
-  let information_boundaries: string[] = [];
-  const snap = __finalDeliveryAuthoritySnapshotForTests;
-  if (snap) {
-    if (
-      snap.freeze.session_id !== ji.session_id ||
-      snap.freeze.freeze_id !== ji.freeze_id ||
-      snap.freeze.context_hash !== ji.context_hash ||
-      snap.freeze.context_id !== ji.context_id
-    ) {
-      return fail("freeze_mismatch", "test snapshot Freeze ≠ DI2 Job");
-    }
-    decision_question = snap.freeze.decision_question ?? null;
-  } else {
-    let freeze: Awaited<ReturnType<typeof loadVerifiedFreezeRecord>>;
-    try {
-      freeze = await loadVerifiedFreezeRecord(ji.session_id, ji.freeze_id);
-    } catch (e) {
-      return fail(
-        "freeze_mismatch",
-        `Freeze unavailable for analysis binding: ${e instanceof Error ? e.message : String(e)}`,
-        { retryable: true },
-      );
-    }
-    if (freeze.context_hash !== ji.context_hash || freeze.context_id !== ji.context_id) {
-      return fail("freeze_mismatch", "Freeze Context identity ≠ DI2 Job");
-    }
-    decision_question = freeze.frozen_dc.definition.decision_question;
-    information_boundaries = [...(freeze.frozen_dc.information_boundaries ?? [])];
-  }
-
+  // No mappable PersonalAnalysisArtifact in Batch2 Authority page outputs.
+  // Honest seal: unavailable / not generated — never status=completed with empty sections.
   const t = nowIso();
   const analysis_id =
     existing?.record.analysis_id ??
@@ -447,23 +407,32 @@ async function ensureAnalysisForDelivery(
     profile_id: ji.profile_id,
     profile_hash: ji.profile_hash,
     analysis_schema_version: ji.analysis_schema_version,
-    status: "completed",
-    attempts: (existing?.record.attempts ?? 0) + 1,
-    generated_at: t,
+    status: "unavailable",
+    attempts: existing?.record.attempts ?? 0,
+    generated_at: null,
     updated_at: t,
-    analysis_result: deterministicStoreBoundAnalysis({
-      decision_question,
-      information_boundaries,
-    }),
-    error: null,
+    analysis_result: null,
+    error: "personal_analysis_not_generated_for_batch2_final_delivery",
     retryable: false,
-    model: "batch2_final_delivery_store_bound",
+    model: null,
     tokens_used: 0,
   };
   const stored: StoredAnalysis = { record, projection: existing?.projection ?? null };
   const saved = await saveAnalysis(stored);
-  if (saved.record.status !== "completed" || !saved.record.analysis_result) {
-    return fail("analysis_incomplete", "Personal Analysis could not be sealed for Final Delivery", {
+  if (saved.record.status === "completed" && saved.record.analysis_result) {
+    // A concurrent writer completed a real analysis — reuse if bindings match.
+    if (
+      saved.record.session_id === ji.session_id &&
+      saved.record.freeze_id === ji.freeze_id &&
+      saved.record.context_hash === ji.context_hash &&
+      saved.record.profile_hash === ji.profile_hash
+    ) {
+      return { ok: true, analysis: saved.record };
+    }
+    return fail("analysis_incomplete", "concurrent Personal Analysis identity mismatch");
+  }
+  if (saved.record.status !== "unavailable" || saved.record.analysis_result != null) {
+    return fail("analysis_incomplete", "Personal Analysis unavailable seal failed", {
       retryable: true,
     });
   }

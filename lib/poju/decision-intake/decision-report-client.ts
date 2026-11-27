@@ -418,13 +418,19 @@ function verifyCompletedReport(
   const a = payload.analysis.record;
   if (
     !a ||
-    a.status !== "completed" ||
-    !a.analysis_result ||
     a.analysis_id !== result.analysis_id ||
     a.freeze_id !== freeze.freezeId ||
     a.context_hash !== freeze.content_hash ||
     a.profile_hash !== payload.profile_hash
   ) {
+    throw new DecisionReportClientError("REPORT_ANALYSIS_INCOMPLETE", "Personal Analysis is incomplete or bound elsewhere");
+  }
+  // completed → real artifact required; unavailable → honest Batch2 seal (no forged empty completed).
+  if (a.status === "completed") {
+    if (!a.analysis_result) {
+      throw new DecisionReportClientError("REPORT_ANALYSIS_INCOMPLETE", "Personal Analysis is incomplete or bound elsewhere");
+    }
+  } else if (a.status !== "unavailable" || a.analysis_result != null) {
     throw new DecisionReportClientError("REPORT_ANALYSIS_INCOMPLETE", "Personal Analysis is incomplete or bound elsewhere");
   }
   const pages = DECISION_PAGE_IDS.map((id) => {
