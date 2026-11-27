@@ -2565,6 +2565,32 @@ async function main() {
       (n) => n.ask_policy === "ask_if_material",
     );
     assert.ok(pastNeeds.some((n) => n.need_id === "need:dc:04b-user-experience"));
+    assert.ok(pastNeeds.some((n) => n.need_id === "need:dc:06c-execution-experience"));
+
+    // 06c must collect past_attempt (lived execution), never validation_capacity.
+    const n06c = reportInformationNeedById("need:dc:06c-execution-experience");
+    assert.ok(n06c);
+    assert.deepEqual([...n06c!.dir_ids], ["DIR-PAST-ATTEMPTS"]);
+    assert.ok(
+      n06c!.fact_role_refs.some(
+        (r) => r.dir_id === "DIR-PAST-ATTEMPTS" && r.fact_role === "past_attempt",
+      ),
+      "06c fact_role_refs must include past_attempt",
+    );
+    assert.ok(
+      !n06c!.fact_role_refs.some((r) => r.fact_role === "validation_capacity"),
+      "06c must not bind validation_capacity",
+    );
+    assert.ok(!n06c!.dir_ids.includes("DIR-VALIDATION-CAPACITY"));
+
+    const n04b = reportInformationNeedById("need:dc:04b-user-experience");
+    assert.ok(n04b);
+    assert.ok(
+      n04b!.fact_role_refs.some(
+        (r) => r.dir_id === "DIR-PAST-ATTEMPTS" && r.fact_role === "past_attempt",
+      ),
+      "04b fact_role_refs must include past_attempt",
+    );
 
     const optNeeds = reportInformationNeedsForDirIds(["DIR-OPT-ON-TABLE"]).filter(
       (n) => n.ask_policy === "ask_if_material",
@@ -2616,6 +2642,16 @@ async function main() {
     const pastCand = candidates.find((c) => c.dir_ids.includes("DIR-PAST-ATTEMPTS"));
     assert.ok(pastCand, "DIR-PAST-ATTEMPTS must enter AQE candidates");
     assert.ok(pastCand!.need_ids?.includes("need:dc:04b-user-experience"));
+    assert.ok(pastCand!.need_ids?.includes("need:dc:06c-execution-experience"));
+    assert.ok(
+      pastCand!.fact_role_codes.some((code) =>
+        code.includes("/DIR-PAST-ATTEMPTS/role/past_attempt"),
+      ),
+      "AQE candidate for past attempts must ask past_attempt, not validation_capacity",
+    );
+    assert.ok(
+      !pastCand!.fact_role_codes.some((code) => code.includes("validation_capacity")),
+    );
     const optCand = candidates.find((c) => c.dir_ids.includes("DIR-OPT-ON-TABLE"));
     assert.ok(optCand, "DIR-OPT-ON-TABLE must enter AQE candidates");
     assert.ok(optCand!.need_ids?.includes("need:dc:DIR-OPT-ON-TABLE"));
@@ -2807,6 +2843,7 @@ async function main() {
             source_stage: "collecting_context",
             source_turn_id: "t1",
             user_confirmed: true,
+            fact_roles: ["option"],
             related_dir_ids: ["DIR-OPT-ON-TABLE"],
           },
           {
@@ -2817,6 +2854,7 @@ async function main() {
             source_stage: "collecting_context",
             source_turn_id: "t2",
             user_confirmed: true,
+            fact_roles: ["option"],
             related_dir_ids: ["DIR-OPT-ON-TABLE"],
           },
           {
@@ -2827,6 +2865,7 @@ async function main() {
             source_stage: "collecting_context",
             source_turn_id: "t3",
             user_confirmed: true,
+            fact_roles: ["option"],
             related_dir_ids: ["DIR-OPT-ON-TABLE"],
           },
           {
@@ -2837,6 +2876,7 @@ async function main() {
             source_stage: "collecting_context",
             source_turn_id: "t4",
             user_confirmed: true,
+            fact_roles: ["option"],
             related_dir_ids: ["DIR-OPT-ON-TABLE"],
           },
         ],
@@ -2844,6 +2884,124 @@ async function main() {
     });
     // Duplicate statement "接受 offer A" counts once → 3 distinct options.
     assert.equal(threeOptions.option_count, 3);
+
+    // Constraints linked to DIR-OPT-ON-TABLE must not inflate option_count.
+    const twoOptsThreeConstraints = complexitySignalsFromDecisionMaterials({
+      dc: draftDc({
+        reality_facts: [
+          {
+            fact_id: "oa",
+            statement: "接受 Offer A",
+            status: "confirmed",
+            verification_level: "user_stated",
+            source_stage: "collecting_context",
+            source_turn_id: "t1",
+            user_confirmed: true,
+            fact_roles: ["option"],
+            related_dir_ids: ["DIR-OPT-ON-TABLE"],
+          },
+          {
+            fact_id: "ob",
+            statement: "维持现状",
+            status: "confirmed",
+            verification_level: "user_stated",
+            source_stage: "collecting_context",
+            source_turn_id: "t2",
+            user_confirmed: true,
+            fact_roles: ["option"],
+            related_dir_ids: ["DIR-OPT-ON-TABLE"],
+          },
+          {
+            fact_id: "non_option",
+            statement: "同事提到过远程岗",
+            status: "confirmed",
+            verification_level: "user_stated",
+            source_stage: "collecting_context",
+            source_turn_id: "t3",
+            user_confirmed: true,
+            // No option role → must not upgrade option_count.
+            fact_roles: ["situation"],
+            related_dir_ids: ["DIR-OPT-ON-TABLE"],
+          },
+        ],
+        constraints: [
+          {
+            constraint_id: "c1",
+            statement: "薪酬不能低于某水平",
+            category: "financial",
+            status: "confirmed",
+            verification_level: "user_stated",
+            source_stage: "collecting_context",
+            source_turn_id: "t4",
+            rigidity: "hard",
+            user_confirmed: true,
+            related_dir_ids: ["DIR-OPT-ON-TABLE"],
+          },
+          {
+            constraint_id: "c2",
+            statement: "不能搬离当前城市",
+            category: "responsibility",
+            status: "confirmed",
+            verification_level: "user_stated",
+            source_stage: "collecting_context",
+            source_turn_id: "t5",
+            rigidity: "hard",
+            user_confirmed: true,
+            related_dir_ids: ["DIR-OPT-ON-TABLE"],
+          },
+          {
+            constraint_id: "c3",
+            statement: "必须照顾家庭成员",
+            category: "responsibility",
+            status: "confirmed",
+            verification_level: "user_stated",
+            source_stage: "collecting_context",
+            source_turn_id: "t6",
+            rigidity: "hard",
+            user_confirmed: true,
+            related_dir_ids: ["DIR-OPT-ON-TABLE"],
+          },
+        ],
+      }),
+    });
+    assert.equal(
+      twoOptsThreeConstraints.option_count,
+      2,
+      "Constraints and non-option facts must not raise option_count above 2",
+    );
+
+    // Non-confirmed stakes material must not flip high_stakes.
+    const missingStakes = complexitySignalsFromDecisionMaterials({
+      dc: draftDc({
+        reality_facts: [
+          {
+            fact_id: "st_missing",
+            statement: "可能失去首付",
+            status: "unverified",
+            verification_level: "user_asserted",
+            source_stage: "collecting_context",
+            source_turn_id: "t1",
+            user_confirmed: false,
+            related_dir_ids: ["DIR-DEF-STAKES"],
+          },
+        ],
+        constraints: [
+          {
+            constraint_id: "st_uv",
+            statement: "不可逆损失边界未核实",
+            category: "unacceptable_outcome",
+            status: "unverified",
+            verification_level: "user_asserted",
+            source_stage: "collecting_context",
+            source_turn_id: "t2",
+            rigidity: "hard",
+            user_confirmed: false,
+            related_dir_ids: ["DIR-DEF-STAKES"],
+          },
+        ],
+      }),
+    });
+    assert.equal(missingStakes.high_stakes, false);
   });
 
   await check("closure P2: Page07 ranking needs never_block under freeze rule", () => {

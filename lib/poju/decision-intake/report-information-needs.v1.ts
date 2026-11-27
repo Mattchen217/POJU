@@ -348,7 +348,12 @@ const DIR_NEEDS: readonly ReportInformationNeed[] = [
   }),
   buildDirNeed({
     dir_id: "DIR-PAST-ATTEMPTS",
-    served_by_units: [unitId("02", "B"), unitId("04", "A"), unitId("04", "B")],
+    served_by_units: [
+      unitId("02", "B"),
+      unitId("04", "A"),
+      unitId("04", "B"),
+      unitId("06", "C"),
+    ],
     collection_cluster: "experience_and_blockers",
     decision_materiality: "supporting",
     necessity: "conditional",
@@ -410,7 +415,7 @@ const DIR_NEEDS: readonly ReportInformationNeed[] = [
   }),
   buildDirNeed({
     dir_id: "DIR-VALIDATION-CAPACITY",
-    served_by_units: [unitId("06", "A"), unitId("06", "C")],
+    served_by_units: [unitId("06", "A")],
     collection_cluster: "validation_and_execution",
     decision_materiality: "ranking_relevant",
     necessity: "required",
@@ -686,6 +691,7 @@ const SYNTHETIC_NEEDS: readonly ReportInformationNeed[] = [
     why_it_matters_zh: "缺少事实时不推断行为",
     // Same collect path as past attempts / lived experience DIR.
     dir_ids: ["DIR-PAST-ATTEMPTS"],
+    fact_role_refs: factRolesForDir("DIR-PAST-ATTEMPTS"),
   }),
   synthNeed({
     need_id: "need:derived:04d-leverage",
@@ -851,7 +857,7 @@ const SYNTHETIC_NEEDS: readonly ReportInformationNeed[] = [
   synthNeed({
     need_id: "need:dc:06c-execution-experience",
     served_by_units: [unitId("06", "C")],
-    collection_cluster: "validation_and_execution",
+    collection_cluster: "experience_and_blockers",
     decision_materiality: "supporting",
     source_kind: "decision_context",
     necessity: "optional",
@@ -861,8 +867,10 @@ const SYNTHETIC_NEEDS: readonly ReportInformationNeed[] = [
     applicability: "model_judged",
     readiness_effect: "never_block",
     description_zh: "真实执行经历与困难",
-    why_it_matters_zh: "自我调节 optional，禁止固定人格标签",
-    dir_ids: ["DIR-VALIDATION-CAPACITY"],
+    why_it_matters_zh: "自我调节 optional，禁止固定人格标签；与过去尝试同一收集路径",
+    // Execution experience is lived attempt history — not validation_capacity.
+    dir_ids: ["DIR-PAST-ATTEMPTS"],
+    fact_role_refs: factRolesForDir("DIR-PAST-ATTEMPTS"),
   }),
   synthNeed({
     need_id: "need:pa:06c-self-regulation",
@@ -1096,7 +1104,7 @@ const NEED_IDS_BY_UNIT: Record<string, readonly string[]> = {
   ],
   "06:B": ["need:local:06b-da-yun", "need:local:06b-ziwei-stage"],
   "06:C": [
-    dcNeedId("DIR-VALIDATION-CAPACITY"),
+    dcNeedId("DIR-PAST-ATTEMPTS"),
     "need:dc:06c-execution-experience",
     "need:pa:06c-self-regulation",
   ],
@@ -1279,40 +1287,60 @@ export function formatReportInformationNeedsForPrompt(
   return lines.join("\n");
 }
 
-const BOUNDARY_COMPLEXITY_STATUSES = new Set([
-  "unknown",
-  "declined",
-  "not_applicable",
-  "unverified",
-]);
+type ComplexityFact = {
+  statement?: string;
+  status?: string;
+  related_dir_ids?: string[] | null;
+  fact_roles?: string[] | null;
+};
 
-function materialStatementsForDir(
+type ComplexityConstraint = {
+  statement?: string;
+  status?: string;
+  related_dir_ids?: string[] | null;
+};
+
+/** Stakes / irreversibility: confirmed RealityFacts + Constraints only. */
+function confirmedMaterialStatementsForDir(
   dc: {
-    reality_facts?: ReadonlyArray<{
-      statement?: string;
-      status?: string;
-      related_dir_ids?: string[] | null;
-    }>;
-    constraints?: ReadonlyArray<{
-      statement?: string;
-      status?: string;
-      related_dir_ids?: string[] | null;
-    }>;
+    reality_facts?: ReadonlyArray<ComplexityFact>;
+    constraints?: ReadonlyArray<ComplexityConstraint>;
   } | null | undefined,
   dirId: string,
 ): string[] {
   const out: string[] = [];
   for (const f of dc?.reality_facts ?? []) {
+    if (f.status !== "confirmed") continue;
     if (!(f.related_dir_ids ?? []).includes(dirId)) continue;
-    if (f.status && BOUNDARY_COMPLEXITY_STATUSES.has(f.status)) continue;
     const s = f.statement?.trim();
     if (s) out.push(s);
   }
   for (const c of dc?.constraints ?? []) {
+    if (c.status !== "confirmed") continue;
     if (!(c.related_dir_ids ?? []).includes(dirId)) continue;
-    if (c.status && BOUNDARY_COMPLEXITY_STATUSES.has(c.status)) continue;
     const s = c.statement?.trim();
     if (s) out.push(s);
+  }
+  return out;
+}
+
+/**
+ * Distinct real options on DIR-OPT-ON-TABLE.
+ * Only confirmed RealityFacts with the catalog `option` role count —
+ * Constraints never inflate option_count.
+ */
+function distinctConfirmedOptionStatements(
+  dc: {
+    reality_facts?: ReadonlyArray<ComplexityFact>;
+  } | null | undefined,
+): Set<string> {
+  const out = new Set<string>();
+  for (const f of dc?.reality_facts ?? []) {
+    if (f.status !== "confirmed") continue;
+    if (!(f.related_dir_ids ?? []).includes("DIR-OPT-ON-TABLE")) continue;
+    if (!(f.fact_roles ?? []).includes("option")) continue;
+    const s = f.statement?.trim();
+    if (s) out.add(s);
   }
   return out;
 }
@@ -1323,33 +1351,24 @@ function materialStatementsForDir(
  */
 export function complexitySignalsFromDecisionMaterials(input: {
   dc?: {
-    reality_facts?: ReadonlyArray<{
-      statement?: string;
-      status?: string;
-      related_dir_ids?: string[] | null;
-    }>;
-    constraints?: ReadonlyArray<{
-      statement?: string;
-      status?: string;
-      related_dir_ids?: string[] | null;
-    }>;
+    reality_facts?: ReadonlyArray<ComplexityFact>;
+    constraints?: ReadonlyArray<ComplexityConstraint>;
     conflicts?: ReadonlyArray<{ state?: string }>;
   } | null;
   /** True only when this session actually activates Page07 topic packs. */
   page_07_emit?: boolean;
 }): DecisionIntakeComplexitySignals {
   const dc = input.dc;
-  const optionStatements = new Set(
-    materialStatementsForDir(dc, "DIR-OPT-ON-TABLE"),
-  );
+  const optionStatements = distinctConfirmedOptionStatements(dc);
   let option_count = 2;
   if (optionStatements.size >= 4) option_count = 4;
   else if (optionStatements.size >= 3) option_count = 3;
 
-  const high_stakes = materialStatementsForDir(dc, "DIR-DEF-STAKES").length > 0;
+  const high_stakes =
+    confirmedMaterialStatementsForDir(dc, "DIR-DEF-STAKES").length > 0;
   const irreversible =
-    materialStatementsForDir(dc, "DIR-OPT-IRREV").length > 0 ||
-    materialStatementsForDir(dc, "DIR-EXIT-CRITERIA").length > 0;
+    confirmedMaterialStatementsForDir(dc, "DIR-OPT-IRREV").length > 0 ||
+    confirmedMaterialStatementsForDir(dc, "DIR-EXIT-CRITERIA").length > 0;
   const open_conflicts = (dc?.conflicts ?? []).some((c) => c.state === "open");
   const multi_topic = input.page_07_emit === true;
 
