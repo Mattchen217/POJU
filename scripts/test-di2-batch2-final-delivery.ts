@@ -41,9 +41,12 @@ import {
   type ChargeAuthorization,
 } from "../lib/poju/decision-intake/decision-report-charge";
 import {
+  loadAnalysis,
   loadCompletedReport,
+  saveAnalysis,
   verifyCompletedReportRecord,
 } from "../lib/poju/decision-intake/decision-report-store";
+import type { PersonalAnalysisRecord } from "../lib/poju/decision-intake/decision-report-types";
 import { kv } from "../lib/kv/client";
 import {
   commitPageResult,
@@ -1166,6 +1169,269 @@ async function main() {
     if (delivered.ok) return;
     assert.equal(delivered.code, "analysis_incomplete");
     assert.equal(await loadCompletedReport(ctx.session_id, ctx.job_id), null);
+  });
+
+  // ── Unit E R2 — Personal Analysis state preservation ────────────────────
+
+  function analysisBase(
+    ji: DecisionReportJobInput,
+    patch: Partial<PersonalAnalysisRecord> & Pick<PersonalAnalysisRecord, "status" | "analysis_id">,
+  ): PersonalAnalysisRecord {
+    return {
+      analysis_id: patch.analysis_id,
+      idempotency_key: ji.analysis_key,
+      session_id: ji.session_id,
+      freeze_id: ji.freeze_id,
+      context_id: ji.context_id,
+      context_version: ji.context_version,
+      context_hash: ji.context_hash,
+      profile_id: ji.profile_id,
+      profile_hash: ji.profile_hash,
+      analysis_schema_version: ji.analysis_schema_version,
+      status: patch.status,
+      attempts: 1,
+      generated_at: patch.status === "completed" ? NOW : null,
+      updated_at: NOW,
+      analysis_result: patch.analysis_result ?? null,
+      error: patch.error ?? null,
+      retryable: patch.retryable ?? false,
+      model: patch.model ?? null,
+      tokens_used: patch.tokens_used ?? 0,
+      ...patch,
+    };
+  }
+
+  await check("R2: no Analysis → unavailable seal + report completes", async () => {
+    const { ctx } = await prepareReadyJob();
+    const job = await getXhighJob(ctx.job_id);
+    assert.ok(job);
+    const ji = job!.input as DecisionReportJobInput;
+    assert.equal(await loadAnalysis(ji.analysis_key), null);
+    const delivered = await attemptDi2Batch2FinalDelivery(ctx.job_id);
+    assert.equal(delivered.ok, true);
+    if (!delivered.ok) return;
+    assert.equal(delivered.record.analysis.status, "unavailable");
+    const stored = await loadAnalysis(ji.analysis_key);
+    assert.ok(stored);
+    assert.equal(stored!.record.status, "unavailable");
+    assert.equal(stored!.record.analysis_result, null);
+  });
+
+  await check("R2: pending Analysis → not overwritten, no CompletedReport", async () => {
+    const { ctx } = await prepareReadyJob();
+    const job = await getXhighJob(ctx.job_id);
+    assert.ok(job);
+    const ji = job!.input as DecisionReportJobInput;
+    const analysis_id = `pa_pending_${uniq("r2")}`;
+    await saveAnalysis({
+      record: analysisBase(ji, {
+        analysis_id,
+        status: "pending",
+        error: null,
+        retryable: true,
+      }),
+      projection: null,
+    });
+    const before = await loadAnalysis(ji.analysis_key);
+    assert.equal(before?.record.status, "pending");
+    assert.equal(before?.record.analysis_id, analysis_id);
+
+    const delivered = await attemptDi2Batch2FinalDelivery(ctx.job_id);
+    assert.equal(delivered.ok, false);
+    if (delivered.ok) return;
+    assert.equal(delivered.code, "analysis_incomplete");
+    assert.equal(delivered.retryable, true);
+    assert.equal(await loadCompletedReport(ctx.session_id, ctx.job_id), null);
+
+    const after = await loadAnalysis(ji.analysis_key);
+    assert.ok(after);
+    assert.equal(after!.record.status, "pending");
+    assert.equal(after!.record.analysis_id, analysis_id);
+    assert.equal(after!.record.analysis_result, null);
+  });
+
+  await check("R2: running Analysis → not overwritten, no CompletedReport", async () => {
+    const { ctx } = await prepareReadyJob();
+    const job = await getXhighJob(ctx.job_id);
+    assert.ok(job);
+    const ji = job!.input as DecisionReportJobInput;
+    const analysis_id = `pa_running_${uniq("r2")}`;
+    await saveAnalysis({
+      record: analysisBase(ji, {
+        analysis_id,
+        status: "running",
+        error: null,
+        retryable: true,
+        model: "in_flight",
+      }),
+      projection: null,
+    });
+    const before = await loadAnalysis(ji.analysis_key);
+    assert.equal(before?.record.status, "running");
+
+    const delivered = await attemptDi2Batch2FinalDelivery(ctx.job_id);
+    assert.equal(delivered.ok, false);
+    if (delivered.ok) return;
+    assert.equal(delivered.code, "analysis_incomplete");
+    assert.equal(delivered.retryable, true);
+    assert.equal(await loadCompletedReport(ctx.session_id, ctx.job_id), null);
+
+    const after = await loadAnalysis(ji.analysis_key);
+    assert.ok(after);
+    assert.equal(after!.record.status, "running");
+    assert.equal(after!.record.analysis_id, analysis_id);
+    assert.equal(after!.record.model, "in_flight");
+  });
+
+  await check("R2: completed context_version / profile_id / schema mismatch → fail closed", async () => {
+    const cases: Array<{ label: string; patch: Partial<PersonalAnalysisRecord> }> = [
+      { label: "context_version", patch: { context_version: 999 } },
+      { label: "profile_id", patch: { profile_id: "other_profile" } },
+      { label: "analysis_schema_version", patch: { analysis_schema_version: "wrong-schema" } },
+    ];
+    for (const c of cases) {
+      const { ctx } = await prepareReadyJob();
+      const job = await getXhighJob(ctx.job_id);
+      assert.ok(job);
+      const ji = job!.input as DecisionReportJobInput;
+      const analysis_id = `pa_mis_${c.label}_${uniq("r2")}`;
+      await saveAnalysis({
+        record: analysisBase(ji, {
+          analysis_id,
+          status: "completed",
+          model: "m",
+          analysis_result: {
+            decision_target: {
+              decision_question: "q",
+              concrete_event: null,
+              desired_outcome: null,
+              stakes: null,
+              goal_priorities: [],
+              unacceptable_outcomes: [],
+            },
+            personal_pattern_analysis: [],
+            personal_strengths: [],
+            personal_risks: [],
+            decision_tendencies: [],
+            constraint_interaction: [],
+            decision_path_implications: [],
+            unresolved_conditions: [],
+            evidence_references: [],
+            confidence_and_limits: {
+              overall_confidence: "low",
+              limits: ["t"],
+              information_boundaries: [],
+            },
+          },
+          ...c.patch,
+        }),
+        projection: null,
+      });
+      const before = await loadAnalysis(ji.analysis_key);
+      assert.equal(before?.record.status, "completed");
+      assert.equal(before?.record.analysis_id, analysis_id);
+
+      const delivered = await attemptDi2Batch2FinalDelivery(ctx.job_id);
+      assert.equal(delivered.ok, false, c.label);
+      if (delivered.ok) return;
+      assert.equal(delivered.code, "analysis_incomplete", c.label);
+      assert.equal(await loadCompletedReport(ctx.session_id, ctx.job_id), null, c.label);
+
+      const after = await loadAnalysis(ji.analysis_key);
+      assert.ok(after, c.label);
+      assert.equal(after!.record.status, "completed", c.label);
+      assert.equal(after!.record.analysis_id, analysis_id, c.label);
+      for (const [k, v] of Object.entries(c.patch)) {
+        assert.equal((after!.record as Record<string, unknown>)[k], v, `${c.label}:${k}`);
+      }
+    }
+  });
+
+  await check("R2: legal unavailable → idempotent reuse", async () => {
+    const { ctx } = await prepareReadyJob();
+    const job = await getXhighJob(ctx.job_id);
+    assert.ok(job);
+    const ji = job!.input as DecisionReportJobInput;
+    const analysis_id = `pa_unavail_${uniq("r2")}`;
+    await saveAnalysis({
+      record: analysisBase(ji, {
+        analysis_id,
+        status: "unavailable",
+        error: "personal_analysis_not_generated_for_batch2_final_delivery",
+        analysis_result: null,
+      }),
+      projection: null,
+    });
+    const delivered = await attemptDi2Batch2FinalDelivery(ctx.job_id);
+    assert.equal(delivered.ok, true);
+    if (!delivered.ok) return;
+    assert.equal(delivered.record.analysis.status, "unavailable");
+    assert.equal(delivered.record.analysis.analysis_id, analysis_id);
+    const after = await loadAnalysis(ji.analysis_key);
+    assert.equal(after?.record.analysis_id, analysis_id);
+    assert.equal(after?.record.status, "unavailable");
+  });
+
+  await check("R2: unavailable identity mismatch → fail closed, no overwrite", async () => {
+    const { ctx } = await prepareReadyJob();
+    const job = await getXhighJob(ctx.job_id);
+    assert.ok(job);
+    const ji = job!.input as DecisionReportJobInput;
+    const analysis_id = `pa_unavail_bad_${uniq("r2")}`;
+    await saveAnalysis({
+      record: analysisBase(ji, {
+        analysis_id,
+        status: "unavailable",
+        context_version: ji.context_version + 1,
+        error: "stale_unavailable",
+        analysis_result: null,
+      }),
+      projection: null,
+    });
+    const before = await loadAnalysis(ji.analysis_key);
+    assert.equal(before?.record.context_version, ji.context_version + 1);
+
+    const delivered = await attemptDi2Batch2FinalDelivery(ctx.job_id);
+    assert.equal(delivered.ok, false);
+    if (delivered.ok) return;
+    assert.equal(delivered.code, "analysis_incomplete");
+    assert.equal(await loadCompletedReport(ctx.session_id, ctx.job_id), null);
+
+    const after = await loadAnalysis(ji.analysis_key);
+    assert.ok(after);
+    assert.equal(after!.record.status, "unavailable");
+    assert.equal(after!.record.analysis_id, analysis_id);
+    assert.equal(after!.record.context_version, ji.context_version + 1);
+    assert.equal(after!.record.error, "stale_unavailable");
+  });
+
+  await check("R2: failed Analysis → fail closed, not rewritten to unavailable", async () => {
+    const { ctx } = await prepareReadyJob();
+    const job = await getXhighJob(ctx.job_id);
+    assert.ok(job);
+    const ji = job!.input as DecisionReportJobInput;
+    const analysis_id = `pa_failed_${uniq("r2")}`;
+    await saveAnalysis({
+      record: analysisBase(ji, {
+        analysis_id,
+        status: "failed",
+        error: "model_quality_exhausted",
+        retryable: false,
+        analysis_result: null,
+      }),
+      projection: null,
+    });
+    const delivered = await attemptDi2Batch2FinalDelivery(ctx.job_id);
+    assert.equal(delivered.ok, false);
+    if (delivered.ok) return;
+    assert.equal(delivered.code, "analysis_incomplete");
+    assert.equal(await loadCompletedReport(ctx.session_id, ctx.job_id), null);
+
+    const after = await loadAnalysis(ji.analysis_key);
+    assert.ok(after);
+    assert.equal(after!.record.status, "failed");
+    assert.equal(after!.record.analysis_id, analysis_id);
+    assert.equal(after!.record.error, "model_quality_exhausted");
   });
 
   console.log(`\nUnit E results: ${passed} passed, ${failed} failed`);

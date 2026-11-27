@@ -341,14 +341,33 @@ function buildPage03Record(input: {
   };
 }
 
+/** Full DI2 Job ↔ Personal Analysis identity (null profile_id is exact, not a wildcard). */
+function analysisIdentityMatches(
+  rec: PersonalAnalysisRecord,
+  ji: DecisionReportJobInput,
+): boolean {
+  return (
+    rec.idempotency_key === ji.analysis_key &&
+    rec.session_id === ji.session_id &&
+    rec.freeze_id === ji.freeze_id &&
+    rec.context_id === ji.context_id &&
+    rec.context_version === ji.context_version &&
+    rec.context_hash === ji.context_hash &&
+    rec.profile_id === ji.profile_id &&
+    rec.profile_hash === ji.profile_hash &&
+    rec.analysis_schema_version === ji.analysis_schema_version
+  );
+}
+
 /**
  * Resolve Personal Analysis for Final Delivery.
  *
- * - Reuse a binding-matched completed record with a real analysis_result.
- * - Batch2 Authority pages are Face schemas — they are not a PersonalAnalysisArtifact;
- *   do not invent section fields from page text.
- * - When no real analysis exists: seal an honest `unavailable` record (not completed).
- * - Completed-but-wrong-identity → fail closed (never overwrite / never forge).
+ * - completed + full identity + analysis_result → reuse
+ * - pending / running → do not overwrite; retryable fail (analysis still in flight)
+ * - failed → fail closed; do not rewrite as unavailable
+ * - unavailable + full identity + null result → reuse
+ * - no record → honest unavailable seal (never forge completed)
+ * - identity mismatch on durable records → fail closed (never silent rewrite)
  */
 async function ensureAnalysisForDelivery(
   job: PojuXhighJob,
@@ -357,86 +376,101 @@ async function ensureAnalysisForDelivery(
   void job;
   const existing = await loadAnalysis(ji.analysis_key).catch(() => null);
 
-  if (existing?.record.status === "completed") {
-    if (!existing.record.analysis_result) {
+  if (!existing) {
+    // No mappable PersonalAnalysisArtifact in Batch2 Authority page outputs.
+    const t = nowIso();
+    const record: PersonalAnalysisRecord = {
+      analysis_id: `pa_${ji.freeze_id.replace(/[^a-zA-Z0-9]/g, "")}_${ji.profile_hash.slice(0, 12)}`,
+      idempotency_key: ji.analysis_key,
+      session_id: ji.session_id,
+      freeze_id: ji.freeze_id,
+      context_id: ji.context_id,
+      context_version: ji.context_version,
+      context_hash: ji.context_hash,
+      profile_id: ji.profile_id,
+      profile_hash: ji.profile_hash,
+      analysis_schema_version: ji.analysis_schema_version,
+      status: "unavailable",
+      attempts: 0,
+      generated_at: null,
+      updated_at: t,
+      analysis_result: null,
+      error: "personal_analysis_not_generated_for_batch2_final_delivery",
+      retryable: false,
+      model: null,
+      tokens_used: 0,
+    };
+    const saved = await saveAnalysis({ record, projection: null });
+    if (saved.record.status === "completed" && saved.record.analysis_result) {
+      if (analysisIdentityMatches(saved.record, ji)) {
+        return { ok: true, analysis: saved.record };
+      }
+      return fail("analysis_incomplete", "concurrent Personal Analysis identity mismatch");
+    }
+    if (saved.record.status !== "unavailable" || saved.record.analysis_result != null) {
+      return fail("analysis_incomplete", "Personal Analysis unavailable seal failed", {
+        retryable: true,
+      });
+    }
+    if (!analysisIdentityMatches(saved.record, ji)) {
+      return fail("analysis_incomplete", "Personal Analysis unavailable seal identity mismatch");
+    }
+    return { ok: true, analysis: saved.record };
+  }
+
+  const rec = existing.record;
+
+  if (rec.status === "pending" || rec.status === "running") {
+    return fail(
+      "analysis_incomplete",
+      `Personal Analysis still ${rec.status} — Final Delivery will not overwrite in-flight analysis`,
+      { retryable: true },
+    );
+  }
+
+  if (rec.status === "failed") {
+    return fail(
+      "analysis_incomplete",
+      "Personal Analysis failed — refuse Final Delivery without rewriting as unavailable",
+    );
+  }
+
+  if (rec.status === "completed") {
+    if (!rec.analysis_result) {
       return fail(
         "analysis_incomplete",
         "Personal Analysis marked completed but analysis_result is missing",
       );
     }
-    if (
-      existing.record.session_id !== ji.session_id ||
-      existing.record.freeze_id !== ji.freeze_id ||
-      existing.record.context_hash !== ji.context_hash ||
-      existing.record.profile_hash !== ji.profile_hash ||
-      existing.record.context_id !== ji.context_id
-    ) {
+    if (!analysisIdentityMatches(rec, ji)) {
       return fail(
         "analysis_incomplete",
-        "Personal Analysis identity ≠ DI2 Job (Freeze/Context/Profile/session)",
+        "Personal Analysis identity ≠ DI2 Job (full Freeze/Context/Profile/schema)",
       );
     }
-    return { ok: true, analysis: existing.record };
+    return { ok: true, analysis: rec };
   }
 
-  if (
-    existing?.record.status === "unavailable" &&
-    existing.record.analysis_result == null &&
-    existing.record.session_id === ji.session_id &&
-    existing.record.freeze_id === ji.freeze_id &&
-    existing.record.context_hash === ji.context_hash &&
-    existing.record.profile_hash === ji.profile_hash
-  ) {
-    return { ok: true, analysis: existing.record };
-  }
-
-  // No mappable PersonalAnalysisArtifact in Batch2 Authority page outputs.
-  // Honest seal: unavailable / not generated — never status=completed with empty sections.
-  const t = nowIso();
-  const analysis_id =
-    existing?.record.analysis_id ??
-    `pa_${ji.freeze_id.replace(/[^a-zA-Z0-9]/g, "")}_${ji.profile_hash.slice(0, 12)}`;
-  const record: PersonalAnalysisRecord = {
-    analysis_id,
-    idempotency_key: ji.analysis_key,
-    session_id: ji.session_id,
-    freeze_id: ji.freeze_id,
-    context_id: ji.context_id,
-    context_version: ji.context_version,
-    context_hash: ji.context_hash,
-    profile_id: ji.profile_id,
-    profile_hash: ji.profile_hash,
-    analysis_schema_version: ji.analysis_schema_version,
-    status: "unavailable",
-    attempts: existing?.record.attempts ?? 0,
-    generated_at: null,
-    updated_at: t,
-    analysis_result: null,
-    error: "personal_analysis_not_generated_for_batch2_final_delivery",
-    retryable: false,
-    model: null,
-    tokens_used: 0,
-  };
-  const stored: StoredAnalysis = { record, projection: existing?.projection ?? null };
-  const saved = await saveAnalysis(stored);
-  if (saved.record.status === "completed" && saved.record.analysis_result) {
-    // A concurrent writer completed a real analysis — reuse if bindings match.
-    if (
-      saved.record.session_id === ji.session_id &&
-      saved.record.freeze_id === ji.freeze_id &&
-      saved.record.context_hash === ji.context_hash &&
-      saved.record.profile_hash === ji.profile_hash
-    ) {
-      return { ok: true, analysis: saved.record };
+  if (rec.status === "unavailable") {
+    if (rec.analysis_result != null) {
+      return fail(
+        "analysis_incomplete",
+        "unavailable Personal Analysis must not carry an analysis_result",
+      );
     }
-    return fail("analysis_incomplete", "concurrent Personal Analysis identity mismatch");
+    if (!analysisIdentityMatches(rec, ji)) {
+      return fail(
+        "analysis_incomplete",
+        "unavailable Personal Analysis identity ≠ DI2 Job — will not overwrite",
+      );
+    }
+    return { ok: true, analysis: rec };
   }
-  if (saved.record.status !== "unavailable" || saved.record.analysis_result != null) {
-    return fail("analysis_incomplete", "Personal Analysis unavailable seal failed", {
-      retryable: true,
-    });
-  }
-  return { ok: true, analysis: saved.record };
+
+  return fail(
+    "analysis_incomplete",
+    `Personal Analysis status=${String(rec.status)} is not deliverable`,
+  );
 }
 
 type GatedPage = {
