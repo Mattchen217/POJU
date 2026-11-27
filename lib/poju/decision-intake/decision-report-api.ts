@@ -67,6 +67,7 @@ import {
   type ReportLockOwner,
   type ReportSessionLock,
 } from "./decision-report-lock";
+import { startDi2Batch2Production } from "./decision-report-batch2-start";
 
 export type { DecisionReportChargeResult } from "./decision-report-charge";
 
@@ -234,22 +235,46 @@ async function continueAction(job_id: string, session_id: string, deps: Decision
   return json(200, { ok: true, job_id: cont.job.job_id, status: "running", worker: "dispatched", stage: cont.stage });
 }
 
-async function startReusedJob(job: PojuXhighJob, session_id: string, deps: DecisionReportApiDeps): Promise<DecisionReportApiReply> {
-  const ensured = await ensureDecisionReportWorker({ job_id: job.job_id, session_id, deps });
-  // The job id is still the one to follow; status polling recovers the worker.
-  if (!ensured.ok && ensured.code !== "DISPATCH_FAILED") return failureReply(ensured);
-  if (ensured.ok && ensured.state === "completed") {
-    // A finished job is a result to follow only under its own delivery authorization.
-    const delivery = await verifyDecisionReportDelivery(ensured.job);
+async function startReusedJob(
+  job: PojuXhighJob,
+  plan: DecisionReportStartPlan,
+  birth_info: unknown,
+  deps: DecisionReportApiDeps,
+): Promise<DecisionReportApiReply> {
+  void deps;
+  // Unit C: reused Start resumes Batch2 production — never the legacy DI2 runner.
+  const started = await startDi2Batch2Production({
+    job_id: job.job_id,
+    freeze: plan.freezeRec,
+    profile: plan.profile,
+    birth_info,
+  });
+  if (!started.ok) {
+    return json(started.code === "dispatch_uncertain" ? 503 : 409, {
+      ok: false,
+      code: started.code,
+      error: started.detail,
+      retryable:
+        started.code === "dispatch_uncertain" ||
+        started.code === "kv_unavailable" ||
+        started.code === "inngest_unavailable" ||
+        started.code === "cas_failed",
+      job_id: job.job_id,
+    });
+  }
+  if (job.status === "completed" || started.job.status === "completed") {
+    const delivery = await verifyDecisionReportDelivery(started.job);
     if (!delivery.ok) return failureReply(deliveryDeniedFailure(delivery));
   }
   return json(200, {
     ok: true,
     job_id: job.job_id,
-    status: ensured.ok ? ensured.job.status : job.status,
+    status: started.job.status === "pending" ? "pending" : started.job.status,
     reused: true,
-    worker: ensured.ok ? ensured.state : "none",
+    worker: started.reused ? "batch2_reused" : "batch2_started",
     execution_generation: job.execution_generation ?? null,
+    batch2_report_id: started.binding.report_id,
+    batch2_generation_id: started.binding.generation_id,
   });
 }
 
@@ -282,7 +307,7 @@ async function startAction(body: Record<string, unknown>, session_id: string, de
     case "observe":
       return observeStart(plan, acq.job);
     case "follow":
-      return followStart(acq.job, session_id, deps);
+      return followStart(acq.job, plan, body.birth_info ?? undefined, deps);
     case "locked":
       break;
   }
@@ -311,14 +336,19 @@ async function observeStart(plan: DecisionReportStartPlan, job: PojuXhighJob | n
 }
 
 /** An authorized live job of this Freeze holds the lock: follow it (no charge, no new job). */
-async function followStart(job: PojuXhighJob, session_id: string, deps: DecisionReportApiDeps): Promise<DecisionReportApiReply> {
+async function followStart(
+  job: PojuXhighJob,
+  plan: DecisionReportStartPlan,
+  birth_info: unknown,
+  deps: DecisionReportApiDeps,
+): Promise<DecisionReportApiReply> {
   let rec: ChargeAuthorization | null;
   try {
-    rec = await loadChargeAuthorization(session_id);
+    rec = await loadChargeAuthorization(plan.session_id);
   } catch {
     return chargeUnconfirmed(job.job_id, "authorization_unreadable");
   }
-  if (rec?.state === "authorized") return startReusedJob(job, session_id, deps);
+  if (rec?.state === "authorized") return startReusedJob(job, plan, birth_info, deps);
   if (rec?.state === "abort_claimed") {
     const r = await resumeRefusalAbortRecord(rec);
     if (abortOwnsSession(r)) return abortResumeReply(r);
@@ -458,28 +488,73 @@ async function lockedStart(
   }
   exit.handedOff = true;
 
-  if (prepared.reused) return startReusedJob(job, session_id, deps);
+  const birth_info = body.birth_info ?? undefined;
+
+  if (prepared.reused) return startReusedJob(job, plan, birth_info, deps);
 
   const granted = await grantDecisionReportExecution((await getXhighJob(job.job_id)) ?? job);
   if (!granted.ok) {
     // The session is paid; the job just could not be granted yet — Continue recovers it.
     console.error("[decision-report] grant after charge failed", { job_id: job.job_id, reason: granted.reason });
-  } else {
-    try {
-      await dispatchDecisionReportStage(job.job_id, session_id, "finalize", deps);
-    } catch (e) {
-      // The job exists and is charged; the next start / continue recovers the worker.
-      await clearDecisionReportDispatch(job.job_id).catch(() => undefined);
-      console.error("[decision-report] first dispatch failed", { job_id: job.job_id, e });
-    }
+    return json(200, {
+      ok: true,
+      job_id: job.job_id,
+      status: "pending",
+      reused: false,
+      worker: "none",
+      execution_generation: job.execution_generation ?? null,
+    });
   }
-  return json(200, {
-    ok: true,
-    job_id: job.job_id,
-    status: "pending",
-    reused: false,
-    execution_generation: job.execution_generation ?? null,
-  });
+
+  // Unit C — Batch2 production engine only (legacy DI2 runner disconnected from Start).
+  try {
+    const started = await startDi2Batch2Production({
+      job_id: job.job_id,
+      freeze: plan.freezeRec,
+      profile: plan.profile,
+      birth_info,
+    });
+    if (!started.ok) {
+      console.error("[decision-report] Batch2 start failed", {
+        job_id: job.job_id,
+        code: started.code,
+        detail: started.detail,
+      });
+      return json(started.code === "dispatch_uncertain" ? 503 : 409, {
+        ok: false,
+        code: started.code,
+        error: started.detail,
+        retryable:
+          started.code === "dispatch_uncertain" ||
+          started.code === "kv_unavailable" ||
+          started.code === "inngest_unavailable" ||
+          started.code === "cas_failed",
+        job_id: job.job_id,
+        execution_generation: job.execution_generation ?? null,
+      });
+    }
+    return json(200, {
+      ok: true,
+      job_id: job.job_id,
+      status: "pending",
+      reused: false,
+      worker: started.reused ? "batch2_reused" : "batch2_started",
+      execution_generation: job.execution_generation ?? null,
+      batch2_report_id: started.binding.report_id,
+      batch2_generation_id: started.binding.generation_id,
+    });
+  } catch (e) {
+    // Do not fall back to the legacy DI2 runner. Leave recoverable job state.
+    console.error("[decision-report] Batch2 start threw", { job_id: job.job_id, e });
+    return json(503, {
+      ok: false,
+      code: "BATCH2_START_UNCERTAIN",
+      error: e instanceof Error ? e.message : String(e),
+      retryable: true,
+      job_id: job.job_id,
+      execution_generation: job.execution_generation ?? null,
+    });
+  }
 }
 
 export async function handleDecisionReportAction(

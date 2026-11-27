@@ -655,6 +655,9 @@ async function startReportJob(
     partial_markdown: "",
     job_status: "pending",
   });
+  // Unit C: birth_info enables server-trusted ZiweiFactPack rebuild (hash-checked).
+  // Never send a client-built ZiweiFactPack object.
+  const profileInput = await loadFreezeProfileInput(authority.session).catch(() => null);
   const { status, json } = await post<StartResponse>(
     {
       action: "start",
@@ -664,6 +667,9 @@ async function startReportJob(
       writer_token: authority.writer_token,
       freeze_receipt: authority.freeze_receipt,
       profile_receipt: authority.profile_receipt,
+      ...(profileInput?.birth_info != null
+        ? { birth_info: profileInput.birth_info }
+        : {}),
     },
     opts.signal,
   );

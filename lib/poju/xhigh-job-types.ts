@@ -204,6 +204,11 @@ export interface PojuXhighJob {
    * Structure-valid ≠ Start; binding does not dispatch Batch2.
    */
   batch2_identity_binding?: import("@/lib/poju/decision-intake/decision-report-batch2-identity").Di2Batch2IdentityBinding;
+  /**
+   * Unit C — Batch2 production pointer after DI2 Start kickoff.
+   * Recoverable report_id / generation_id / epoch for the active production run.
+   */
+  batch2_production_state?: import("@/lib/poju/decision-intake/decision-report-batch2-start").Di2Batch2ProductionState;
   input:
     | Segment2JobInput
     | Segment2AgendaJobInput
