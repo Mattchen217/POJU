@@ -1,9 +1,10 @@
 /**
- * Unit F-R2 Repair — DI2 standalone HTML delivery closure.
+ * Unit F-R2-R3 — DI2 HTML artifact authority closure (download ≡ email).
  *
  *   pnpm exec tsx scripts/test-di2-html-delivery-closure.ts
  *
  * MemoryKv / mocked email only — no OpenRouter, no real Resend.
+ * Does NOT claim real browser offline verification.
  */
 
 process.env.REPORT_BATCH2_ALLOW_MEMORY_STORE = "1";
@@ -23,6 +24,10 @@ import {
   type Di2HtmlPageAuthority,
   type Di2HtmlPackIdentity,
 } from "../lib/deliverables/di2-html-authority";
+import {
+  __setDi2HtmlArtifactDepsForTests,
+  buildAuthorizedDi2HtmlArtifact,
+} from "../lib/deliverables/di2-html-artifact";
 import {
   __setDi2DeliveryEmailDepsForTests,
   sendAuthorizedDi2DeliveryEmail,
@@ -211,8 +216,20 @@ async function sealedRecord(
   });
 }
 
+function artifactDeps(record: CompletedReportRecord | null, overrides: Record<string, unknown> = {}) {
+  return {
+    getUser: async () => ({ id: "u1", email: "a@example.com" }),
+    isAuthConfigured: () => true,
+    assertWriter: async () => "ok",
+    loadCompletedReport: async () => record,
+    verifyDelivery: async () => ({ ok: true as const, record: {} as never }),
+    requireLogin: true as const,
+    ...overrides,
+  };
+}
+
 async function main() {
-  console.log("Unit F-R2 Repair — DI2 HTML Delivery Closure\n");
+  console.log("Unit F-R2-R3 — DI2 HTML Artifact Authority Closure\n");
 
   await check("Page 03 present → HTML includes pane 03", async () => {
     const { pages, fullText } = fullSet({ page03: true, page07: "not_applicable" });
@@ -463,11 +480,7 @@ async function main() {
 
     let sentAttachment: string | null = null;
     __setDi2DeliveryEmailDepsForTests({
-      getUser: async () => ({ id: "u1", email: "a@example.com" }),
-      isAuthConfigured: () => true,
-      assertWriter: async () => "ok",
-      loadCompletedReport: async () => sealed,
-      verifyDelivery: async () => ({ ok: true, record: {} as never }),
+      ...artifactDeps(sealed),
       sendEmail: async (params) => {
         sentAttachment =
           typeof params.attachments?.[0]?.content === "string"
@@ -499,15 +512,217 @@ async function main() {
     assert.match(sentAttachment ?? "", /data-slot-pane="03"/);
   });
 
-  await check("Download HTML builder equals email HTML for same report", async () => {
-    const { pages, fullText } = fullSet({ page03: true, page07: "applies" });
-    const a = fillDi2AuthorityHtml(fullText, "zh", pages, { title: "同一份" });
-    const b = fillDi2AuthorityHtml(fullText, "zh", pages, { title: "同一份" });
-    assert.equal(a, b);
+  // ── F-R2-R3: download artifact path vs email artifact path ────────────────
+
+  await check("Download: uses server CompletedReport (not client fullText)", async () => {
+    const { pages, fullText } = fullSet({ page03: true, page07: "not_applicable" });
+    const sealed = await sealedRecord(pages, fullText);
+    __setDi2HtmlArtifactDepsForTests(artifactDeps(sealed));
+
+    const clientTampered = fullText + "\n\n## CLIENT ONLY FORGERY\n\nshould never appear";
+    const dl = await buildAuthorizedDi2HtmlArtifact({
+      session_id: "sess_html_1",
+      job_id: "job_html_1",
+      writer_token: "wt",
+      locale: "zh",
+      title: "权威报告",
+    });
+    assert.equal(dl.ok, true, JSON.stringify(dl));
+    if (!dl.ok) return;
+    assert.equal(dl.html.includes("CLIENT ONLY FORGERY"), false);
+    assert.equal(dl.html.includes(clientTampered), false);
+    assert.match(dl.html, /data-slot-pane="03"/);
+    assert.equal(dl.template_version, DI2_HTML_TEMPLATE_VERSION);
+    assert.equal(dl.report_job_id, sealed.report_job_id);
+    // reportDate from committed_at, not "today"
+    assert.match(dl.html, /2026-11-27/);
+    // no audio embed in unified artifact
+    assert.equal(/data:audio\//.test(dl.html), false);
+    __setDi2HtmlArtifactDepsForTests(null);
+  });
+
+  await check("Download: local Session mismatch still uses server record", async () => {
+    const server = fullSet({ page03: true, page07: "applies" });
+    const sealed = await sealedRecord(server.pages, server.fullText);
+    // Client would have different pages (no 03) — server still wins.
+    const local = fullSet({ page03: false, page07: "not_applicable" });
+    __setDi2HtmlArtifactDepsForTests(artifactDeps(sealed));
+
+    const dl = await buildAuthorizedDi2HtmlArtifact({
+      session_id: "sess_html_1",
+      job_id: "job_html_1",
+      writer_token: "wt",
+      locale: "zh",
+      title: "同一份",
+    });
+    assert.equal(dl.ok, true);
+    if (!dl.ok) return;
+    assert.match(dl.html, /data-slot-pane="03"/);
+    assert.match(dl.html, /data-slot-pane="07"/);
+    assert.equal(dl.html.includes(local.fullText), false);
+    __setDi2HtmlArtifactDepsForTests(null);
+  });
+
+  await check("Download: unauthorized session refused", async () => {
+    __setDi2HtmlArtifactDepsForTests(
+      artifactDeps(null, {
+        assertWriter: async () => {
+          throw new Error("forbidden");
+        },
+      }),
+    );
+    const dl = await buildAuthorizedDi2HtmlArtifact({
+      session_id: "sess_other",
+      job_id: "job_html_1",
+      writer_token: "bad",
+      locale: "zh",
+    });
+    assert.equal(dl.ok, false);
+    if (!dl.ok) assert.equal(dl.code, "session_forbidden");
+    __setDi2HtmlArtifactDepsForTests(null);
+  });
+
+  await check("Download: generation mismatch refused", async () => {
+    const { pages, fullText } = fullSet({ page03: true });
+    const sealed = await sealedRecord(pages, fullText);
+    __setDi2HtmlArtifactDepsForTests(artifactDeps(sealed));
+    const dl = await buildAuthorizedDi2HtmlArtifact({
+      session_id: "sess_html_1",
+      job_id: "job_html_1",
+      writer_token: "wt",
+      locale: "zh",
+      expected_execution_generation: 99,
+    });
+    assert.equal(dl.ok, false);
+    if (!dl.ok) assert.equal(dl.code, "generation_mismatch");
+    __setDi2HtmlArtifactDepsForTests(null);
+  });
+
+  await check("Download: freeze / context mismatch refused", async () => {
+    const { pages, fullText } = fullSet({ page03: true });
+    const sealed = await sealedRecord(pages, fullText);
+    __setDi2HtmlArtifactDepsForTests(artifactDeps(sealed));
+    const freeze = await buildAuthorizedDi2HtmlArtifact({
+      session_id: "sess_html_1",
+      job_id: "job_html_1",
+      writer_token: "wt",
+      locale: "zh",
+      expected_freeze_id: "wrong",
+    });
+    assert.equal(freeze.ok, false);
+    if (!freeze.ok) assert.equal(freeze.code, "freeze_mismatch");
+    const ctx = await buildAuthorizedDi2HtmlArtifact({
+      session_id: "sess_html_1",
+      job_id: "job_html_1",
+      writer_token: "wt",
+      locale: "zh",
+      expected_context_hash: "wrong",
+    });
+    assert.equal(ctx.ok, false);
+    if (!ctx.ok) assert.equal(ctx.code, "context_mismatch");
+    __setDi2HtmlArtifactDepsForTests(null);
+  });
+
+  await check("Download: missing / invalid CompletedReport refused", async () => {
+    __setDi2HtmlArtifactDepsForTests(artifactDeps(null));
+    const missing = await buildAuthorizedDi2HtmlArtifact({
+      session_id: "sess_html_1",
+      job_id: "job_missing",
+      writer_token: "wt",
+      locale: "zh",
+    });
+    assert.equal(missing.ok, false);
+    if (!missing.ok) assert.equal(missing.code, "report_missing");
+    __setDi2HtmlArtifactDepsForTests(null);
+  });
+
+  await check(
+    "Download path HTML bytes === email attachment bytes (same artifact entry)",
+    async () => {
+      const { pages, fullText } = fullSet({ page03: true, page07: "applies" });
+      const sealed = await sealedRecord(pages, fullText);
+      const title = "字节一致标题";
+      const locale = "zh";
+
+      __setDi2HtmlArtifactDepsForTests(artifactDeps(sealed));
+      const downloadPath = await buildAuthorizedDi2HtmlArtifact({
+        session_id: "sess_html_1",
+        job_id: "job_html_1",
+        writer_token: "wt",
+        locale,
+        title,
+        expected_execution_generation: 1,
+        expected_report_job_id: "report_html_1",
+        expected_freeze_id: "freeze_1",
+        expected_context_hash: "ctx_hash_1",
+      });
+      assert.equal(downloadPath.ok, true, JSON.stringify(downloadPath));
+      if (!downloadPath.ok) return;
+
+      let emailedHtml: string | null = null;
+      __setDi2DeliveryEmailDepsForTests({
+        ...artifactDeps(sealed),
+        sendEmail: async (params) => {
+          emailedHtml =
+            typeof params.attachments?.[0]?.content === "string"
+              ? params.attachments[0].content
+              : null;
+          return { ok: true, mocked: true };
+        },
+      });
+      const emailPath = await sendAuthorizedDi2DeliveryEmail({
+        session_id: "sess_html_1",
+        job_id: "job_html_1",
+        writer_token: "wt",
+        locale,
+        to: "a@example.com",
+        title,
+        expected_execution_generation: 1,
+        expected_report_job_id: "report_html_1",
+        expected_freeze_id: "freeze_1",
+        expected_context_hash: "ctx_hash_1",
+        html_attachment: "<html>IGNORED FORGERY</html>",
+      });
+      assert.equal(emailPath.ok, true, JSON.stringify(emailPath));
+      if (!emailPath.ok) return;
+
+      assert.equal(emailedHtml, downloadPath.html);
+      assert.equal(emailPath.html, downloadPath.html);
+      assert.equal(emailPath.template_version, downloadPath.template_version);
+      assert.equal(emailPath.report_job_id, downloadPath.report_job_id);
+      assert.equal(emailPath.execution_generation, downloadPath.execution_generation);
+      // date / title / locale / no audio — both paths
+      assert.match(downloadPath.html, /2026-11-27/);
+      assert.match(downloadPath.html, /字节一致标题/);
+      assert.equal(/data:audio\//.test(downloadPath.html), false);
+      assert.equal(/data:audio\//.test(emailedHtml ?? ""), false);
+      assert.equal(downloadPath.html.includes("IGNORED FORGERY"), false);
+
+      __setDi2HtmlArtifactDepsForTests(null);
+      __setDi2DeliveryEmailDepsForTests(null);
+    },
+  );
+
+  await check("Audio strategy consistent: neither path embeds audio", async () => {
+    const { pages, fullText } = fullSet({ page03: true });
+    const sealed = await sealedRecord(pages, fullText);
+    __setDi2HtmlArtifactDepsForTests(artifactDeps(sealed));
+    const dl = await buildAuthorizedDi2HtmlArtifact({
+      session_id: "sess_html_1",
+      job_id: "job_html_1",
+      writer_token: "wt",
+      locale: "zh",
+      title: "无音频",
+    });
+    assert.equal(dl.ok, true);
+    if (!dl.ok) return;
+    assert.equal(/audioBase64|data:audio\//.test(dl.html), false);
+    __setDi2HtmlArtifactDepsForTests(null);
   });
 
   __setDi2DeliveryEmailDepsForTests(null);
-  console.log(`\nF-R2 HTML Closure results: ${passed} passed, ${failed} failed`);
+  __setDi2HtmlArtifactDepsForTests(null);
+  console.log(`\nF-R2-R3 HTML Artifact Closure results: ${passed} passed, ${failed} failed`);
   process.exit(failed > 0 ? 1 : 0);
 }
 

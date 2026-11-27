@@ -11,8 +11,6 @@ import { ensureDeliveryFilledHtml } from "@/lib/deliverables";
 import {
   DI2_HTML_TEMPLATE_VERSION,
   Di2HtmlExportError,
-  di2HtmlContentIdentity,
-  fillDi2AuthorityHtml,
   readDi2HtmlPackCache,
   resolveDi2HtmlProseOrder,
   writeDi2HtmlPackCache,
@@ -25,7 +23,6 @@ import { deliveryTopicFromSignals } from "@/lib/llm/pro/delivery/slice-for-page"
 import { buildDeliveryShelfSlots } from "@/lib/poju/delivery-shelf-slots";
 import type { PartnerBaziPresence } from "@/lib/poju/dyad-compat";
 import type { PivotChartPath } from "@/lib/poju/pivot-chart-path";
-import { ensureDeliveryAudio } from "@/lib/poju/ensure-delivery-audio";
 import { loadPOJUSession, savePOJUSession } from "@/lib/poju/session-manager";
 import type { POJUSessionState } from "@/lib/poju/types";
 
@@ -131,6 +128,7 @@ export function DeliveryShelfView({
   const [emailMsg, setEmailMsg] = useState<string | null>(null);
   const [packBusy, setPackBusy] = useState(false);
   const packCacheRef = useRef<Di2HtmlPackCacheEntry | null>(null);
+  const lastServerPackIdentityRef = useRef<Di2HtmlPackIdentity | null>(null);
   const [di2Authority, setDi2Authority] = useState<{
     pages: Di2HtmlPageAuthority[];
     report_job_id: string;
@@ -236,85 +234,96 @@ export function DeliveryShelfView({
     [sessionId],
   );
 
-  const packIdentity = useMemo((): Di2HtmlPackIdentity | null => {
-    if (!di2Authority) return null;
-    return {
+  /**
+   * F-R2-R3: download/email HTML comes from server CompletedReport via
+   * /api/poju/delivery-html — local Session is Reader-only, not export authority.
+   */
+  const fetchServerPackHtml = async (): Promise<{ html: string; reportDate: string }> => {
+    if (!di2Authority) {
+      throw new Di2HtmlExportError(
+        "di2_authority_required",
+        "DI2 session binding required for HTML export",
+      );
+    }
+
+    const cachedIdentity = lastServerPackIdentityRef.current;
+    if (
+      cachedIdentity &&
+      cachedIdentity.report_job_id === di2Authority.report_job_id &&
+      cachedIdentity.execution_generation === di2Authority.execution_generation &&
+      cachedIdentity.locale === locale
+    ) {
+      const cached = readDi2HtmlPackCache(packCacheRef.current, cachedIdentity);
+      if (cached) {
+        return { html: cached, reportDate: new Date().toISOString().slice(0, 10) };
+      }
+    }
+
+    const res = await fetch("/api/poju/delivery-html", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "same-origin",
+      body: JSON.stringify({
+        locale,
+        title: coverTitle,
+        session_id: sessionId,
+        job_id: di2Authority.xhigh_job_id,
+        writer_token: di2Authority.writer_token,
+        expected_execution_generation: di2Authority.execution_generation,
+        expected_report_job_id: di2Authority.report_job_id,
+        expected_freeze_id: di2Authority.freeze_id,
+        expected_context_hash: di2Authority.context_hash,
+      }),
+    });
+    const data = (await res.json().catch(() => ({}))) as {
+      ok?: boolean;
+      html?: string;
+      error?: string;
+      code?: string;
+      identity?: Di2HtmlPackIdentity;
+      report_date?: string;
+    };
+    if (!res.ok || !data.ok || !data.html) {
+      throw new Di2HtmlExportError(
+        data.code || "download_failed",
+        data.error || "server HTML artifact failed",
+      );
+    }
+
+    const identity: Di2HtmlPackIdentity = data.identity ?? {
       report_job_id: di2Authority.report_job_id,
       execution_generation: di2Authority.execution_generation,
-      content_identity: di2HtmlContentIdentity(fullText),
+      content_identity: "server",
       locale,
       template_version: DI2_HTML_TEMPLATE_VERSION,
     };
-  }, [di2Authority, fullText, locale]);
+    lastServerPackIdentityRef.current = identity;
+    packCacheRef.current = writeDi2HtmlPackCache(identity, data.html);
 
-  const packOpts = useMemo(
-    () => ({
-      title: coverTitle,
-      originalQuestion,
-      topic: verifiedProseOrder ? null : topic,
-      pageOrder: verifiedProseOrder
-        ? (["cover", ...verifiedProseOrder] as string[])
-        : undefined,
-      reportId:
-        di2Authority?.report_job_id ??
-        `EOS-${sessionId.replace(/-/g, "").slice(0, 8).toUpperCase()}`,
-      reportDate: new Date().toISOString().slice(0, 10),
-    }),
-    [coverTitle, originalQuestion, topic, verifiedProseOrder, di2Authority, sessionId],
-  );
-
-  const resolvePackHtml = async (): Promise<string> => {
-    if (!di2Authority || !packIdentity || !verifiedProseOrder) {
-      throw new Di2HtmlExportError(
-        "di2_authority_required",
-        "DI2 verified pages required for HTML export",
-      );
-    }
-    const cached = readDi2HtmlPackCache(packCacheRef.current, packIdentity);
-    if (cached) return cached;
-
-    const audio = await ensureDeliveryAudio({ sessionId, fullText, locale });
-    const opts = {
-      ...packOpts,
-      audioBase64: audio.base64,
-      audioMime: audio.mime,
-    };
-
-    const html = fillDi2AuthorityHtml(fullText, locale, di2Authority.pages, opts);
-
-    let session =
-      prepare?.session?.session_id === sessionId
-        ? prepare.session
-        : await loadPOJUSession(sessionId);
-    if (session) {
-      const cleared = {
-        ...session,
-        deliverable_html: session.deliverable_html
-          ? { ...session.deliverable_html, delivery: undefined }
-          : undefined,
-      };
-      const filled = ensureDeliveryFilledHtml(cleared, fullText, locale, opts);
-      // Prefer the DI2-authority HTML string (same bytes as download/email local pack).
-      const artifact = html || filled.html;
-      packCacheRef.current = writeDi2HtmlPackCache(packIdentity, artifact);
-      try {
+    try {
+      const session =
+        prepare?.session?.session_id === sessionId
+          ? prepare.session
+          : await loadPOJUSession(sessionId);
+      if (session) {
         await savePOJUSession({
-          ...filled.session,
+          ...session,
           deliverable_html: {
-            ...filled.session.deliverable_html,
-            delivery: artifact,
+            ...session.deliverable_html,
+            delivery: data.html,
             locale,
             template_version: DI2_HTML_TEMPLATE_VERSION,
           },
         });
-      } catch {
-        /* still return html */
       }
-      return artifact;
+    } catch {
+      /* download still works */
     }
 
-    packCacheRef.current = writeDi2HtmlPackCache(packIdentity, html);
-    return html;
+    return {
+      html: data.html,
+      reportDate: data.report_date || new Date().toISOString().slice(0, 10),
+    };
   };
 
   const handleDownloadHtml = () => {
@@ -322,9 +331,9 @@ export function DeliveryShelfView({
       setPackBusy(true);
       setEmailMsg(null);
       try {
-        const html = await resolvePackHtml();
+        const { html, reportDate } = await fetchServerPackHtml();
         downloadBlob(
-          `eastern-os-decision-report-${new Date().toISOString().slice(0, 10)}.html`,
+          `eastern-os-decision-report-${reportDate}.html`,
           html,
           "text/html;charset=utf-8",
         );
@@ -352,8 +361,6 @@ export function DeliveryShelfView({
     setPackBusy(true);
     setEmailMsg(null);
     try {
-      // Warm local pack cache (download/email share the same resolvePackHtml identity).
-      await resolvePackHtml();
       const res = await fetch("/api/poju/delivery-email", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
