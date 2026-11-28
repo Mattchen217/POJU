@@ -5,6 +5,10 @@
  */
 
 import type { POJUSessionState } from "@/lib/poju/types";
+import {
+  isServerSessionContentShell,
+  sessionHasLocalPrivateContent,
+} from "@/lib/poju/session-authority/privacy-boundary";
 import type {
   AuthoritativeSessionEnvelope,
   SessionLifecycleStatus,
@@ -93,6 +97,36 @@ export function decideAuthoritativeMirror(input: {
     frozen: "This Session is frozen on the server. Intake cannot be reopened.",
     terminated: "This Session has been terminated on the server and cannot be cleared locally.",
   };
+
+  // Unit A: server get returns a privacy shell. Never replace local private
+  // conversation / DC content with an empty shell just because the shell is newer.
+  const serverIsShell =
+    server.content_local === true || isServerSessionContentShell(server.session);
+  if (serverIsShell && sessionHasLocalPrivateContent(local)) {
+    const merged: POJUSessionState = {
+      ...local,
+      session_id: server.session_id,
+      session_revision: server.revision,
+      expires_at: server.expires_at,
+      unlock_status: local.unlock_status ?? server.session.unlock_status,
+      unlock_via: local.unlock_via ?? server.session.unlock_via,
+      pending_decision_report_job_id:
+        local.pending_decision_report_job_id ?? server.session.pending_decision_report_job_id ?? null,
+    };
+    return {
+      session: merged,
+      lifecycle_status: server.lifecycle_status,
+      authority_sync: syncByStatus[server.lifecycle_status],
+      revision: server.revision,
+      expires_at: server.expires_at,
+      server_envelope: server,
+      used_offline_cache: false,
+      message:
+        server.lifecycle_status === "active"
+          ? "Kept the local private Session; server shell supplies revision and lifecycle only."
+          : messageByStatus[server.lifecycle_status],
+    };
+  }
 
   return {
     session: server.session,

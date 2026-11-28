@@ -27,8 +27,14 @@ export type ServerSessionRecord = ServerSessionAssociations & {
   expires_at: string;
   lifecycle_status: SessionLifecycleStatus;
   snapshot_hash: string;
+  /**
+   * Unit A: durable snapshot is a privacy shell (no chat/DC bodies).
+   * Full private Session content lives in the original browser IndexedDB.
+   */
   session_snapshot: POJUSessionState;
   last_committed_turn_id: string | null;
+  /** Present on records written after Unit A; absent on legacy full snapshots. */
+  content_policy?: "local_private" | "legacy_full";
 };
 
 export type SessionAuthorityErrorCode =
@@ -65,11 +71,17 @@ export type AuthoritativeSessionEnvelope = {
   expires_at: string;
   lifecycle_status: SessionLifecycleStatus;
   snapshot_hash: string;
+  /**
+   * Unit A get/init durable view: privacy shell only. Chat responses still
+   * return the full turn Session via `authoritative_session` (transient).
+   */
   session: POJUSessionState;
   dc_ledger_head_hash: string | null;
   dc_ledger_commit_version: number | null;
   latest_freeze_receipt_id: string | null;
   latest_freeze_id: string | null;
+  /** When true, `session` has no private conversation bodies — keep IndexedDB content. */
+  content_local?: boolean;
 };
 
 export type SessionAuthorityConflictBody = {

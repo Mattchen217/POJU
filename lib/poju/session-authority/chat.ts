@@ -38,6 +38,10 @@ import {
   requireAuthoritativeSession,
   toAuthoritativeEnvelope,
 } from "@/lib/poju/session-authority/lifecycle";
+import {
+  applyServerOwnedSessionFields,
+  sessionHasLocalPrivateContent,
+} from "@/lib/poju/session-authority/privacy-boundary";
 import type { AuthoritativeSessionEnvelope } from "@/lib/poju/session-authority/types";
 
 export type AuthoritativeChatBody = {
@@ -112,6 +116,32 @@ export async function executeAuthoritativeChatTurn(
 
   const sessionId = body.session.session_id;
   const record = await requireAuthoritativeSession(sessionId);
+
+  // Unit A: durable server snapshot is a privacy shell. Idempotency is keyed by
+  // last_committed_turn_id; private content for the response comes from the client.
+  const explicitTurnId =
+    typeof body.client_turn_id === "string" && body.client_turn_id.trim()
+      ? body.client_turn_id.trim()
+      : null;
+  if (
+    explicitTurnId &&
+    record.last_committed_turn_id === explicitTurnId &&
+    sessionHasLocalPrivateContent(body.session)
+  ) {
+    const idempotentSession = applyServerOwnedSessionFields(body.session, record);
+    return {
+      ok: true,
+      idempotent: true,
+      llm: llmFromCommittedSession(idempotentSession),
+      session: idempotentSession,
+      envelope: toAuthoritativeEnvelope(record),
+      aborted: false,
+    };
+  }
+
+  // Turn identity checks must use the durable server snapshot (privacy shell /
+  // last_committed_turn_id), never the client body — the client already contains
+  // the new user message and would false-trigger idempotency.
   const incoming = extractIncomingUserTurn({
     serverSnapshot: record.session_snapshot,
     clientSession: body.session,
@@ -119,11 +149,14 @@ export async function executeAuthoritativeChatTurn(
     client_turn_id: body.client_turn_id,
   });
   if (incoming != null && "idempotent" in incoming && incoming.idempotent) {
+    const idempotentSession = sessionHasLocalPrivateContent(body.session)
+      ? applyServerOwnedSessionFields(body.session, record)
+      : record.session_snapshot;
     return {
       ok: true,
       idempotent: true,
-      llm: llmFromCommittedSession(record.session_snapshot),
-      session: record.session_snapshot,
+      llm: llmFromCommittedSession(idempotentSession),
+      session: idempotentSession,
       envelope: toAuthoritativeEnvelope(record),
       aborted: false,
     };
@@ -142,7 +175,12 @@ export async function executeAuthoritativeChatTurn(
 
   // Ledger may be ahead of Session Authority after an aborted/conflicted prior
   // turn. Adopt the durable head into the working snapshot before binding.
-  const catchup = await adoptLedgerHeadIntoSessionIfAhead(record.session_snapshot);
+  // Unit A: when the server shell has no private DC, catch-up is a no-op until
+  // report-start seals the first ledger entry.
+  const contentBase = sessionHasLocalPrivateContent(body.session)
+    ? applyServerOwnedSessionFields(body.session, record)
+    : record.session_snapshot;
+  const catchup = await adoptLedgerHeadIntoSessionIfAhead(contentBase);
   const serverSnapshotForTurn = catchup.session;
   const boundSession = bindAuthoritativeChatSession(
     { ...record, session_snapshot: serverSnapshotForTurn },
@@ -345,12 +383,15 @@ export async function executeAuthoritativeChatTurn(
     }
 
     clearClarificationClaimsReservedThisRequest();
-    const llm = capture.current ?? llmFromCommittedSession(committed.session_snapshot);
+    // Return the full in-memory turn Session (transient). Durable KV holds only
+    // the redacted shell inside `committed`.
+    const authoritativeSession = applyServerOwnedSessionFields(sessionOut, committed);
+    const llm = capture.current ?? llmFromCommittedSession(authoritativeSession);
     return {
       ok: true,
       idempotent: false,
       llm,
-      session: committed.session_snapshot,
+      session: authoritativeSession,
       envelope: toAuthoritativeEnvelope(committed),
       aborted: false,
     };

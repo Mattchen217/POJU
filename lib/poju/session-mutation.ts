@@ -23,6 +23,7 @@ import {
   contentDerivedLedgerKey,
   syncDcLedgerBeforeWrite,
 } from "@/lib/poju/decision-authority/client-sync";
+import { PRE_REPORT_DC_LEDGER_DEFERRED } from "@/lib/poju/session-authority/privacy-boundary";
 
 const SESSION_SECRET = "pojulife_v4_poju_session"; // legacy encryptJson arg; not a security boundary
 
@@ -666,12 +667,15 @@ export async function mutatePOJUSession(
       }
     }
 
-    // M4 — DI2 DC changes reach the server ledger before the local blob.
-    await syncDcLedgerBeforeWrite({
-      base,
-      candidate,
-      idempotency_key: mutation.operation_id,
-    });
+    // Unit A: defer server DC ledger until explicit Freeze / report-start seal.
+    // sealFreezeWithAuthority still calls syncDcLedgerBeforeWrite directly.
+    if (!PRE_REPORT_DC_LEDGER_DEFERRED) {
+      await syncDcLedgerBeforeWrite({
+        base,
+        candidate,
+        idempotency_key: mutation.operation_id,
+      });
+    }
 
     const bumpPolicy = mutation.bump_dc ?? "auto";
     const bumpDc =
@@ -811,11 +815,13 @@ export async function casWritePOJUSessionFromCandidate(
       session_revision: mirror.session_revision,
       dc_write_revision: mirror.dc_write_revision,
     };
-    await syncDcLedgerBeforeWrite({
-      base: baseForDc,
-      candidate,
-      idempotency_key: opts?.dc_ledger_idempotency_key ?? contentDerivedLedgerKey(candidate),
-    });
+    if (!PRE_REPORT_DC_LEDGER_DEFERRED) {
+      await syncDcLedgerBeforeWrite({
+        base: baseForDc,
+        candidate,
+        idempotency_key: opts?.dc_ledger_idempotency_key ?? contentDerivedLedgerKey(candidate),
+      });
+    }
     const bumpDc =
       bumpPolicy === true
         ? true
@@ -865,13 +871,14 @@ export async function casWritePOJUSessionFromCandidate(
     dc_write_revision: mirror.dc_write_revision,
   };
 
-  // M4 — DI2 DC changes reach the server ledger before the local blob
-  // (mutates candidate.dc_ledger in place, like the revision mirrors below).
-  await syncDcLedgerBeforeWrite({
-    base: baseForDc,
-    candidate,
-    idempotency_key: opts?.dc_ledger_idempotency_key ?? contentDerivedLedgerKey(candidate),
-  });
+  // Unit A: defer server DC ledger until explicit Freeze / report-start seal.
+  if (!PRE_REPORT_DC_LEDGER_DEFERRED) {
+    await syncDcLedgerBeforeWrite({
+      base: baseForDc,
+      candidate,
+      idempotency_key: opts?.dc_ledger_idempotency_key ?? contentDerivedLedgerKey(candidate),
+    });
+  }
   const bumpDc =
     bumpPolicy === true
       ? true

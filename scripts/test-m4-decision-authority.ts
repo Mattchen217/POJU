@@ -52,7 +52,7 @@ async function main() {
   const { __resetPojuDbForTests, ensurePojuDbReady } = await import("../lib/db/poju-db");
   const sm = await import("../lib/poju/session-manager");
   const { mutatePOJUSession } = await import("../lib/poju/session-mutation");
-  const { ensureSessionFrozenForDelivery } = await import("../lib/poju/decision-context/production-freeze-wire");
+  const { ensureSessionFrozenViaAuthority } = await import("../lib/poju/decision-context/production-freeze-wire");
 
   type DecisionContext = import("../lib/poju/decision-context/types").DecisionContext;
   type ConfirmationEvent = import("../lib/poju/decision-context/confirmation-event").ConfirmationEvent;
@@ -813,40 +813,47 @@ async function main() {
     } as POJUSessionState;
   }
 
-  await check("DI2 Session write commits the DC to the ledger before the local blob; mirror only from server", async () => {
+  await check("Unit A Intake: local DC saves skip ledger; report-start sync with force creates genesis", async () => {
     const s = await di2Session("pay_m4_dev_1");
     const withDc = { ...s, decision_context: draft({ context_id: `ctx_${s.session_id}` }) };
     await sm.savePOJUSessionCore(withDc, { dc_ledger_idempotency_key: `dc_seed:opening:${s.session_id}` });
     const loaded = await sm.loadPOJUSession(s.session_id);
-    const head = await ledger.readLedgerHead(s.session_id);
-    assert.equal(head?.commit_version, 1);
-    assert.equal(head?.idempotency_key, `dc_seed:opening:${s.session_id}`);
-    assert.deepEqual(loaded?.dc_ledger?.head, authTypes.headRefFromEntry(head!));
-    assert.equal(loaded?.dc_ledger?.head.snapshot_hash, hash.dcSnapshotHash(loaded!.decision_context!));
+    assert.equal(await ledger.readLedgerHead(s.session_id), null, "Intake save does not touch ledger");
+    assert.equal(loaded?.dc_ledger ?? null, null, "no local mirror during Intake");
 
+    const afterCollect = draft({ context_id: `ctx_${s.session_id}`, extraFact: { id: "f_t5", statement: "第五轮回答" } });
     await mutatePOJUSession(s.session_id, {
       operation_id: `dc_collect:${s.session_id}:t5`,
       kind: "session_patch",
-      apply: (b) => ({
-        ...b,
-        decision_context: draft({ context_id: `ctx_${s.session_id}`, extraFact: { id: "f_t5", statement: "第五轮回答" } }),
-      }),
+      apply: (b) => ({ ...b, decision_context: afterCollect }),
     } as Parameters<typeof mutatePOJUSession>[1]);
-    const h2 = await ledger.readLedgerHead(s.session_id);
-    assert.equal(h2?.commit_version, 2);
-    assert.equal(h2?.change_type, "draft_update");
+    assert.equal(await ledger.readLedgerHead(s.session_id), null, "mutate during Intake still skips ledger");
     const l2 = await sm.loadPOJUSession(s.session_id);
-    assert.equal(l2?.dc_ledger?.head.commit_version, 2);
+    assert.equal(l2?.dc_ledger ?? null, null);
+
+    const working = (await sm.loadPOJUSession(s.session_id))!;
+    const catchup = { ...working };
+    await clientSync.syncDcLedgerBeforeWrite({
+      base: working,
+      candidate: catchup,
+      idempotency_key: `dc_seed:opening:${s.session_id}`,
+      force: true,
+    });
+    const head = await ledger.readLedgerHead(s.session_id);
+    assert.equal(head?.commit_version, 1);
+    assert.equal(head?.idempotency_key, `dc_seed:opening:${s.session_id}`);
+    assert.deepEqual(catchup.dc_ledger?.head, authTypes.headRefFromEntry(head!));
+    assert.equal(catchup.dc_ledger?.head.snapshot_hash, hash.dcSnapshotHash(catchup.decision_context!));
 
     await mutatePOJUSession(s.session_id, {
       operation_id: `ui:${s.session_id}:x`,
       kind: "session_patch",
       apply: (b) => ({ ...b, tokens_used: (b.tokens_used ?? 0) + 1 }),
     } as Parameters<typeof mutatePOJUSession>[1]);
-    assert.equal((await ledger.readLedgerHead(s.session_id))?.commit_version, 2, "non-DC writes add no commit");
+    assert.equal((await ledger.readLedgerHead(s.session_id))?.commit_version, 1, "non-DC writes add no commit");
   });
 
-  await check("authority unreachable → local DC write fails (retryable); nothing half-applied", async () => {
+  await check("Unit A Intake: authority unreachable — local DC mutate still succeeds; ledger stays null", async () => {
     const s = await di2Session("pay_m4_dev_2");
     await sm.savePOJUSessionCore({ ...s, decision_context: draft({ context_id: `ctx_${s.session_id}` }) });
     const before = await sm.loadPOJUSession(s.session_id);
@@ -864,93 +871,88 @@ async function main() {
         throw new transport.DecisionAuthorityUnreachableError("offline");
       },
     });
-    let err: unknown = null;
-    try {
-      await mutatePOJUSession(s.session_id, {
-        operation_id: `dc_collect:${s.session_id}:off`,
-        kind: "session_patch",
-        apply: (b) => ({
-          ...b,
-          decision_context: draft({ context_id: `ctx_${s.session_id}`, extraFact: { id: "f_off", statement: "离线" } }),
-        }),
-      } as Parameters<typeof mutatePOJUSession>[1]);
-    } catch (e) {
-      err = e;
-    } finally {
-      installInProcessDecisionAuthority();
-    }
-    assert.ok(clientSync.isDcLedgerSyncError(err), String(err));
-    assert.equal((err as { retryable: boolean }).retryable, true);
-    const after = await sm.loadPOJUSession(s.session_id);
-    assert.equal(after?.session_revision, before?.session_revision);
-    assert.deepEqual(after?.decision_context, before?.decision_context);
-    // Retry with the same operation id once the network is back → exactly one commit.
+    const nextDc = draft({ context_id: `ctx_${s.session_id}`, extraFact: { id: "f_off", statement: "离线" } });
     await mutatePOJUSession(s.session_id, {
       operation_id: `dc_collect:${s.session_id}:off`,
       kind: "session_patch",
-      apply: (b) => ({
-        ...b,
-        decision_context: draft({ context_id: `ctx_${s.session_id}`, extraFact: { id: "f_off", statement: "离线" } }),
-      }),
+      apply: (b) => ({ ...b, decision_context: nextDc }),
     } as Parameters<typeof mutatePOJUSession>[1]);
-    assert.equal((await ledger.readLedgerHead(s.session_id))?.commit_version, 2);
+    installInProcessDecisionAuthority();
+    const after = await sm.loadPOJUSession(s.session_id);
+    assert.notEqual(after?.session_revision, before?.session_revision);
+    assert.equal(after?.decision_context?.reality_facts.length, nextDc.reality_facts.length);
+    assert.equal(await ledger.readLedgerHead(s.session_id), null);
+    assert.equal(after?.dc_ledger ?? null, null);
   });
 
-  await check("lost local mirror write self-heals onto the server head holding the same base", async () => {
+  await check("syncDcLedgerBeforeWrite self-heals (force) onto the server head holding the same base", async () => {
     const s = await di2Session("pay_m4_dev_3");
-    await sm.savePOJUSessionCore({ ...s, decision_context: draft({ context_id: `ctx_${s.session_id}` }) });
+    const dc0 = draft({ context_id: `ctx_${s.session_id}` });
+    await sm.savePOJUSessionCore({ ...s, decision_context: dc0 });
     const base = (await sm.loadPOJUSession(s.session_id))!;
+    const enrolled = { ...base };
+    await clientSync.syncDcLedgerBeforeWrite({
+      base,
+      candidate: enrolled,
+      idempotency_key: `dc_genesis:${s.session_id}`,
+      force: true,
+    });
+    assert.equal((await ledger.readLedgerHead(s.session_id))?.commit_version, 1);
     // Server accepted a Blueprint-only update whose local write never landed.
-    const lost = { ...base, decision_blueprint: blueprint(s.session_id, `ctx_${s.session_id}`, 2) };
-    await clientSync.syncDcLedgerBeforeWrite({ base, candidate: lost, idempotency_key: "lost_write" });
+    const lost = { ...enrolled, decision_blueprint: blueprint(s.session_id, `ctx_${s.session_id}`, 2) };
+    await clientSync.syncDcLedgerBeforeWrite({ base: enrolled, candidate: lost, idempotency_key: "lost_write" });
     assert.equal((await ledger.readLedgerHead(s.session_id))?.commit_version, 2);
     const reloaded = (await sm.loadPOJUSession(s.session_id))!;
-    assert.equal(reloaded.dc_ledger?.head.commit_version, 1, "local mirror never saw commit 2");
-    // The next write starts from a base that equals the server head on DC but not Blueprint →
-    // explicit failure instead of silently overwriting history.
-    let err: unknown = null;
-    try {
-      await mutatePOJUSession(s.session_id, {
-        operation_id: `dc_collect:${s.session_id}:after_lost`,
-        kind: "session_patch",
-        apply: (b) => ({ ...b, decision_context: draft({ context_id: `ctx_${s.session_id}`, extraFact: { id: "f_al", statement: "al" } }) }),
-      } as Parameters<typeof mutatePOJUSession>[1]);
-    } catch (e) {
-      err = e;
-    }
-    assert.equal((err as { code?: string })?.code, "DC_LEDGER_HEAD_MISMATCH");
-    // Same content re-sent under a new operation id after the local write was lost → adopt head.
-    const s2 = await di2Session("pay_m4_dev_4");
-    await sm.savePOJUSessionCore({ ...s2, decision_context: draft({ context_id: `ctx_${s2.session_id}` }) });
-    const b2 = (await sm.loadPOJUSession(s2.session_id))!;
-    const nextDc = draft({ context_id: `ctx_${s2.session_id}`, extraFact: { id: "f_lw", statement: "lost write" } });
-    await clientSync.syncDcLedgerBeforeWrite({ base: b2, candidate: { ...b2, decision_context: nextDc }, idempotency_key: "lw_1" });
-    await sm.savePOJUSessionCore({ ...b2, decision_context: nextDc }, { dc_ledger_idempotency_key: "lw_2" });
-    const h = await ledger.readLedgerHead(s2.session_id);
-    const l = await sm.loadPOJUSession(s2.session_id);
-    assert.equal(h?.commit_version, 2, "no extra commit for the re-sent state");
-    assert.equal(l?.dc_ledger?.head.entry_hash, h?.entry_hash);
+    assert.equal(reloaded.dc_ledger?.head.commit_version ?? null, null, "local mirror never saw commit 2");
 
-    // Server head already equals the local base (catch-up commit whose local write was lost) → rebase.
-    const s3 = await di2Session("pay_m4_dev_8");
-    const dc0 = draft({ context_id: `ctx_${s3.session_id}` });
-    await sm.savePOJUSessionCore({ ...s3, decision_context: dc0 });
-    const b3 = (await sm.loadPOJUSession(s3.session_id))!;
-    const dcX = draft({ context_id: `ctx_${s3.session_id}`, extraFact: { id: "f_x", statement: "x" } });
-    const midCandidate = { ...b3, decision_context: dcX };
-    await clientSync.syncDcLedgerBeforeWrite({ base: b3, candidate: midCandidate, idempotency_key: "rb_1" });
+    const s2 = await di2Session("pay_m4_dev_4");
+    const dc2 = draft({ context_id: `ctx_${s2.session_id}` });
+    await sm.savePOJUSessionCore({ ...s2, decision_context: dc2 });
+    const b2 = (await sm.loadPOJUSession(s2.session_id))!;
+    const enrolled2 = { ...b2 };
     await clientSync.syncDcLedgerBeforeWrite({
-      base: midCandidate,
-      candidate: { ...midCandidate, decision_context: dc0 },
-      idempotency_key: "rb_2",
+      base: b2,
+      candidate: enrolled2,
+      idempotency_key: `dc_genesis:${s2.session_id}`,
+      force: true,
     });
+    const nextDc = draft({ context_id: `ctx_${s2.session_id}`, extraFact: { id: "f_lw", statement: "lost write" } });
+    await clientSync.syncDcLedgerBeforeWrite({
+      base: enrolled2,
+      candidate: { ...enrolled2, decision_context: nextDc },
+      idempotency_key: "lw_1",
+    });
+    const dupCandidate = { ...enrolled2, decision_context: nextDc };
+    await clientSync.syncDcLedgerBeforeWrite({ base: enrolled2, candidate: dupCandidate, idempotency_key: "lw_2" });
+    const h = await ledger.readLedgerHead(s2.session_id);
+    assert.equal(h?.commit_version, 2, "no extra commit for the re-sent state");
+    assert.equal(dupCandidate.dc_ledger?.head.entry_hash, h?.entry_hash);
+
+    const s3 = await di2Session("pay_m4_dev_8");
+    const dc3 = draft({ context_id: `ctx_${s3.session_id}` });
+    await sm.savePOJUSessionCore({ ...s3, decision_context: dc3 });
+    const b3 = (await sm.loadPOJUSession(s3.session_id))!;
+    const enrolled3 = { ...b3 };
+    await clientSync.syncDcLedgerBeforeWrite({
+      base: b3,
+      candidate: enrolled3,
+      idempotency_key: `dc_genesis:${s3.session_id}`,
+      force: true,
+    });
+    const dcX = draft({ context_id: `ctx_${s3.session_id}`, extraFact: { id: "f_x", statement: "x" } });
+    const midCandidate = { ...enrolled3, decision_context: dcX };
+    await clientSync.syncDcLedgerBeforeWrite({ base: enrolled3, candidate: midCandidate, idempotency_key: "rb_1" });
+    const rb2Candidate = { ...midCandidate, decision_context: dc3 };
+    await clientSync.syncDcLedgerBeforeWrite({ base: midCandidate, candidate: rb2Candidate, idempotency_key: "rb_2" });
     assert.equal((await ledger.readLedgerHead(s3.session_id))?.commit_version, 3);
     const dcY = draft({ context_id: `ctx_${s3.session_id}`, extraFact: { id: "f_y", statement: "y" } });
-    await sm.savePOJUSessionCore({ ...b3, decision_context: dcY }, { dc_ledger_idempotency_key: "rb_3" });
+    const staleLocal = (await sm.loadPOJUSession(s3.session_id))!;
+    const rb3Candidate = { ...staleLocal, decision_context: dcY };
+    await clientSync.syncDcLedgerBeforeWrite({ base: rb2Candidate, candidate: rb3Candidate, idempotency_key: "rb_3" });
     const h3 = await ledger.readLedgerHead(s3.session_id);
     assert.equal(h3?.commit_version, 4);
     assert.equal(h3?.previous_commit_version, 3);
-    assert.equal((await sm.loadPOJUSession(s3.session_id))?.dc_ledger?.head.entry_hash, h3?.entry_hash);
+    assert.equal(rb3Candidate.dc_ledger?.head.entry_hash, h3?.entry_hash);
   });
 
   await check("legacy sessions (no Blueprint) never touch the ledger", async () => {
@@ -960,12 +962,13 @@ async function main() {
     assert.equal((await sm.loadPOJUSession(s.session_id))?.dc_ledger ?? null, null);
   });
 
-  await check("DI2 Freeze wire: server seal adopted through C1 with receipts; device cannot self-freeze", async () => {
+  await check("DI2 report-start: ensureSessionFrozenViaAuthority seals server + adopts receipts", async () => {
     const s = await di2Session("pay_m4_dev_6");
-    await sm.savePOJUSessionCore({ ...s, decision_context: draft({ context_id: `ctx_${s.session_id}` }) });
+    const dc = draft({ context_id: `ctx_${s.session_id}` });
+    await sm.savePOJUSessionCore({ ...s, decision_context: dc });
     const cur = (await sm.loadPOJUSession(s.session_id))!;
-    const res = await ensureSessionFrozenForDelivery(cur, {
-      trigger: "sufficiency_end_confirm",
+    assert.equal(await ledger.readLedgerHead(s.session_id), null, "no ledger before report-start");
+    const res = await ensureSessionFrozenViaAuthority(cur, dc, {
       profile: { profile_id: "p_a", birth_info: BIRTH_A },
     });
     assert.ok(res.ok && !res.skipped, JSON.stringify(res).slice(0, 300));
@@ -980,19 +983,23 @@ async function main() {
     assert.equal(receipt?.context_hash, after.decision_context?.content_hash);
     assert.equal(after.dc_profile_receipts?.[0]?.freeze_id, receipt?.freeze_id);
 
-    // A device-made final for a fresh draft is refused by the ledger → local write fails.
     const s2 = await di2Session("pay_m4_dev_7");
-    await sm.savePOJUSessionCore({ ...s2, decision_context: draft({ context_id: `ctx_${s2.session_id}` }) });
+    const dc2 = draft({ context_id: `ctx_${s2.session_id}` });
+    await sm.savePOJUSessionCore({ ...s2, decision_context: dc2 });
     const cur2 = (await sm.loadPOJUSession(s2.session_id))!;
-    const selfFrozen = { ...cur2.decision_context!, status: "final" as const };
-    let err: unknown = null;
-    try {
-      await sm.savePOJUSessionCore({ ...cur2, decision_context: selfFrozen });
-    } catch (e) {
-      err = e;
-    }
-    assert.equal((err as { code?: string })?.code, "DC_LEDGER_STATUS_FORBIDDEN");
-    assert.equal((await sm.loadPOJUSession(s2.session_id))?.decision_context?.status, "draft");
+    const selfFrozen = { ...dc2, status: "final" as const, content_hash: computeContentHash({ ...dc2, status: "final" }) };
+    await sm.savePOJUSessionCore({ ...cur2, decision_context: selfFrozen });
+    const localFinal = (await sm.loadPOJUSession(s2.session_id))!;
+    assert.equal(localFinal?.decision_context?.status, "final");
+    assert.equal(await ledger.readLedgerHead(s2.session_id), null, "local final before authority leaves ledger empty");
+    const sealed = await ensureSessionFrozenViaAuthority(localFinal!, dc2, {
+      profile: { profile_id: "p_a", birth_info: BIRTH_A },
+    });
+    assert.ok(sealed.ok && !sealed.skipped);
+    const after2 = (await sm.loadPOJUSession(s2.session_id))!;
+    assert.equal(after2.decision_context?.status, "final");
+    assert.equal((await ledger.readLedgerHead(s2.session_id))?.change_type, "freeze");
+    assert.ok((after2.dc_freeze_receipts ?? []).length >= 1);
   });
 
   console.log(`\n${passed} passed, ${failed} failed`);

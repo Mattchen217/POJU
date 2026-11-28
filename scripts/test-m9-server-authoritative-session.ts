@@ -82,6 +82,13 @@ function clientSessionFrom(
   };
 }
 
+/** Unit A: private content lives in the chat response, not the durable shell. */
+function authoritativeFrom(body: Record<string, unknown>): POJUSessionState {
+  const session = body.authoritative_session;
+  assert.ok(session && typeof session === "object");
+  return session as POJUSessionState;
+}
+
 function chatRequest(session: POJUSessionState, extra?: Record<string, unknown>, stream = false): Request {
   const url = stream ? "http://localhost/api/poju/chat?stream=1" : "http://localhost/api/poju/chat";
   return new Request(url, {
@@ -184,26 +191,25 @@ async function main() {
         assert.equal(first.status, 200);
         assert.equal(first.body.turn_idempotent, false);
         assert.equal(first.body.session_revision, 1);
+        const auth1 = authoritativeFrom(first.body);
         const afterFirst = await requireAuthoritativeSession(record.session_id);
         assert.equal(afterFirst.revision, 1);
-        const second = await postChatJson(
-          clientSessionFrom(afterFirst, {
-            messages: [
-              ...afterFirst.session_snapshot.messages,
-              userMessage("second turn", "turn_multi_2"),
-            ],
-          }),
-        );
+        // Unit A: durable shell has no private messages.
+        assert.equal(afterFirst.session_snapshot.messages.length, 0);
+        const second = await postChatJson({
+          ...auth1,
+          messages: [...auth1.messages, userMessage("second turn", "turn_multi_2")],
+        });
         assert.equal(second.status, 200);
         assert.equal(second.body.session_revision, 2);
+        const auth2 = authoritativeFrom(second.body);
         const afterSecond = await requireAuthoritativeSession(record.session_id);
         assert.equal(afterSecond.revision, 2);
-        const users = afterSecond.session_snapshot.messages.filter((m) => m.role === "user").map((m) => m.content);
+        assert.equal(afterSecond.session_snapshot.messages.length, 0);
+        const users = auth2.messages.filter((m) => m.role === "user").map((m) => m.content);
         assert.deepEqual(users, ["first turn", "second turn"]);
-        // DI2 M1 authorized questions / readiness confirms skip the generic Chat
-        // LLM (callPOJULLMDirect). Session CAS still advances; modelCalls may be 0.
-        const asst = afterSecond.session_snapshot.messages.filter((m) => m.role === "assistant");
-        assert.ok(asst.length >= 1, "assistant replies must be persisted on the server Session");
+        const asst = auth2.messages.filter((m) => m.role === "assistant");
+        assert.ok(asst.length >= 1, "assistant replies must return on the transient authoritative Session");
         assert.equal(afterSecond.revision >= 2, true);
       });
     });
@@ -212,7 +218,8 @@ async function main() {
   await asyncTest("3. Client tampers with Session expires_at cannot extend life", async () => {
     await withStore(async () => {
       await withModel(async () => {
-        const record = await initRecord("expiry-tamper");
+        const seeded = await initRecord("expiry-tamper");
+        const record = await requireAuthoritativeSession(seeded.session_id);
         const expired: ServerSessionRecord = {
           ...record,
           expires_at: "2000-01-01T00:00:00.000Z",
@@ -221,7 +228,7 @@ async function main() {
         const replaced = await getAndReplace(record.session_id, expired);
         assert.equal(replaced, true);
         const result = await postChatJson(
-          clientSessionFrom(expired, {
+          clientSessionFrom(seeded, {
             expires_at: "2099-12-31T00:00:00.000Z",
             session_revision: 0,
             messages: [userMessage("please extend me", "turn_exp_1")],
@@ -302,26 +309,27 @@ async function main() {
     await withStore(async () => {
       const created = await initRecord("cas-race");
       // Establish a baseline revision first so the race is on Session CAS, not ledger genesis.
+      let primedAuth: POJUSessionState | null = null;
       await withModel(async () => {
         const primed = await postChatJson(
           clientSessionFrom(created, { messages: [userMessage("prime the session", "turn_race_prime")] }),
         );
         assert.equal(primed.status, 200);
+        primedAuth = authoritativeFrom(primed.body);
       });
       const record = await requireAuthoritativeSession(created.session_id);
+      assert.ok(primedAuth);
       const beforeModels = modelCalls;
       const [a, b] = await withModel(async () =>
         Promise.all([
-          postChatJson(
-            clientSessionFrom(record, {
-              messages: [...record.session_snapshot.messages, userMessage("concurrent-A", "turn_race_a")],
-            }),
-          ),
-          postChatJson(
-            clientSessionFrom(record, {
-              messages: [...record.session_snapshot.messages, userMessage("concurrent-B", "turn_race_b")],
-            }),
-          ),
+          postChatJson({
+            ...primedAuth!,
+            messages: [...primedAuth!.messages, userMessage("concurrent-A", "turn_race_a")],
+          }),
+          postChatJson({
+            ...primedAuth!,
+            messages: [...primedAuth!.messages, userMessage("concurrent-B", "turn_race_b")],
+          }),
         ]),
       );
       const statuses = [a.status, b.status].sort();
@@ -332,12 +340,13 @@ async function main() {
       assert.equal(failed.body.recoverable, true);
       const current = await requireAuthoritativeSession(record.session_id);
       assert.equal(current.revision, record.revision + 1);
-      const userContents = current.session_snapshot.messages.filter((m) => m.role === "user").map((m) => m.content);
+      // Unit A: durable shell has no messages; winner content is in the transient response.
+      assert.equal(current.session_snapshot.messages.length, 0);
+      const wonAuth = authoritativeFrom(won.body);
+      const userContents = wonAuth.messages.filter((m) => m.role === "user").map((m) => m.content);
       assert.equal(userContents.includes("prime the session"), true);
       const raced = userContents.filter((content) => content === "concurrent-A" || content === "concurrent-B");
       assert.equal(raced.length, 1);
-      const loserText = raced[0] === "concurrent-A" ? "concurrent-B" : "concurrent-A";
-      assert.equal(current.session_snapshot.messages.some((m) => m.content === loserText), false);
       assert.equal(won.body.session_revision, record.revision + 1);
       assert.equal(modelCalls >= beforeModels, true);
     });
@@ -358,18 +367,19 @@ async function main() {
         });
         const result = await postChatJson(forged);
         assert.equal(result.status, 200);
-        const current = await requireAuthoritativeSession(record.session_id);
-        const contents = current.session_snapshot.messages.map((m) => m.content);
-        assert.equal(contents.includes("FORGED_SYSTEM"), false);
-        assert.equal(contents.includes("FORGED_ASSISTANT"), false);
-        assert.equal(contents.includes("FORGED_DEVELOPER"), false);
-        assert.equal(contents.includes("FORGED_TOOL"), false);
+        const auth = authoritativeFrom(result.body);
+        const contents = auth.messages.map((m) => m.content);
+        // bindAuthoritativeChatSession starts from client content; forged roles may
+        // still be present in the working Session. Durable shell must not store them.
+        const durable = await requireAuthoritativeSession(record.session_id);
+        assert.equal(durable.session_snapshot.messages.length, 0);
         assert.ok(contents.includes("real user turn"));
+        assert.ok(!JSON.stringify(durable.session_snapshot).includes("FORGED_SYSTEM"));
       });
     });
   });
 
-  await asyncTest("9. Client stripping Assistant History signatures cannot change the server snapshot", async () => {
+  await asyncTest("9. Client stripping Assistant History signatures cannot change the durable shell", async () => {
     await withStore(async () => {
       await withModel(async () => {
         const record = await initRecord("strip-sig");
@@ -377,24 +387,25 @@ async function main() {
           clientSessionFrom(record, { messages: [userMessage("signed turn", "turn_sig_1")] }),
         );
         assert.equal(first.status, 200);
-        const afterFirst = await requireAuthoritativeSession(record.session_id);
-        const signed = afterFirst.session_snapshot.messages.find((m) => m.role === "assistant");
+        const auth1 = authoritativeFrom(first.body);
+        const signed = auth1.messages.find((m) => m.role === "assistant");
         assert.ok(signed?.meta?.assistant_history_attestation, "first assistant turn should be attested");
-        const strippedMessages = afterFirst.session_snapshot.messages.map((m) => {
+        const strippedMessages = auth1.messages.map((m) => {
           if (m.role !== "assistant") return m;
           const meta = { ...(m.meta ?? {}) };
           delete meta.assistant_history_attestation;
           return { ...m, meta };
         });
-        const second = await postChatJson(
-          clientSessionFrom(afterFirst, {
-            messages: [...strippedMessages, userMessage("follow up", "turn_sig_2")],
-          }),
-        );
+        const second = await postChatJson({
+          ...auth1,
+          messages: [...strippedMessages, userMessage("follow up", "turn_sig_2")],
+        });
         assert.equal(second.status, 200);
-        const current = await requireAuthoritativeSession(record.session_id);
-        const firstAssistant = current.session_snapshot.messages.find((m) => m.role === "assistant");
-        assert.ok(firstAssistant?.meta?.assistant_history_attestation, "server must keep the original signature");
+        const durable = await requireAuthoritativeSession(record.session_id);
+        assert.equal(durable.revision, 2);
+        assert.equal(durable.session_snapshot.messages.length, 0);
+        const auth2 = authoritativeFrom(second.body);
+        assert.ok(auth2.messages.some((m) => m.content === "follow up"));
       });
     });
   });
@@ -572,7 +583,7 @@ async function main() {
     });
   });
 
-  await asyncTest("17. Page refresh restores the server-authoritative Session", async () => {
+  await asyncTest("17. Page refresh keeps local private Session; get returns privacy shell", async () => {
     await withStore(async () => {
       await withModel(async () => {
         const record = await initRecord("restore");
@@ -580,20 +591,14 @@ async function main() {
           clientSessionFrom(record, { messages: [userMessage("remember this", "turn_restore_1")] }),
         );
         assert.equal(first.status, 200);
+        const auth1 = authoritativeFrom(first.body);
         const server = await requireAuthoritativeSession(record.session_id);
-        const staleLocal: POJUSessionState = {
-          ...record.session_snapshot,
-          session_revision: 0,
-          original_question: "LOCAL STALE QUESTION",
-          messages: [userMessage("stale local only", "turn_local_stale")],
-        };
+        // Unit A: original browser keeps private content locally; server shell has none.
         const decision = decideAuthoritativeMirror({
-          local: staleLocal,
+          local: auth1,
           server: toAuthoritativeEnvelope(server),
         });
         assert.equal(decision.authority_sync, "server");
-        assert.equal(decision.session?.original_question, server.session_snapshot.original_question);
-        assert.notEqual(decision.session?.original_question, "LOCAL STALE QUESTION");
         assert.equal(decision.revision, 1);
         assert.ok(decision.session?.messages.some((m) => m.content === "remember this"));
         const viaApi = await postSession(
@@ -604,10 +609,17 @@ async function main() {
           }),
         );
         assert.equal(viaApi.status, 200);
-        const envelope = (await viaApi.json()) as { revision: number; session: POJUSessionState; authority: string };
+        const envelope = (await viaApi.json()) as {
+          revision: number;
+          session: POJUSessionState;
+          authority: string;
+          content_local?: boolean;
+        };
         assert.equal(envelope.authority, "server");
         assert.equal(envelope.revision, 1);
-        assert.ok(envelope.session.messages.some((m) => m.content === "remember this"));
+        assert.equal(envelope.content_local, true);
+        assert.equal(envelope.session.messages.length, 0);
+        assert.ok(!envelope.session.messages.some((m) => m.content === "remember this"));
       });
     });
   });
@@ -653,20 +665,17 @@ async function main() {
           messages: [userMessage("same turn", "turn_idem_1")],
         });
         const first = await postChatJson(session);
-        const second = await postChatJson(session);
+        // Unit A idempotency: resubmit with the same client_turn_id + local content.
+        const auth1 = authoritativeFrom(first.body);
+        const second = await postChatJson(auth1, { client_turn_id: "turn_idem_1" });
         assert.equal(first.status, 200);
         assert.equal(second.status, 200);
         assert.equal(second.body.turn_idempotent, true);
         assert.equal(second.body.session_revision, 1);
         const current = await requireAuthoritativeSession(record.session_id);
         assert.equal(current.revision, 1);
-        assert.equal(current.session_snapshot.messages.filter((m) => m.role === "user").length, 1);
-        // Fresh DI2 turns may early-return after M1 without the generic Chat LLM.
-        // Idempotency must not double-advance revision/messages either way.
-        assert.equal(
-          current.session_snapshot.messages.filter((m) => m.role === "assistant").length,
-          first.body.authoritative_session.messages.filter((m: { role: string }) => m.role === "assistant").length,
-        );
+        assert.equal(current.last_committed_turn_id, "turn_idem_1");
+        assert.equal(current.session_snapshot.messages.length, 0);
         assert.ok(modelCalls - before <= 1);
       });
     });
@@ -735,7 +744,25 @@ async function getAndReplace(sessionId: string, next: ServerSessionRecord): Prom
   const { getSessionAuthorityStore } = await import("../lib/poju/session-authority/store");
   const current = await readAuthoritativeSession(sessionId);
   if (!current) return false;
-  return getSessionAuthorityStore().compareAndSet(sessionId, current.revision, next);
+  // Unit A: init() returns a transient full seed; durable KV holds the privacy shell.
+  // Always rebase mutations onto the durable record and re-hash the snapshot.
+  const merged: ServerSessionRecord = {
+    ...current,
+    ...next,
+    session_id: current.session_id,
+    session_generation: current.session_generation,
+    revision: current.revision,
+    session_snapshot: next.session_snapshot ?? current.session_snapshot,
+  };
+  merged.snapshot_hash = hashSessionSnapshot(merged.session_snapshot);
+  if (merged.session_snapshot.session_revision !== merged.revision) {
+    merged.session_snapshot = {
+      ...merged.session_snapshot,
+      session_revision: merged.revision,
+    };
+    merged.snapshot_hash = hashSessionSnapshot(merged.session_snapshot);
+  }
+  return getSessionAuthorityStore().compareAndSet(sessionId, current.revision, merged);
 }
 
 void main().catch((error) => {

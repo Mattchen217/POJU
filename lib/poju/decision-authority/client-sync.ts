@@ -57,9 +57,14 @@ export async function syncDcLedgerBeforeWrite(input: {
   idempotency_key: string;
   source_op?: string;
   now?: string;
+  /**
+   * Unit A report-start seal: allow the first durable ledger append even when the
+   * Session is not yet blueprint/ledger enrolled (local-first Intake).
+   */
+  force?: boolean;
 }): Promise<void> {
   const { base, candidate } = input;
-  if (!isDcLedgerEnrolled(candidate) && !isDcLedgerEnrolled(base)) return;
+  if (!input.force && !isDcLedgerEnrolled(candidate) && !isDcLedgerEnrolled(base)) return;
   const dc = candidate.decision_context;
   if (!dc) return;
 

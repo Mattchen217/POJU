@@ -23,7 +23,6 @@ import {
   type FreezeProfileInput,
   type SealedFreeze,
 } from "@/lib/poju/decision-authority/client-freeze";
-import { isDcLedgerEnrolled } from "@/lib/poju/decision-authority/types";
 import {
   sessionHasDecisionContextSlice,
   sessionHasFrozenDecisionContext,
@@ -281,9 +280,10 @@ export async function ensureSessionFrozenForDelivery(
     return await applySufficiencyFreezeToSession(session, { now: opts?.now });
   }
 
-  if (isDcLedgerEnrolled(session)) {
-    return await ensureSessionFrozenViaAuthority(session, gate.draft!, opts);
-  }
+  // Unit A: sufficiency Freeze is local-only. Server ledger / Freeze / Profile
+  // authority is sealed at the explicit report-start boundary (see
+  // ensureReportAuthority). Do not durably write private DC before report start.
+  void opts?.profile;
 
   const applied = await applySufficiencyFreezeToSession(session, { now: opts?.now });
   if (!applied.ok || applied.skipped) return applied;
@@ -335,10 +335,12 @@ export async function ensureSessionFrozenForDelivery(
 }
 
 /**
- * M4 — DI2 Freeze is sealed by the server from its own ledger head. The device only
- * adopts the returned final snapshot + signed receipts through Session C1.
+ * M4 / Unit A report-start — DI2 Freeze is sealed by the server from its own ledger
+ * head. The device only adopts the returned final snapshot + signed receipts through
+ * Session C1. Sufficiency Freeze uses the local-only path above; call this at the
+ * explicit report-start boundary (or from recovery tests).
  */
-async function ensureSessionFrozenViaAuthority(
+export async function ensureSessionFrozenViaAuthority(
   session: POJUSessionState,
   draft: DecisionContext,
   opts?: { now?: string; profile?: FreezeProfileInput },

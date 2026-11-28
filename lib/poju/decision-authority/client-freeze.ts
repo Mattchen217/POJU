@@ -200,31 +200,49 @@ export async function sealFreezeWithAuthority(
   opts?: { now?: string; profile?: FreezeProfileInput },
 ): Promise<SealedFreeze> {
   const dc = session.decision_context;
-  if (!dc || dc.status !== "draft") {
+  if (!dc) {
     throw new DcLedgerSyncError("FREEZE_TARGET_NOT_DRAFT", "only a draft Decision Context can be frozen");
   }
+  // Unit A: report-start may seal a locally-final DC that was never written to the
+  // server ledger. Rebuild a draft projection with the same business content so the
+  // server can append + seal from a draft head (existing Freeze authority rules).
+  const alreadyServerSealed = (session.dc_freeze_receipts ?? []).some(
+    (r) => r.freeze_id === `${dc.context_id}@v${dc.version}`,
+  );
+  if (dc.status === "final" && alreadyServerSealed) {
+    throw new DcLedgerSyncError("FREEZE_ALREADY_SEALED", "this Freeze already has a server receipt");
+  }
+  if (dc.status !== "draft" && dc.status !== "final") {
+    throw new DcLedgerSyncError("FREEZE_TARGET_NOT_DRAFT", "only a draft Decision Context can be frozen");
+  }
+  const draftDc: DecisionContext =
+    dc.status === "final"
+      ? ({ ...dc, status: "draft" } as DecisionContext)
+      : dc;
   // Ledger catch-up: the head the server seals must be this exact draft.
-  const working: POJUSessionState = { ...session };
+  const working: POJUSessionState = { ...session, decision_context: draftDc };
   try {
     await syncDcLedgerBeforeWrite({
-      base: session,
+      base: { ...session, decision_context: draftDc },
       candidate: working,
-      idempotency_key: `dc_ledger_catchup:${session.session_id}:${dcSnapshotHash(dc).slice(0, 32)}`,
+      idempotency_key: `dc_ledger_catchup:${session.session_id}:${dcSnapshotHash(draftDc).slice(0, 32)}`,
       now: opts?.now,
+      // Unit A: first cloud DC write happens at report-start seal.
+      force: true,
     });
   } catch (e) {
     if (isDcLedgerSyncError(e) && e.code === DC_LEDGER_REMOTE_FROZEN && e.head) {
       return recoverFreezeWithAuthority({
         session,
-        dc,
-        anchor: draftAnchor(session.dc_ledger, dc),
+        dc: draftDc,
+        anchor: draftAnchor(session.dc_ledger, draftDc),
         remoteHead: e.head,
         now: opts?.now,
       });
     }
     throw e;
   }
-  const mirror = draftAnchor(working.dc_ledger, dc);
+  const mirror = draftAnchor(working.dc_ledger, draftDc);
   if (!mirror) {
     throw new DcLedgerSyncError("DC_LEDGER_NOT_CURRENT", "ledger head does not hold the Decision Context to freeze");
   }
@@ -236,7 +254,13 @@ export async function sealFreezeWithAuthority(
   );
   if (!remote.ok) throw new DcLedgerSyncError(remote.code, remote.error, remote.retryable, remote.head ?? null);
   if (remote.head && !sameCommit(mirror.head, remote.head)) {
-    return recoverFreezeWithAuthority({ session, dc, anchor: mirror, remoteHead: remote.head, now: opts?.now });
+    return recoverFreezeWithAuthority({
+      session,
+      dc: draftDc,
+      anchor: mirror,
+      remoteHead: remote.head,
+      now: opts?.now,
+    });
   }
 
   const profile = opts?.profile !== undefined ? opts.profile : await loadFreezeProfileInput(session);
@@ -247,9 +271,9 @@ export async function sealFreezeWithAuthority(
       expected: {
         commit_version: mirror.head.commit_version,
         entry_hash: mirror.head.entry_hash,
-        context_id: dc.context_id,
-        dc_version: dc.version,
-        content_hash: computeContentHash(dc),
+        context_id: draftDc.context_id,
+        dc_version: draftDc.version,
+        content_hash: computeContentHash(draftDc),
       },
       authority: freezeAuthorityEnvelope(session),
       profile,
@@ -258,7 +282,7 @@ export async function sealFreezeWithAuthority(
   if (!res.ok) throw new DcLedgerSyncError(res.code, res.error, res.retryable, res.head ?? null);
   assertServerFreezeFor({
     session_id: session.session_id,
-    dc,
+    dc: draftDc,
     anchor: mirror,
     frozen: res.frozen_dc,
     receipt: res.receipt,

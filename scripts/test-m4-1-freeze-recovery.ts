@@ -4,7 +4,7 @@
  *
  *   pnpm test:m4-1-freeze-recovery
  *
- * Device path: production `ensureSessionFrozenForDelivery` → `sealFreezeWithAuthority`
+ * Device path: report-start `ensureSessionFrozenViaAuthority` → `sealFreezeWithAuthority`
  * → in-process transport (JSON round-trip into the same `handleDecisionAuthority` the
  * API route calls) → server ledger / Freeze / profile on the process-memory KV.
  * C1 failure: real IndexedDB transaction abort on the Session store (fake-indexeddb,
@@ -57,6 +57,7 @@ async function main() {
   const sm = await import("../lib/poju/session-manager");
   const { mutatePOJUSession } = await import("../lib/poju/session-mutation");
   const wire = await import("../lib/poju/decision-context/production-freeze-wire");
+  const authTypes = await import("../lib/poju/decision-authority/types");
 
   type DecisionContext = import("../lib/poju/decision-context/types").DecisionContext;
   type ConfirmationEvent = import("../lib/poju/decision-context/confirmation-event").ConfirmationEvent;
@@ -194,22 +195,38 @@ async function main() {
     return (await sm.loadPOJUSession(sid))!;
   }
 
+  /** Genesis mirror the device would have held before the failed C1 adoption (Unit A: never in IDB). */
+  async function unadoptedFreezeDeviceView(s: POJUSessionState): Promise<POJUSessionState> {
+    const idb = (await sm.loadPOJUSession(s.session_id))!;
+    assert.equal(idb.dc_ledger ?? null, null, "IDB has no ledger mirror after failed adoption");
+    const genesis = (await ledger.loadLedgerEntry(s.session_id, 1))!;
+    assert.ok(genesis, "server genesis exists after report-start seal");
+    return {
+      ...idb,
+      dc_ledger: {
+        schema_version: authTypes.DC_LEDGER_SCHEMA_VERSION,
+        writer_token: ledger.writerTokenForGenesis(s.session_id, genesis.entry_hash),
+        head: authTypes.headRefFromEntry(genesis),
+        synced_at: NOW,
+      },
+    };
+  }
+
   /** Production Freeze wire with the C1 IndexedDB write aborted: server sealed, device kept its draft. */
   async function sealButLoseLocalCommit(
     s: POJUSessionState,
     profile: typeof PROFILE | null = PROFILE,
   ): Promise<POJUSessionState> {
     const { value, hits } = await withIdbWriteFault(SESSION_STORE, () =>
-      wire.ensureSessionFrozenForDelivery(s, { trigger: "sufficiency_end_confirm", profile }),
+      wire.ensureSessionFrozenViaAuthority(s, s.decision_context!, { profile }),
     );
     assert.equal(hits, 1, "the storage fault must hit the C1 write");
     assert.equal(value.ok, false, JSON.stringify(value).slice(0, 300));
     if (!value.ok) assert.equal(value.reason_code, wire.FREEZE_WIRE_PERSIST_FAIL_CODE);
     const head = await ledger.readLedgerHead(s.session_id);
     assert.equal(head?.change_type, "freeze", "server Freeze was sealed");
-    const local = (await sm.loadPOJUSession(s.session_id))!;
+    const local = await unadoptedFreezeDeviceView(s);
     assert.equal(local.decision_context?.status, "draft", "device kept its draft");
-    assert.equal(local.dc_ledger?.head.change_type, "genesis", "device kept its old mirror");
     assert.equal((local.dc_freeze_receipts ?? []).length, 0);
     return local;
   }
@@ -257,7 +274,7 @@ async function main() {
     const record = await freezeAuth.loadVerifiedFreezeRecord(s.session_id, `ctx_${s.session_id}@v1`);
 
     resetCalls();
-    const retry = await wire.ensureSessionFrozenForDelivery(local, { trigger: "sufficiency_end_confirm", profile: PROFILE });
+    const retry = await wire.ensureSessionFrozenViaAuthority(local, local.decision_context!, { profile: PROFILE });
     assert.ok(retry.ok && !retry.skipped, JSON.stringify(retry).slice(0, 300));
     assert.equal(calls.recoverFreeze, 1, "device used the recovery action");
     assert.equal(calls.freeze, 0, "no new seal requested");
@@ -280,20 +297,24 @@ async function main() {
     const s = await seededDraft("pay_m41_1b");
     const local = await sealButLoseLocalCommit(s);
     let err: unknown = null;
+    const lateDc = draft(`ctx_${s.session_id}`, { extra: "late answer" });
     try {
-      await mutatePOJUSession(s.session_id, {
-        operation_id: `dc_collect:${s.session_id}:late`,
-        kind: "session_patch",
-        apply: (b) => ({ ...b, decision_context: draft(`ctx_${s.session_id}`, { extra: "late answer" }) }),
-      } as Parameters<typeof mutatePOJUSession>[1]);
+      await clientSync.syncDcLedgerBeforeWrite({
+        base: local,
+        candidate: { ...local, decision_context: lateDc },
+        idempotency_key: `dc_late:${s.session_id}`,
+        force: true,
+      });
     } catch (e) {
       err = e;
     }
     assert.ok(clientSync.isDcLedgerSyncError(err), String(err));
     assert.equal((err as { code: string }).code, clientSync.DC_LEDGER_REMOTE_FROZEN);
     assert.equal((err as { head: { change_type: string } }).head.change_type, "freeze");
-    assert.equal(localState(await sm.loadPOJUSession(s.session_id)), localState(local), "local state untouched");
-    const retry = await wire.ensureSessionFrozenForDelivery(local, { trigger: "sufficiency_end_confirm", profile: PROFILE });
+    const idbAfter = await sm.loadPOJUSession(s.session_id);
+    assert.equal(idbAfter?.decision_context?.status, "draft", "IDB draft untouched");
+    assert.equal(idbAfter?.dc_ledger ?? null, null, "IDB mirror still absent");
+    const retry = await wire.ensureSessionFrozenViaAuthority(local, local.decision_context!, { profile: PROFILE });
     assert.ok(retry.ok && !retry.skipped, JSON.stringify(retry).slice(0, 300));
     assert.equal((await sm.loadPOJUSession(s.session_id))?.decision_context?.status, "final");
   });
@@ -353,7 +374,7 @@ async function main() {
     ];
     for (const [label, v] of variants) {
       resetCalls();
-      const r = await wire.ensureSessionFrozenForDelivery(v, { trigger: "sufficiency_end_confirm", profile: PROFILE });
+      const r = await wire.ensureSessionFrozenViaAuthority(v, v.decision_context!, { profile: PROFILE });
       assert.equal(r.ok, false, `${label} must be refused`);
       assert.equal(calls.freeze, 0, `${label}: no new seal`);
       assert.equal(localState(await sm.loadPOJUSession(sid)), before, `${label}: local Session unchanged`);
@@ -388,7 +409,7 @@ async function main() {
       "FREEZE_NOT_CURRENT",
     );
     const before = localState(await sm.loadPOJUSession(sid));
-    const r = await wire.ensureSessionFrozenForDelivery(local, { trigger: "sufficiency_end_confirm", profile: PROFILE });
+    const r = await wire.ensureSessionFrozenViaAuthority(local, local.decision_context!, { profile: PROFILE });
     assert.equal(r.ok, false);
     if (!r.ok) assert.match(r.reason, /FREEZE_NOT_CURRENT/);
     assert.equal(localState(await sm.loadPOJUSession(sid)), before, "V1 never written back over local state");
@@ -418,7 +439,7 @@ async function main() {
       await code(freezeAuth.recoverFreeze({ session_id: sid, writer_token: token, expected: anchorOf(local) })),
       "FREEZE_NOT_CURRENT",
     );
-    const r2 = await wire.ensureSessionFrozenForDelivery(local, { trigger: "sufficiency_end_confirm", profile: PROFILE });
+    const r2 = await wire.ensureSessionFrozenViaAuthority(local, local.decision_context!, { profile: PROFILE });
     assert.equal(r2.ok, false);
     if (!r2.ok) assert.match(r2.reason, /FREEZE_NOT_CURRENT/);
     assert.equal(localState(await sm.loadPOJUSession(sid)), before);
@@ -481,7 +502,7 @@ async function main() {
     await kv.del(entryKey);
     const local = (await sm.loadPOJUSession(sid))!;
     const before = localState(local);
-    const r = await wire.ensureSessionFrozenForDelivery(local, { trigger: "sufficiency_end_confirm", profile: PROFILE });
+    const r = await wire.ensureSessionFrozenViaAuthority(local, local.decision_context!, { profile: PROFILE });
     assert.equal(r.ok, false);
     assert.equal(localState(await sm.loadPOJUSession(sid)), before);
     await kv.set(entryKey, rawEntry);
@@ -492,7 +513,7 @@ async function main() {
   await check("6a Freeze sealed without birth → recovery returns profile_receipt null (nothing invented)", async () => {
     const s = await seededDraft("pay_m41_6a");
     const local = await sealButLoseLocalCommit(s, null);
-    const r = await wire.ensureSessionFrozenForDelivery(local, { trigger: "sufficiency_end_confirm", profile: null });
+    const r = await wire.ensureSessionFrozenViaAuthority(local, local.decision_context!, { profile: null });
     assert.ok(r.ok && !r.skipped, JSON.stringify(r).slice(0, 300));
     const after = (await sm.loadPOJUSession(s.session_id))!;
     assert.equal(after.decision_context?.status, "final");
@@ -512,7 +533,7 @@ async function main() {
       profile_id: "p_a",
       birth_info: BIRTH,
     });
-    const r = await wire.ensureSessionFrozenForDelivery(local, { trigger: "sufficiency_end_confirm", profile: null });
+    const r = await wire.ensureSessionFrozenViaAuthority(local, local.decision_context!, { profile: null });
     assert.ok(r.ok && !r.skipped);
     const after = (await sm.loadPOJUSession(sid))!;
     assert.deepEqual(after.dc_profile_receipts, [reg.receipt]);

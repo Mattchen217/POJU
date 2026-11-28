@@ -28,9 +28,12 @@ import {
   freezeReceiptFor,
   loadFreezeProfileInput,
   profileReceiptFor,
+  sealFreezeWithAuthority,
   withFreezeReceipts,
 } from "@/lib/poju/decision-authority/client-freeze";
+import { isDcLedgerSyncError } from "@/lib/poju/decision-authority/client-sync";
 import { getDecisionAuthorityTransport } from "@/lib/poju/decision-authority/client-transport";
+import { bindingFromDecisionContext } from "@/lib/poju/decision-context/read-bound";
 import type { FreezeReceipt, ProfileReceipt } from "@/lib/poju/decision-authority/types";
 import {
   di2ReportJobId,
@@ -587,9 +590,12 @@ type ReportAuthority = {
 };
 
 /**
- * The report starts only from server-signed receipts. A profile receipt missing for this
- * Freeze (no birth at seal time, or lost) is obtained by asking the server to recompute
- * the profile at the Freeze instant — the device never sends a computed chart.
+ * The report starts only from server-signed receipts.
+ *
+ * Unit A: sufficiency Freeze is local-only. The first durable server ledger /
+ * Freeze / Profile write happens here at explicit report start. A profile receipt
+ * missing for this Freeze is obtained by asking the server to recompute the
+ * profile at the Freeze instant — the device never sends a computed chart.
  */
 async function ensureReportAuthority(
   initial: POJUSessionState,
@@ -597,8 +603,43 @@ async function ensureReportAuthority(
   opts: DecisionReportRunOpts,
 ): Promise<ReportAuthority> {
   let session = initial;
-  const writer_token = session.dc_ledger?.writer_token ?? "";
-  const freeze_receipt = freezeReceiptFor(session, freeze.freezeId);
+  let writer_token = session.dc_ledger?.writer_token ?? "";
+  let freeze_receipt = freezeReceiptFor(session, freeze.freezeId);
+
+  if (!writer_token || !freeze_receipt) {
+    const profile = await loadFreezeProfileInput(session);
+    let sealed;
+    try {
+      sealed = await sealFreezeWithAuthority(session, { profile });
+      session = {
+        ...session,
+        decision_context: sealed.frozen_dc,
+        dc_ledger: sealed.mirror,
+        ...withFreezeReceipts(session, sealed.receipt, sealed.profile_receipt),
+      };
+      await (opts.persist ?? defaultPersist)(session);
+    } catch (e) {
+      if (isDcLedgerSyncError(e)) {
+        throw new DecisionReportClientError(e.code, e.message, { retryable: e.retryable });
+      }
+      throw new DecisionReportClientError(
+        "FREEZE_NOT_SERVER_SEALED",
+        e instanceof Error ? e.message : "Failed to seal Freeze at report start",
+        { retryable: true },
+      );
+    }
+    writer_token = sealed.mirror.writer_token ?? "";
+    freeze_receipt = sealed.receipt;
+    if (sealed.profile_receipt) {
+      return {
+        session,
+        writer_token,
+        freeze_receipt,
+        profile_receipt: sealed.profile_receipt,
+      };
+    }
+  }
+
   if (!writer_token || !freeze_receipt) {
     throw new DecisionReportClientError(
       "FREEZE_NOT_SERVER_SEALED",
@@ -606,7 +647,13 @@ async function ensureReportAuthority(
     );
   }
   if (freeze_receipt.context_hash !== freeze.content_hash) {
-    throw new DecisionReportClientError("FREEZE_RECEIPT_MISMATCH", "Freeze receipt does not match the session Freeze");
+    // After local→server seal, binding hash comes from the sealed final DC.
+    const sealedHash = session.decision_context
+      ? bindingFromDecisionContext(session.decision_context).context_hash
+      : null;
+    if (freeze_receipt.context_hash !== sealedHash && freeze_receipt.context_hash !== freeze.content_hash) {
+      throw new DecisionReportClientError("FREEZE_RECEIPT_MISMATCH", "Freeze receipt does not match the session Freeze");
+    }
   }
   let profile_receipt = profileReceiptFor(session, freeze.freezeId);
   if (!profile_receipt) {

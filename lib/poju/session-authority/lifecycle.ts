@@ -18,6 +18,12 @@ import {
   getSessionAuthorityStore,
 } from "@/lib/poju/session-authority/store";
 import {
+  SERVER_SESSION_CONTENT_POLICY,
+  isServerSessionContentShell,
+  redactSessionSnapshotForServerDurable,
+  resolveWorkingSessionForChat,
+} from "@/lib/poju/session-authority/privacy-boundary";
+import {
   SERVER_SESSION_RECORD_VERSION,
   type AuthoritativeSessionEnvelope,
   type ServerSessionAssociations,
@@ -114,6 +120,9 @@ export function toAuthoritativeEnvelope(record: ServerSessionRecord): Authoritat
     dc_ledger_commit_version: record.dc_ledger_commit_version,
     latest_freeze_receipt_id: record.latest_freeze_receipt_id,
     latest_freeze_id: record.latest_freeze_id,
+    content_local:
+      record.content_policy === SERVER_SESSION_CONTENT_POLICY ||
+      isServerSessionContentShell(record.session_snapshot),
   };
 }
 
@@ -271,6 +280,7 @@ export async function initializeAuthoritativeSession(input: {
     created_at: nowIso,
     expires_at: expiresAt,
   });
+  const durableShell = redactSessionSnapshotForServerDurable(snapshot);
   const record: ServerSessionRecord = {
     v: SERVER_SESSION_RECORD_VERSION,
     session_id: sessionId,
@@ -280,10 +290,11 @@ export async function initializeAuthoritativeSession(input: {
     updated_at: nowIso,
     expires_at: expiresAt,
     lifecycle_status: "active",
-    snapshot_hash: hashSessionSnapshot(snapshot),
-    session_snapshot: snapshot,
+    snapshot_hash: hashSessionSnapshot(durableShell),
+    session_snapshot: durableShell,
     last_committed_turn_id: null,
-    ...associationsFromSnapshot(snapshot),
+    content_policy: SERVER_SESSION_CONTENT_POLICY,
+    ...associationsFromSnapshot(durableShell),
   };
   let created: boolean;
   try {
@@ -304,7 +315,9 @@ export async function initializeAuthoritativeSession(input: {
       { session_id: sessionId, recoverable: false },
     );
   }
-  return record;
+  // Transient client seed: return the full initial snapshot once so IndexedDB
+  // can store the private question. Durable KV keeps only the redacted shell.
+  return { ...record, session_snapshot: snapshot };
 }
 
 export async function readAuthoritativeSession(
@@ -472,19 +485,24 @@ export function extractIncomingUserTurn(input: {
 }
 
 /**
- * Bind the incoming user turn onto the server snapshot.
- * Client Pass unlock is local-first (`unlock_status: unlocked`); server init is
- * always `preview`. Without carrying the client's unlock forward, the first
- * successful chat commit would downgrade the session back to preview and the
- * next turn would re-open the Pass gate.
+ * Bind the incoming user turn onto the working Session.
+ * Unit A: private content comes from the original browser; the durable server
+ * record is a privacy shell. Client Pass unlock is local-first.
  */
 export function bindAuthoritativeChatSession(
   record: ServerSessionRecord,
   turn: IncomingUserTurn,
   clientSession?: POJUSessionState | null,
 ): POJUSessionState {
-  const snapshot = applyServerExpiryToSnapshot(record.session_snapshot, record);
+  const snapshot = resolveWorkingSessionForChat({
+    serverSnapshot: record.session_snapshot,
+    clientSession,
+    record,
+  });
   const messages = Array.isArray(snapshot.messages) ? snapshot.messages : [];
+  const alreadyBound = messages.some(
+    (message) => typeof message.client_id === "string" && message.client_id === turn.client_turn_id,
+  );
   const clientUnlocked = clientSession?.unlock_status === "unlocked";
   const serverUnlocked = snapshot.unlock_status === "unlocked";
   return {
@@ -496,7 +514,7 @@ export function bindAuthoritativeChatSession(
             clientSession?.unlock_via ?? snapshot.unlock_via ?? undefined,
         }
       : {}),
-    messages: [...messages, turn.message],
+    messages: alreadyBound ? messages : [...messages, turn.message],
   };
 }
 
@@ -580,6 +598,14 @@ export async function commitAuthoritativeSessionUpdate(input: {
   snapshot.session_id = current.session_id;
   snapshot.session_revision = current.revision + 1;
   snapshot.expires_at = current.expires_at;
+  // Unit A: durable KV stores a privacy shell only. Full turn content is returned
+  // transiently to the original browser and persisted in IndexedDB there.
+  // Lifecycle must be decided from the full in-memory snapshot before redaction —
+  // the shell no longer carries decision_context freeze markers.
+  const durableShell = redactSessionSnapshotForServerDurable(snapshot);
+  let nextLifecycle: SessionLifecycleStatus = "active";
+  if (snapshotAppearsTerminated(snapshot)) nextLifecycle = "terminated";
+  else if (snapshotAppearsFrozen(snapshot)) nextLifecycle = "frozen";
   const next: ServerSessionRecord = {
     ...current,
     v: current.v,
@@ -588,10 +614,11 @@ export async function commitAuthoritativeSessionUpdate(input: {
     revision: current.revision + 1,
     updated_at: now.toISOString(),
     expires_at: current.expires_at,
-    lifecycle_status: "active",
-    snapshot_hash: hashSessionSnapshot(snapshot),
-    session_snapshot: snapshot,
+    lifecycle_status: nextLifecycle,
+    snapshot_hash: hashSessionSnapshot(durableShell),
+    session_snapshot: durableShell,
     last_committed_turn_id: input.last_committed_turn_id,
+    content_policy: SERVER_SESSION_CONTENT_POLICY,
     ...associationsFromSnapshot(snapshot),
   };
   let result;
