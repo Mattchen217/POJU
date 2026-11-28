@@ -70,6 +70,11 @@ import {
 import { startDi2Batch2Production } from "./decision-report-batch2-start";
 import { continueDi2Batch2Production } from "./decision-report-batch2-continue";
 import { evaluateExistingDi2Batch2Binding } from "./decision-report-batch2-identity";
+import {
+  assertBrowserTaskCredential,
+  bindBrowserTaskCredential,
+  type TaskCredentialGateFailure,
+} from "./browser-task-credential";
 
 export type { DecisionReportChargeResult } from "./decision-report-charge";
 
@@ -88,6 +93,28 @@ function str(x: unknown): string {
 
 function json(status: number, body: Record<string, unknown>): DecisionReportApiReply {
   return { kind: "json", status, body };
+}
+
+function credentialFromBody(body: Record<string, unknown>): unknown {
+  return body.browser_task_credential ?? body.task_credential ?? null;
+}
+
+function credentialGateReply(f: TaskCredentialGateFailure): DecisionReportApiReply {
+  return json(f.status, { ok: false, code: f.code, error: f.error, retryable: false });
+}
+
+async function requireTaskCredential(
+  body: Record<string, unknown>,
+  session_id: string,
+  job_id: string,
+): Promise<DecisionReportApiReply | null> {
+  const gate = await assertBrowserTaskCredential({
+    job_id,
+    session_id,
+    credential: credentialFromBody(body),
+  });
+  if (!gate.ok) return credentialGateReply(gate);
+  return null;
 }
 
 function failureReply(f: { status: number; code: string; error: string; retryable: boolean }): DecisionReportApiReply {
@@ -405,6 +432,16 @@ async function startReusedJob(
  * that cannot take the lock never creates, charges, revives or dispatches.
  */
 async function startAction(body: Record<string, unknown>, session_id: string, deps: DecisionReportApiDeps): Promise<DecisionReportApiReply> {
+  // Unit B — start always requires the originating-browser credential (bound after job id exists).
+  if (!str(String(credentialFromBody(body) ?? ""))) {
+    return json(401, {
+      ok: false,
+      code: "TASK_CREDENTIAL_REQUIRED",
+      error: "browser_task_credential required",
+      retryable: false,
+    });
+  }
+
   const plan = await planDecisionReportStart({
     session_id,
     locale: str(body.locale) || "zh",
@@ -424,9 +461,9 @@ async function startAction(body: Record<string, unknown>, session_id: string, de
     case "busy":
       return busyReply();
     case "observe":
-      return observeStart(plan, acq.job);
+      return observeStart(plan, acq.job, body);
     case "follow":
-      return followStart(acq.job, plan, body.birth_info ?? undefined, deps);
+      return followStart(acq.job, plan, body, deps);
     case "locked":
       break;
   }
@@ -444,13 +481,26 @@ async function startAction(body: Record<string, unknown>, session_id: string, de
  * Another start owns the session lock. Read-only: report its job when it is this Freeze's
  * (the driver polls it) or an unfinished refusal abort; never charge, create or advance.
  */
-async function observeStart(plan: DecisionReportStartPlan, job: PojuXhighJob | null): Promise<DecisionReportApiReply> {
+async function observeStart(
+  plan: DecisionReportStartPlan,
+  job: PojuXhighJob | null,
+  body: Record<string, unknown>,
+): Promise<DecisionReportApiReply> {
   const pre = await resumeDecisionReportRefusalAbort(plan.session_id);
   if (pre.kind === "unreadable") return chargeUnconfirmed(null, "authorization_unreadable");
   if (abortOwnsSession(pre)) return abortResumeReply(pre);
   const ji = job && isDecisionReportJobInput(job.input) ? job.input : null;
   const live = job && (job.status === "pending" || job.status === "running");
-  if (job && live && ji && !plan.regenerate && sameIdentity(ji, plan.identity)) return awaitingCharge(job, true);
+  if (job && live && ji && !plan.regenerate && sameIdentity(ji, plan.identity)) {
+    // Busy peer start owns the lock — still require originating-browser credential.
+    const bound = await bindBrowserTaskCredential({
+      job_id: job.job_id,
+      session_id: plan.session_id,
+      credential: String(credentialFromBody(body) ?? ""),
+    });
+    if (!bound.ok) return credentialGateReply(bound);
+    return awaitingCharge(job, true);
+  }
   return busyReply();
 }
 
@@ -458,9 +508,16 @@ async function observeStart(plan: DecisionReportStartPlan, job: PojuXhighJob | n
 async function followStart(
   job: PojuXhighJob,
   plan: DecisionReportStartPlan,
-  birth_info: unknown,
+  body: Record<string, unknown>,
   deps: DecisionReportApiDeps,
 ): Promise<DecisionReportApiReply> {
+  const bound = await bindBrowserTaskCredential({
+    job_id: job.job_id,
+    session_id: plan.session_id,
+    credential: String(credentialFromBody(body) ?? ""),
+  });
+  if (!bound.ok) return credentialGateReply(bound);
+
   let rec: ChargeAuthorization | null;
   try {
     rec = await loadChargeAuthorization(plan.session_id);
@@ -482,7 +539,7 @@ async function followStart(
       }
       const taken = await takeOverReportLock(cur.raw, owner, "start", job.job_id);
       if (!taken) return busyReply();
-      const reply = await startReusedJob(job, plan, birth_info, deps, owner);
+      const reply = await startReusedJob(job, plan, body.birth_info ?? undefined, deps, owner);
       const handed = await updateOwnedReportLock(owner, {
         holder: "job",
         job_id: job.job_id,
@@ -537,6 +594,18 @@ async function lockedStart(
     return failureReply(prepared);
   }
   const job = prepared.job;
+
+  // Unit B — bind originating-browser task credential before any further access.
+  const bound = await bindBrowserTaskCredential({
+    job_id: job.job_id,
+    session_id,
+    credential: String(credentialFromBody(body) ?? ""),
+  });
+  if (!bound.ok) {
+    await release();
+    return credentialGateReply(bound);
+  }
+
   const live = job.status === "pending" || job.status === "running";
   if (prepared.reused && !live) {
     await release();
@@ -546,6 +615,7 @@ async function lockedStart(
       status: job.status,
       reused: true,
       execution_generation: job.execution_generation ?? null,
+      browser_task_credential_bound: true,
     });
   }
 
@@ -743,9 +813,41 @@ export async function handleDecisionReportAction(
   if (action === "status") {
     const job_id = str(body.job_id);
     if (!job_id) return json(400, { ok: false, error: "job_id required" });
+    const denied = await requireTaskCredential(body, session_id, job_id);
+    if (denied) return denied;
     // A refusal abort abandoned mid-way is finished here too (same job; no charge, no run).
     await resumeDecisionReportRefusalAbort(session_id).catch(() => undefined);
     return json(200, (await buildDecisionReportStatus({ job_id, session_id })) as unknown as Record<string, unknown>);
+  }
+
+  if (action === "claim") {
+    const job_id = str(body.job_id);
+    if (!job_id) return json(400, { ok: false, error: "job_id required" });
+    const denied = await requireTaskCredential(body, session_id, job_id);
+    if (denied) return denied;
+    const done = await loadCompletedReport(session_id, job_id).catch(() => null);
+    if (!done) {
+      return json(404, {
+        ok: false,
+        code: "REPORT_NOT_READY",
+        error: "Completed report is not available for claim",
+        retryable: true,
+      });
+    }
+    const delivery = await verifyDecisionReportDelivery(done);
+    if (!delivery.ok) return failureReply(deliveryDeniedFailure(delivery));
+    return json(200, {
+      ok: true,
+      action: "claim",
+      job_id,
+      session_id,
+      report_job_id: done.report_job_id,
+      execution_generation: done.execution_generation,
+      committed_at: done.committed_at,
+      result: done.result,
+      pages: done.pages,
+      analysis: done.analysis,
+    });
   }
 
   if (!(deps.modelConfigured ?? isOpenRouterConfigured)()) {
@@ -755,6 +857,8 @@ export async function handleDecisionReportAction(
   if (action === "continue") {
     const job_id = str(body.job_id);
     if (!job_id) return json(400, { ok: false, error: "job_id required" });
+    const denied = await requireTaskCredential(body, session_id, job_id);
+    if (denied) return denied;
     return continueAction(job_id, session_id, deps);
   }
 

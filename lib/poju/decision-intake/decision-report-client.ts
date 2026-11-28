@@ -711,6 +711,14 @@ async function startReportJob(
   // Unit C: birth_info enables server-trusted ZiweiFactPack rebuild (hash-checked).
   // Never send a client-built ZiweiFactPack object.
   const profileInput = await loadFreezeProfileInput(authority.session).catch(() => null);
+  const {
+    persistCredentialAfterStart,
+    resolveCredentialForReportStart,
+  } = await import("./browser-task-credential-client");
+  const browser_task_credential = await resolveCredentialForReportStart({
+    session_id: authority.session.session_id,
+    pending_job_id: authority.session.pending_decision_report_job_id,
+  });
   const { status, json } = await post<StartResponse>(
     {
       action: "start",
@@ -720,6 +728,7 @@ async function startReportJob(
       writer_token: authority.writer_token,
       freeze_receipt: authority.freeze_receipt,
       profile_receipt: authority.profile_receipt,
+      browser_task_credential,
       ...(profileInput?.birth_info != null
         ? { birth_info: profileInput.birth_info }
         : {}),
@@ -731,6 +740,19 @@ async function startReportJob(
       retryable: json.retryable === true,
       status,
     });
+  }
+  try {
+    await persistCredentialAfterStart({
+      session_id: authority.session.session_id,
+      job_id: json.job_id,
+      credential: browser_task_credential,
+    });
+  } catch (e) {
+    throw new DecisionReportClientError(
+      "LOCAL_CREDENTIAL_SAVE_FAILED",
+      `Report started but task credential could not be saved on this device: ${e instanceof Error ? e.message : String(e)}`,
+      { retryable: true },
+    );
   }
   const session: POJUSessionState = { ...authority.session, pending_decision_report_job_id: json.job_id };
   try {
@@ -751,7 +773,19 @@ async function postContinue(
   job_id: string,
   signal?: AbortSignal,
 ): Promise<{ status: number; json: StartResponse }> {
-  return post<StartResponse>({ action: "continue", session_id, job_id }, signal);
+  const { loadReportTaskCredential } = await import("./browser-task-credential-client");
+  const browser_task_credential = await loadReportTaskCredential(session_id, job_id);
+  if (!browser_task_credential) {
+    throw new DecisionReportClientError(
+      "TASK_CREDENTIAL_MISSING",
+      "browser task credential is missing on this device",
+      { retryable: false },
+    );
+  }
+  return post<StartResponse>(
+    { action: "continue", session_id, job_id, browser_task_credential },
+    signal,
+  );
 }
 
 // ─── poll + recovery ───────────────────────────────────────────────────────
@@ -810,7 +844,23 @@ async function pollUntilDone(
 
       let payload: DecisionReportStatusPayload;
       try {
-        payload = (await post<DecisionReportStatusPayload>({ action: "status", session_id: session.session_id, job_id }, opts.signal)).json;
+        {
+          const { loadReportTaskCredential } = await import("./browser-task-credential-client");
+          const browser_task_credential = await loadReportTaskCredential(session.session_id, job_id);
+          if (!browser_task_credential) {
+            throw new DecisionReportClientError(
+              "TASK_CREDENTIAL_MISSING",
+              "browser task credential is missing on this device",
+              { retryable: false },
+            );
+          }
+          payload = (
+            await post<DecisionReportStatusPayload>(
+              { action: "status", session_id: session.session_id, job_id, browser_task_credential },
+              opts.signal,
+            )
+          ).json;
+        }
       } catch {
         if (opts.signal?.aborted) return session;
         await sleep(pollMs, opts.signal);

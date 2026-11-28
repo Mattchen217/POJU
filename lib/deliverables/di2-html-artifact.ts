@@ -23,11 +23,14 @@ import {
   normalizeDi2HtmlPackTitle,
   type Di2HtmlPackIdentity,
 } from "@/lib/deliverables/di2-html-authority";
+import { assertBrowserTaskCredential } from "@/lib/poju/decision-intake/browser-task-credential";
 
 export type Di2HtmlArtifactRequest = {
   session_id: string;
   job_id: string;
   writer_token: string;
+  /** Unit B — originating-browser task credential (required for HTML read). */
+  browser_task_credential: string;
   locale: string;
   /** Optional display title; download + email must pass the same value for byte identity. */
   title?: string;
@@ -111,11 +114,23 @@ export async function buildAuthorizedDi2HtmlArtifact(
   const session_id = req.session_id?.trim() ?? "";
   const job_id = req.job_id?.trim() ?? "";
   const writer_token = req.writer_token?.trim() ?? "";
+  const browser_task_credential = req.browser_task_credential?.trim() ?? "";
   const locale = (req.locale || "en").trim() || "en";
 
   if (!session_id || !job_id) {
     return { ok: false, status: 400, code: "invalid_request", error: "session_id and job_id required" };
   }
+
+  // Unit B — task access is gated by browser credential, not account login alone.
+  const gate = await assertBrowserTaskCredential({
+    job_id,
+    session_id,
+    credential: browser_task_credential,
+  });
+  if (!gate.ok) {
+    return { ok: false, status: gate.status, code: gate.code, error: gate.error };
+  }
+
   if (!writer_token) {
     return { ok: false, status: 401, code: "writer_required", error: "writer_token required" };
   }

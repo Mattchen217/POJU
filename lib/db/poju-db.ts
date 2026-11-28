@@ -283,6 +283,14 @@ export class PojuDb extends Dexie {
   poju_tool_suggestions!: EntityTable<POJUToolSuggestionRecord, "suggestion_id">;
   /** v2 base-analysis phased intermediates (encrypted JSON blob). */
   base_analysis_v2_checkpoints!: EntityTable<BaseAnalysisV2CheckpointRecord, "profile_id">;
+  /**
+   * Unit B — originating-browser raw report task credentials.
+   * Server stores only HMAC verifier material; never mirrored to cloud Session.
+   */
+  report_task_credentials!: EntityTable<
+    import("@/lib/poju/decision-intake/browser-task-credential-client").ReportTaskCredentialRow,
+    "id"
+  >;
 
   constructor() {
     super("pojulife_v4");
@@ -430,6 +438,29 @@ export class PojuDb extends Dexie {
       poju_tool_suggestions:
         "suggestion_id, session_id, cycle_id, owner_key, tool, user_action, suggested_at, tool_completed_at",
       base_analysis_v2_checkpoints: "profile_id, updated_at",
+    });
+    // v12 — Unit B browser-exclusive report task credentials (raw secret, local only).
+    this.version(12).stores({
+      userProfiles: "id, updatedAt",
+      glyphHistory: "id, updatedAt",
+      syncroCache: "id, updatedAt",
+      pojuSessions: "id, updatedAt",
+      usage: "id, dayKey, product, updatedAt",
+      pojuSessionRecords:
+        "session_id, owner_key, device_id, status, expires_at, last_interaction_at, active_cycle_id, [owner_key+status]",
+      pojuSessionArchive: "session_id, owner_key, device_id, archived_at",
+      stored_profiles:
+        "profile_id, owner_key, device_id, birth_info_hash, last_used_at, has_base_analysis",
+      archive: "archive_id, owner_key, device_id, type, session_id, created_at, product",
+      device_usage: "id, owner_key, device_id, product, last_used_at",
+      syncro_sessions: "session_id, owner_key, device_id, profile_id, created_at, expires_at",
+      match_sessions: "match_id, owner_key, device_id, a_profile_id, b_profile_id, created_at",
+      poju_cycles:
+        "cycle_id, session_id, owner_key, device_id, cycle_index, is_active, is_delivered, started_at, delivery_completed_at",
+      poju_tool_suggestions:
+        "suggestion_id, session_id, cycle_id, owner_key, tool, user_action, suggested_at, tool_completed_at",
+      base_analysis_v2_checkpoints: "profile_id, updated_at",
+      report_task_credentials: "id, session_id, job_id, updated_at",
     });
   }
 }

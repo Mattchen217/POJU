@@ -30,6 +30,16 @@ import {
   buildAuthorizedDi2HtmlArtifact,
 } from "../lib/deliverables/di2-html-artifact";
 import {
+  bindBrowserTaskCredential,
+  generateBrowserTaskCredential,
+} from "../lib/poju/decision-intake/browser-task-credential";
+
+const BTC_HTML = generateBrowserTaskCredential();
+async function ensureHtmlBtc(session_id = "sess_html_1", job_id = "job_html_1"): Promise<string> {
+  await bindBrowserTaskCredential({ session_id, job_id, credential: BTC_HTML });
+  return BTC_HTML;
+}
+import {
   __setBaselineDeliveryEmailDepsForTests,
   isBaselineDeliverableHtml,
   sendAuthorizedBaselineDeliveryEmail,
@@ -236,6 +246,7 @@ function artifactDeps(record: CompletedReportRecord | null, overrides: Record<st
 
 async function main() {
   console.log("Unit F-R2-R4 — DI2 HTML + Baseline Auth Closure\n");
+  await ensureHtmlBtc();
 
   await check("Page 03 present → HTML includes pane 03", async () => {
     const { pages, fullText } = fullSet({ page03: true, page07: "not_applicable" });
@@ -372,6 +383,7 @@ async function main() {
       session_id: "sess_html_1",
       job_id: "job_html_1",
       writer_token: "wt",
+      browser_task_credential: BTC_HTML,
       locale: "zh",
       to: "a@example.com",
     });
@@ -390,10 +402,12 @@ async function main() {
       verifyDelivery: async () => ({ ok: true, record: {} as never }),
       sendEmail: async () => ({ ok: true, mocked: true }),
     });
+    await ensureHtmlBtc("sess_other", "job_html_1");
     const res = await sendAuthorizedDi2DeliveryEmail({
       session_id: "sess_other",
       job_id: "job_html_1",
       writer_token: "bad",
+      browser_task_credential: BTC_HTML,
       locale: "zh",
       to: "a@example.com",
     });
@@ -414,6 +428,7 @@ async function main() {
       session_id: "sess_html_1",
       job_id: "job_missing",
       writer_token: "wt",
+      browser_task_credential: BTC_HTML,
       locale: "zh",
       to: "a@example.com",
     });
@@ -436,6 +451,7 @@ async function main() {
       session_id: "sess_html_1",
       job_id: "job_html_1",
       writer_token: "wt",
+      browser_task_credential: BTC_HTML,
       locale: "zh",
       to: "a@example.com",
       expected_execution_generation: 99,
@@ -459,6 +475,7 @@ async function main() {
       session_id: "sess_html_1",
       job_id: "job_html_1",
       writer_token: "wt",
+      browser_task_credential: BTC_HTML,
       locale: "zh",
       to: "a@example.com",
       expected_freeze_id: "wrong_freeze",
@@ -470,6 +487,7 @@ async function main() {
       session_id: "sess_html_1",
       job_id: "job_html_1",
       writer_token: "wt",
+      browser_task_credential: BTC_HTML,
       locale: "zh",
       to: "a@example.com",
       expected_context_hash: "wrong_hash",
@@ -493,6 +511,7 @@ async function main() {
       session_id: "sess_html_1",
       job_id: "job_html_1",
       writer_token: "wt",
+      browser_task_credential: BTC_HTML,
       locale: "zh",
       to: "other@example.com",
     });
@@ -525,6 +544,7 @@ async function main() {
       session_id: "sess_html_1",
       job_id: "job_html_1",
       writer_token: "wt",
+      browser_task_credential: BTC_HTML,
       locale: "zh",
       to: "a@example.com",
       title: "测试报告",
@@ -550,6 +570,7 @@ async function main() {
       session_id: "sess_html_1",
       job_id: "job_html_1",
       writer_token: "wt",
+      browser_task_credential: BTC_HTML,
       locale: "zh",
       title: "权威报告",
     });
@@ -578,6 +599,7 @@ async function main() {
       session_id: "sess_html_1",
       job_id: "job_html_1",
       writer_token: "wt",
+      browser_task_credential: BTC_HTML,
       locale: "zh",
       title: "同一份",
     });
@@ -597,10 +619,12 @@ async function main() {
         },
       }),
     );
+    await ensureHtmlBtc("sess_other", "job_html_1");
     const dl = await buildAuthorizedDi2HtmlArtifact({
       session_id: "sess_other",
       job_id: "job_html_1",
       writer_token: "bad",
+      browser_task_credential: BTC_HTML,
       locale: "zh",
     });
     assert.equal(dl.ok, false);
@@ -616,6 +640,7 @@ async function main() {
       session_id: "sess_html_1",
       job_id: "job_html_1",
       writer_token: "wt",
+      browser_task_credential: BTC_HTML,
       locale: "zh",
       expected_execution_generation: 99,
     });
@@ -632,6 +657,7 @@ async function main() {
       session_id: "sess_html_1",
       job_id: "job_html_1",
       writer_token: "wt",
+      browser_task_credential: BTC_HTML,
       locale: "zh",
       expected_freeze_id: "wrong",
     });
@@ -641,6 +667,7 @@ async function main() {
       session_id: "sess_html_1",
       job_id: "job_html_1",
       writer_token: "wt",
+      browser_task_credential: BTC_HTML,
       locale: "zh",
       expected_context_hash: "wrong",
     });
@@ -655,6 +682,7 @@ async function main() {
       session_id: "sess_html_1",
       job_id: "job_missing",
       writer_token: "wt",
+      browser_task_credential: BTC_HTML,
       locale: "zh",
     });
     assert.equal(missing.ok, false);
@@ -675,6 +703,7 @@ async function main() {
         session_id: "sess_html_1",
         job_id: "job_html_1",
         writer_token: "wt",
+        browser_task_credential: BTC_HTML,
         locale,
         title,
         expected_execution_generation: 1,
@@ -700,6 +729,7 @@ async function main() {
         session_id: "sess_html_1",
         job_id: "job_html_1",
         writer_token: "wt",
+        browser_task_credential: BTC_HTML,
         locale,
         to: "a@example.com",
         title,
@@ -737,6 +767,7 @@ async function main() {
       session_id: "sess_html_1",
       job_id: "job_html_1",
       writer_token: "wt",
+      browser_task_credential: BTC_HTML,
       locale: "zh",
       title: "无音频",
     });
@@ -754,6 +785,7 @@ async function main() {
       session_id: "sess_html_1",
       job_id: "job_html_1",
       writer_token: "wt",
+      browser_task_credential: BTC_HTML,
       locale: "zh",
       title: " 标题A ",
     });
@@ -761,6 +793,7 @@ async function main() {
       session_id: "sess_html_1",
       job_id: "job_html_1",
       writer_token: "wt",
+      browser_task_credential: BTC_HTML,
       locale: "zh",
       title: "标题B",
     });

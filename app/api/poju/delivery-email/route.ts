@@ -18,6 +18,7 @@ const BodySchema = z.object({
   session_id: z.string().min(1).max(200).optional(),
   job_id: z.string().min(1).max(200).optional(),
   writer_token: z.string().min(1).max(500).optional(),
+  browser_task_credential: z.string().min(40).max(128).optional(),
   expected_execution_generation: z.number().int().optional(),
   expected_report_job_id: z.string().max(200).optional(),
   expected_freeze_id: z.string().max(200).optional(),
@@ -71,9 +72,13 @@ export async function POST(req: Request) {
     });
   }
 
-  if (!body.session_id || !body.job_id || !body.writer_token) {
+  if (!body.session_id || !body.job_id || !body.writer_token || !body.browser_task_credential) {
     return NextResponse.json(
-      { ok: false, error: "session_id, job_id, writer_token required", code: "invalid_request" },
+      {
+        ok: false,
+        error: "session_id, job_id, writer_token, browser_task_credential required",
+        code: "invalid_request",
+      },
       { status: 400 },
     );
   }
@@ -82,6 +87,7 @@ export async function POST(req: Request) {
     session_id: body.session_id,
     job_id: body.job_id,
     writer_token: body.writer_token,
+    browser_task_credential: body.browser_task_credential,
     locale: body.locale || "en",
     to: body.to,
     title: body.title,
