@@ -20,6 +20,7 @@ import {
 import {
   SERVER_SESSION_CONTENT_POLICY,
   isServerSessionContentShell,
+  needsLegacySessionPrivacyMigration,
   redactSessionSnapshotForServerDurable,
   resolveWorkingSessionForChat,
 } from "@/lib/poju/session-authority/privacy-boundary";
@@ -320,6 +321,124 @@ export async function initializeAuthoritativeSession(input: {
   return { ...record, session_snapshot: snapshot };
 }
 
+const LEGACY_PRIVACY_MIGRATION_RETRIES = 3;
+
+function recordHasStoredAssociations(record: ServerSessionRecord): boolean {
+  return (
+    record.dc_ledger_head_hash != null ||
+    record.dc_ledger_commit_version != null ||
+    record.latest_freeze_receipt_id != null ||
+    record.latest_freeze_id != null
+  );
+}
+
+function preservedAssociations(
+  record: ServerSessionRecord,
+  legacy: POJUSessionState,
+): ServerSessionAssociations {
+  if (recordHasStoredAssociations(record)) {
+    return {
+      dc_ledger_head_hash: record.dc_ledger_head_hash,
+      dc_ledger_commit_version: record.dc_ledger_commit_version,
+      latest_freeze_receipt_id: record.latest_freeze_receipt_id,
+      latest_freeze_id: record.latest_freeze_id,
+    };
+  }
+  return associationsFromSnapshot(legacy);
+}
+
+function buildPrivacyMigratedRecord(record: ServerSessionRecord): ServerSessionRecord {
+  const legacy = record.session_snapshot;
+  const shell = redactSessionSnapshotForServerDurable(legacy);
+  shell.session_revision = record.revision;
+  let nextLifecycle = record.lifecycle_status;
+  if (snapshotAppearsTerminated(legacy)) {
+    nextLifecycle = mergeLifecycleStatus(nextLifecycle, "terminated");
+  } else if (snapshotAppearsFrozen(legacy)) {
+    nextLifecycle = mergeLifecycleStatus(nextLifecycle, "frozen");
+  }
+  const nowIso = new Date().toISOString();
+  return {
+    ...record,
+    updated_at: nowIso,
+    lifecycle_status: nextLifecycle,
+    snapshot_hash: hashSessionSnapshot(shell),
+    session_snapshot: shell,
+    content_policy: SERVER_SESSION_CONTENT_POLICY,
+    ...preservedAssociations(record, legacy),
+  };
+}
+
+/**
+ * In-place redact of legacy full server records (same revision CAS, non-intake).
+ * Never returns private conversation bodies to callers — fail closed on conflict.
+ */
+async function ensureLegacySessionPrivacyMigrated(record: ServerSessionRecord): Promise<ServerSessionRecord> {
+  const sessionId = record.session_id;
+  let current = record;
+  for (let attempt = 0; attempt < LEGACY_PRIVACY_MIGRATION_RETRIES; attempt += 1) {
+    if (!needsLegacySessionPrivacyMigration(current)) {
+      return current;
+    }
+    const next = buildPrivacyMigratedRecord(current);
+    let result;
+    try {
+      result = await getSessionAuthorityStore().compareAndSetDetailed(
+        sessionId,
+        current.revision,
+        next,
+        { intakeCommit: false, nowIso: new Date().toISOString() },
+      );
+    } catch (error) {
+      if (error instanceof SessionPersistenceUnavailableError) {
+        throw new SessionAuthorityError("server_persistence_unavailable", error.message, {
+          session_id: sessionId,
+        });
+      }
+      throw new SessionAuthorityError(
+        "server_persistence_unavailable",
+        error instanceof Error ? error.message : "legacy session privacy migration failed",
+        { session_id: sessionId },
+      );
+    }
+    if (result.ok) {
+      return next;
+    }
+    if (result.reason === "cas_conflict" || result.reason === "session_snapshot_changed") {
+      try {
+        const winner = await getSessionAuthorityStore().get(sessionId);
+        if (!winner) {
+          throw new SessionAuthorityError("session_not_found", `server session not found: ${sessionId}`, {
+            session_id: sessionId,
+            recoverable: false,
+          });
+        }
+        current = winner;
+        continue;
+      } catch (error) {
+        if (error instanceof SessionAuthorityError) throw error;
+        if (error instanceof SessionRecordIntegrityError) {
+          throw new SessionAuthorityError("invalid_session_record", error.message, {
+            session_id: sessionId,
+            recoverable: false,
+          });
+        }
+        throw error;
+      }
+    }
+    throw new SessionAuthorityError(
+      "session_cas_conflict",
+      `legacy session privacy migration refused: ${result.reason}`,
+      { session_id: sessionId, current_revision: current.revision, recoverable: true },
+    );
+  }
+  throw new SessionAuthorityError(
+    "session_cas_conflict",
+    "legacy session privacy migration exhausted retries",
+    { session_id: sessionId, current_revision: current.revision, recoverable: true },
+  );
+}
+
 export async function readAuthoritativeSession(
   sessionId: string,
   now = Date.now(),
@@ -347,6 +466,7 @@ export async function readAuthoritativeSession(
     );
   }
   if (!record) return null;
+  record = await ensureLegacySessionPrivacyMigrated(record);
   const effective = await deriveEffectiveLifecycle(record, now);
   if (effective === record.lifecycle_status) return record;
   return { ...record, lifecycle_status: effective };
