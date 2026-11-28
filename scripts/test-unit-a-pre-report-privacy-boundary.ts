@@ -615,6 +615,299 @@ async function main() {
     assert.equal((mirror.session!.context_collected as Record<string, string>).salary_note, "private");
   });
 
+  await asyncTest("11. Omitted POJUSessionState private fields survive decideAuthoritativeMirror", async () => {
+    const base = emptySessionDefaults("r2_field_audit");
+    assert.ok(!sessionHasLocalPrivateContent(base), "empty defaults must not look private");
+
+    type Case = {
+      name: string;
+      patch: Partial<POJUSessionState>;
+      assertKept: (session: POJUSessionState) => void;
+    };
+
+    const cases: Case[] = [
+      {
+        name: "personal_analysis_profile",
+        patch: {
+          personal_analysis_profile: {
+            schema_version: 1,
+            profile_summary: "user chart summary",
+          } as POJUSessionState["personal_analysis_profile"],
+        },
+        assertKept: (s) => {
+          assert.equal(
+            (s.personal_analysis_profile as { profile_summary?: string } | undefined)?.profile_summary,
+            "user chart summary",
+          );
+        },
+      },
+      {
+        name: "decision_understanding",
+        patch: {
+          decision_understanding: {
+            schema_version: 1,
+            summary: "private understanding",
+          } as POJUSessionState["decision_understanding"],
+        },
+        assertKept: (s) => {
+          assert.equal(
+            (s.decision_understanding as { summary?: string } | null)?.summary,
+            "private understanding",
+          );
+        },
+      },
+      {
+        name: "adaptive_ask_plan",
+        patch: {
+          adaptive_ask_plan: {
+            plan_id: "ask_1",
+            question_text: "private adaptive ask",
+          } as POJUSessionState["adaptive_ask_plan"],
+        },
+        assertKept: (s) => {
+          assert.equal(
+            (s.adaptive_ask_plan as { question_text?: string } | null)?.question_text,
+            "private adaptive ask",
+          );
+        },
+      },
+      {
+        name: "pending_answer_resolution",
+        patch: {
+          pending_answer_resolution: {
+            reason: "unbound_role",
+            raw_answer: "private answer text",
+          } as POJUSessionState["pending_answer_resolution"],
+        },
+        assertKept: (s) => {
+          assert.equal(
+            (s.pending_answer_resolution as { raw_answer?: string } | null)?.raw_answer,
+            "private answer text",
+          );
+        },
+      },
+      {
+        name: "pending_intake_control",
+        patch: {
+          pending_intake_control: {
+            kind: "goal_change",
+            note: "private control",
+          } as POJUSessionState["pending_intake_control"],
+        },
+        assertKept: (s) => {
+          assert.equal(
+            (s.pending_intake_control as { note?: string } | null)?.note,
+            "private control",
+          );
+        },
+      },
+      {
+        name: "intake_ask_plan",
+        patch: {
+          intake_ask_plan: {
+            ask_id: "intake_1",
+            prompt: "private intake ask",
+          } as POJUSessionState["intake_ask_plan"],
+        },
+        assertKept: (s) => {
+          assert.equal((s.intake_ask_plan as { prompt?: string } | null)?.prompt, "private intake ask");
+        },
+      },
+      {
+        name: "intake_answer_sources",
+        patch: {
+          intake_answer_sources: [
+            { source_turn_id: "t1", raw_text: "private source answer" },
+          ] as POJUSessionState["intake_answer_sources"],
+        },
+        assertKept: (s) => {
+          assert.equal(
+            (s.intake_answer_sources?.[0] as { raw_text?: string } | undefined)?.raw_text,
+            "private source answer",
+          );
+        },
+      },
+      {
+        name: "decision_blueprint_history",
+        patch: {
+          decision_blueprint_history: [
+            { blueprint_id: "bp_hist", decision_question: "old private q" },
+          ] as POJUSessionState["decision_blueprint_history"],
+        },
+        assertKept: (s) => {
+          assert.equal(s.decision_blueprint_history?.[0]?.decision_question, "old private q");
+        },
+      },
+      {
+        name: "blueprint_change_log",
+        patch: {
+          blueprint_change_log: [
+            { change_id: "c1", reason: "private blueprint edit" },
+          ] as POJUSessionState["blueprint_change_log"],
+        },
+        assertKept: (s) => {
+          assert.equal(
+            (s.blueprint_change_log?.[0] as { reason?: string } | undefined)?.reason,
+            "private blueprint edit",
+          );
+        },
+      },
+      {
+        name: "last_answer_event",
+        patch: {
+          last_answer_event: {
+            event_id: "ae1",
+            answer_text: "private last answer",
+          } as POJUSessionState["last_answer_event"],
+        },
+        assertKept: (s) => {
+          assert.equal(
+            (s.last_answer_event as { answer_text?: string } | null)?.answer_text,
+            "private last answer",
+          );
+        },
+      },
+      {
+        name: "control_plane",
+        patch: {
+          control_plane: {
+            schema_version: 1,
+            phase: "collecting",
+            note: "private control plane",
+          } as POJUSessionState["control_plane"],
+        },
+        assertKept: (s) => {
+          assert.equal(
+            (s.control_plane as { note?: string } | undefined)?.note,
+            "private control plane",
+          );
+        },
+      },
+      {
+        name: "topic_applicability_evals",
+        patch: {
+          topic_applicability_evals: [
+            { eval_id: "te1", topic: "career", result: "applicable" },
+          ] as POJUSessionState["topic_applicability_evals"],
+        },
+        assertKept: (s) => {
+          assert.equal(
+            (s.topic_applicability_evals?.[0] as { topic?: string } | undefined)?.topic,
+            "career",
+          );
+        },
+      },
+      {
+        name: "generation_task_contexts",
+        patch: {
+          generation_task_contexts: [
+            { task_id: "gt1", prompt_digest: "private gen task" },
+          ] as POJUSessionState["generation_task_contexts"],
+        },
+        assertKept: (s) => {
+          assert.equal(
+            (s.generation_task_contexts?.[0] as { prompt_digest?: string } | undefined)?.prompt_digest,
+            "private gen task",
+          );
+        },
+      },
+      {
+        name: "generation_registry",
+        patch: {
+          generation_registry: [
+            { generation_id: "gr1", label: "private registry" },
+          ] as POJUSessionState["generation_registry"],
+        },
+        assertKept: (s) => {
+          assert.equal(
+            (s.generation_registry?.[0] as { label?: string } | undefined)?.label,
+            "private registry",
+          );
+        },
+      },
+      {
+        name: "generation_operation_bindings",
+        patch: {
+          generation_operation_bindings: [
+            { idempotency_key: "gob1", op: "private-op" },
+          ] as POJUSessionState["generation_operation_bindings"],
+        },
+        assertKept: (s) => {
+          assert.equal(
+            (s.generation_operation_bindings?.[0] as { op?: string } | undefined)?.op,
+            "private-op",
+          );
+        },
+      },
+      {
+        name: "pending_delivery_job_id",
+        patch: { pending_delivery_job_id: "job_delivery_private_1" },
+        assertKept: (s) => assert.equal(s.pending_delivery_job_id, "job_delivery_private_1"),
+      },
+      {
+        name: "pending_synthesis_job_id",
+        patch: { pending_synthesis_job_id: "job_synth_private_1" },
+        assertKept: (s) => assert.equal(s.pending_synthesis_job_id, "job_synth_private_1"),
+      },
+      {
+        name: "pending_segment2_job_id",
+        patch: { pending_segment2_job_id: "job_seg2_private_1" },
+        assertKept: (s) => assert.equal(s.pending_segment2_job_id, "job_seg2_private_1"),
+      },
+      {
+        name: "joint_decision_id",
+        patch: { joint_decision_id: "joint_private_1" },
+        assertKept: (s) => assert.equal(s.joint_decision_id, "joint_private_1"),
+      },
+      {
+        name: "joint_pass_ref",
+        patch: { joint_pass_ref: "joint:abc:a" },
+        assertKept: (s) => assert.equal(s.joint_pass_ref, "joint:abc:a"),
+      },
+      {
+        name: "action_plan_archive_id",
+        patch: { action_plan_archive_id: "archive_private_1" },
+        assertKept: (s) => assert.equal(s.action_plan_archive_id, "archive_private_1"),
+      },
+    ];
+
+    for (const c of cases) {
+      const local: POJUSessionState = { ...base, ...c.patch };
+      assert.equal(
+        sessionHasLocalPrivateContent(local),
+        true,
+        `${c.name} must count as local private content`,
+      );
+      // Empty/default counterpart must not flip a fresh session private.
+      const emptyish: POJUSessionState = { ...base };
+      assert.ok(!sessionHasLocalPrivateContent(emptyish));
+
+      const shell = redactSessionSnapshotForServerDurable(local);
+      const serverEnvelope = toAuthoritativeEnvelope({
+        v: 1,
+        session_id: local.session_id,
+        session_generation: 1,
+        revision: 4,
+        created_at: local.created_at,
+        updated_at: local.last_interaction_at,
+        expires_at: local.expires_at,
+        lifecycle_status: "active",
+        snapshot_hash: hashSessionSnapshot(shell),
+        session_snapshot: shell,
+        last_committed_turn_id: null,
+        content_policy: "local_private",
+        dc_ledger_head_hash: null,
+        dc_ledger_commit_version: null,
+        latest_freeze_receipt_id: null,
+        latest_freeze_id: null,
+      });
+      const mirror = decideAuthoritativeMirror({ local, server: serverEnvelope });
+      assert.ok(mirror.session, `${c.name}: mirror session required`);
+      assert.equal(mirror.revision, 4, `${c.name}: server revision applied`);
+      c.assertKept(mirror.session!);
+    }
+  });
+
   console.log("Unit A pre-report privacy boundary tests complete");
 }
 

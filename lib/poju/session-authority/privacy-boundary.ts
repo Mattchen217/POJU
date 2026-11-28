@@ -28,6 +28,117 @@ const EMPTY_ABUSE = {
   duplicate_attempts: 0,
 };
 
+/**
+ * Fields that alone never imply private browser content.
+ * Audited against `POJUSessionState` in types.ts (Unit A-R2).
+ * Anything else with a meaningful value is treated as private (fail-closed).
+ */
+export const NON_PRIVATE_SESSION_KEYS = new Set<string>([
+  // Identity / CAS mirrors
+  "session_id",
+  "session_revision",
+  "dc_write_revision",
+  "device_id",
+  // Timestamps / expiry
+  "created_at",
+  "last_interaction_at",
+  "expires_at",
+  // Lifecycle / entitlement counters (no conversation bodies)
+  "tokens_used",
+  "abuse_metrics",
+  "main_delivery_done",
+  "profile_skipped",
+  "unlock_status",
+  "unlock_via",
+  // Opaque structural pointers without payload bodies
+  "active_cycle_id",
+  // Catalog / provider locks (not user narrative content)
+  "topic_catalog_version",
+  "locked_provider",
+  "locked_output_locale",
+  // Boolean UI defaults that are not user narrative
+  "question_briefing_dismissed",
+  "joint_decision",
+  "understanding_confirm_held_for_dyad",
+  // Enum defaults — only non-default values are checked separately as private state
+  "dyad_offer_status",
+  "partner_bazi",
+  "pivot_chart_path",
+  "pending_segment2_stage",
+  // Intentionally retained on durable shells; not a private-content signal.
+  "pending_decision_report_job_id",
+]);
+
+/**
+ * Local continuity / association pointers: a non-empty value means the original
+ * browser holds private session state that a server shell must not wipe.
+ * Note: `pending_decision_report_job_id` stays on the durable shell and is
+ * merged in decideAuthoritativeMirror — it must NOT appear here, or shells
+ * with that pointer would fail `isServerSessionContentShell`.
+ */
+const PRIVATE_ASSOCIATION_KEYS = [
+  "pending_delivery_job_id",
+  "pending_synthesis_job_id",
+  "pending_segment2_job_id",
+  "joint_decision_id",
+  "joint_pass_ref",
+  "action_plan_archive_id",
+  "selected_stored_profile_id",
+  "partner_profile_id",
+  "charts_locked_at",
+] as const;
+
+/**
+ * Explicit private content / private interaction-state payloads on POJUSessionState.
+ * Audited from types.ts; fail-closed unknown keys cover future additions.
+ */
+const PRIVATE_CONTENT_KEYS = [
+  "original_question",
+  "pending_question",
+  "messages",
+  "context_collected",
+  "shared_context",
+  "actions",
+  "main_delivery",
+  "agent_v2",
+  "situation_analysis_by_fingerprint",
+  "cycles",
+  "dyad_compat_summary",
+  "dyad_matrix_pack",
+  "matrix_payload",
+  "deliverable_html",
+  "decision_context",
+  "decision_context_versions",
+  "decision_context_idempotency_keys",
+  "decision_blueprint",
+  "decision_blueprint_history",
+  "blueprint_change_log",
+  "decision_understanding",
+  "adaptive_ask_plan",
+  "pending_answer_resolution",
+  "pending_intake_control",
+  "intake_ask_plan",
+  "intake_answer_sources",
+  "intake_protection",
+  "last_answer_event",
+  "personal_analysis_profile",
+  "personal_analysis_records",
+  "freeze_bound_report_jobs",
+  "last_delivery_context_binding",
+  "dc_ledger",
+  "dc_freeze_receipts",
+  "dc_profile_receipts",
+  "generation_task_contexts",
+  "generation_registry",
+  "generation_operation_bindings",
+  "control_plane",
+  "confirmation_events",
+  "na_declaration_actions",
+  "topic_applicability_evals",
+  "opening_anchors",
+  "opening_confirm_history",
+] as const;
+
 function deviceIdForDurableShell(snapshot: POJUSessionState): string {
   const id = typeof snapshot.device_id === "string" ? snapshot.device_id.trim() : "";
   return id.length > 0 ? id : "server";
@@ -92,6 +203,30 @@ export function redactSessionSnapshotForServerDurable(
     opening_confirm_history: [],
     na_declaration_actions: [],
     topic_applicability_evals: [],
+    // Explicit clears for Unit A-R2 private payloads (omit from durable shell).
+    personal_analysis_profile: undefined,
+    decision_understanding: null,
+    adaptive_ask_plan: null,
+    pending_answer_resolution: null,
+    pending_intake_control: null,
+    intake_ask_plan: null,
+    intake_answer_sources: [],
+    decision_blueprint_history: [],
+    blueprint_change_log: [],
+    last_answer_event: null,
+    control_plane: undefined,
+    intake_protection: undefined,
+    pending_delivery_job_id: null,
+    pending_synthesis_job_id: null,
+    pending_segment2_job_id: null,
+    pending_segment2_stage: null,
+    joint_decision_id: null,
+    joint_pass_ref: null,
+    action_plan_archive_id: null,
+    personal_analysis_records: [],
+    freeze_bound_report_jobs: [],
+    last_delivery_context_binding: null,
+    decision_context_idempotency_keys: [],
   };
 }
 
@@ -115,7 +250,8 @@ function cycleCarriesPrivateContent(cycles: POJUSessionState["cycles"]): boolean
     return (
       hasMeaningfulValue(cycle.original_question) ||
       hasMeaningfulValue(cycle.current_summary) ||
-      (Array.isArray(cycle.delivered_actions) && cycle.delivered_actions.length > 0)
+      (Array.isArray(cycle.delivered_actions) && cycle.delivered_actions.length > 0) ||
+      (Array.isArray(cycle.tool_suggestions) && cycle.tool_suggestions.length > 0)
     );
   });
 }
@@ -123,63 +259,72 @@ function cycleCarriesPrivateContent(cycles: POJUSessionState["cycles"]): boolean
 function dcLedgerMirrorIsPrivate(ledger: POJUSessionState["dc_ledger"]): boolean {
   if (!ledger) return false;
   if (hasMeaningfulValue(ledger.writer_token)) return true;
-  const head = ledger.head;
-  if (!head) return false;
-  return (
-    hasMeaningfulValue(head.content_hash) ||
-    hasMeaningfulValue(head.snapshot_hash) ||
-    hasMeaningfulValue(head.blueprint_hash)
-  );
+  if (ledger.head != null) return true;
+  return false;
 }
 
+function nonDefaultEnumPrivate(session: POJUSessionState): boolean {
+  if (session.dyad_offer_status != null && session.dyad_offer_status !== "none") return true;
+  if (session.partner_bazi != null) return true;
+  if (session.pivot_chart_path != null) return true;
+  if (session.pending_segment2_stage != null) return true;
+  if (session.understanding_confirm_held_for_dyad === true) return true;
+  if (session.joint_decision === true) return true;
+  return false;
+}
+
+function privateContentKeyHasValue(session: POJUSessionState, key: string): boolean {
+  const value = (session as Record<string, unknown>)[key];
+  if (key === "cycles") return cycleCarriesPrivateContent(session.cycles);
+  if (key === "dc_ledger") return dcLedgerMirrorIsPrivate(session.dc_ledger);
+  if (key === "messages") return Array.isArray(session.messages) && session.messages.length > 0;
+  if (value === undefined || value === null) return false;
+  if (key === "decision_context" || key === "decision_blueprint" || key === "main_delivery") {
+    return value != null;
+  }
+  if (
+    key === "dyad_compat_summary" ||
+    key === "dyad_matrix_pack" ||
+    key === "personal_analysis_profile" ||
+    key === "control_plane" ||
+    key === "intake_protection" ||
+    key === "last_delivery_context_binding"
+  ) {
+    return value != null && hasMeaningfulValue(value);
+  }
+  return hasMeaningfulValue(value);
+}
+
+/**
+ * Conservative local-private predicate for Unit A mirror protection.
+ * Classification authority: complete {@link POJUSessionState} in types.ts.
+ */
 export function sessionHasLocalPrivateContent(session: POJUSessionState | null | undefined): boolean {
   if (!session || typeof session !== "object") return false;
 
-  if (Array.isArray(session.messages) && session.messages.length > 0) return true;
-  if (hasMeaningfulValue(session.original_question)) return true;
-  if (hasMeaningfulValue(session.pending_question)) return true;
-  if (session.decision_context != null) return true;
-  if (session.decision_blueprint != null) return true;
-  if (Array.isArray(session.decision_context_versions) && session.decision_context_versions.length > 0) {
-    return true;
-  }
-  if (hasMeaningfulValue(session.context_collected)) return true;
-  if (hasMeaningfulValue(session.shared_context)) return true;
-  if (session.agent_v2 != null && hasMeaningfulValue(session.agent_v2)) return true;
-  if (hasMeaningfulValue(session.situation_analysis_by_fingerprint)) return true;
-  if (cycleCarriesPrivateContent(session.cycles)) return true;
-  if (session.dyad_compat_summary != null) return true;
-  if (session.dyad_matrix_pack != null) return true;
-  if (hasMeaningfulValue(session.partner_profile_id)) return true;
-  if (session.matrix_payload != null && hasMeaningfulValue(session.matrix_payload)) return true;
-  if (session.deliverable_html != null && hasMeaningfulValue(session.deliverable_html)) return true;
-  if (Array.isArray(session.personal_analysis_records) && session.personal_analysis_records.length > 0) {
-    return true;
-  }
-  if (Array.isArray(session.freeze_bound_report_jobs) && session.freeze_bound_report_jobs.length > 0) {
-    return true;
-  }
-  if (session.main_delivery != null) return true;
-  if (Array.isArray(session.confirmation_events) && session.confirmation_events.length > 0) return true;
-  if (Array.isArray(session.na_declaration_actions) && session.na_declaration_actions.length > 0) {
-    return true;
-  }
-  if (Array.isArray(session.opening_anchors) && session.opening_anchors.length > 0) return true;
-  if (Array.isArray(session.opening_confirm_history) && session.opening_confirm_history.length > 0) {
-    return true;
-  }
-  if (Array.isArray(session.actions) && session.actions.some((a) => hasMeaningfulValue(a))) return true;
-  if (
-    typeof session.selected_stored_profile_id === "string" &&
-    session.selected_stored_profile_id.trim().length > 0
-  ) {
-    return true;
-  }
   if (session.has_profile === true) return true;
   if (session.birth_submitted_in_session === true) return true;
-  if (dcLedgerMirrorIsPrivate(session.dc_ledger)) return true;
-  if (Array.isArray(session.dc_freeze_receipts) && session.dc_freeze_receipts.length > 0) return true;
-  if (Array.isArray(session.dc_profile_receipts) && session.dc_profile_receipts.length > 0) return true;
+  if (nonDefaultEnumPrivate(session)) return true;
+
+  for (const key of PRIVATE_ASSOCIATION_KEYS) {
+    if (hasMeaningfulValue((session as Record<string, unknown>)[key])) return true;
+  }
+
+  for (const key of PRIVATE_CONTENT_KEYS) {
+    if (privateContentKeyHasValue(session, key)) return true;
+  }
+
+  // Fail-closed: any own key outside the non-private allowlist with meaningful
+  // value is treated as private (covers future POJUSessionState fields).
+  for (const key of Object.keys(session)) {
+    if (NON_PRIVATE_SESSION_KEYS.has(key)) continue;
+    if ((PRIVATE_CONTENT_KEYS as readonly string[]).includes(key)) continue;
+    if ((PRIVATE_ASSOCIATION_KEYS as readonly string[]).includes(key)) continue;
+    // Booleans already handled above when true; skip false/defaults.
+    if (key === "has_profile" || key === "birth_submitted_in_session") continue;
+    const value = (session as Record<string, unknown>)[key];
+    if (hasMeaningfulValue(value)) return true;
+  }
 
   return false;
 }
@@ -197,10 +342,7 @@ export function isServerSessionContentShell(snapshot: POJUSessionState | null | 
     return false;
   }
   if (hasMeaningfulValue(snapshot.partner_profile_id)) return false;
-  if (snapshot.dc_ledger != null) {
-    if (dcLedgerMirrorIsPrivate(snapshot.dc_ledger)) return false;
-    if (snapshot.dc_ledger.head != null) return false;
-  }
+  if (snapshot.dc_ledger != null) return false;
   if (Array.isArray(snapshot.dc_freeze_receipts) && snapshot.dc_freeze_receipts.length > 0) return false;
   if (Array.isArray(snapshot.dc_profile_receipts) && snapshot.dc_profile_receipts.length > 0) return false;
 
