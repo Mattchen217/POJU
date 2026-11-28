@@ -176,8 +176,8 @@ export async function bindBrowserTaskCredential(input: {
     created_at: now,
     bound_at: now,
   };
-  const set = await store.set(key, record, {
-    ex: KV_TTL.DECISION_AUTHORITY_RETENTION,
+  const set =   await store.set(key, record, {
+    ex: KV_TTL.REPORT_JOB_ABSOLUTE,
     nx: true,
   });
   const back = await loadBrowserTaskCredentialRecord(job_id);
@@ -209,6 +209,12 @@ export async function bindBrowserTaskCredential(input: {
       };
     }
     return { ok: true, record: back, outcome: "existing" };
+  }
+  try {
+    const { ensureReportLifecycleStarted } = await import("./report-data-lifecycle");
+    await ensureReportLifecycleStarted({ job_id, session_id, now });
+  } catch {
+    // Lifecycle start is best-effort alongside credential bind.
   }
   return { ok: true, record: back, outcome: "bound" };
 }

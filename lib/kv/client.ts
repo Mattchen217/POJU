@@ -98,8 +98,12 @@ export const KV_TTL = {
   /** Cover full Phase-4 wall (status MAX_JOB_AGE ≈ 90m); was 5m and allowed double-create. */
   POJU_XHIGH_LOCK: 60 * 90,
   /**
-   * DI2 authority + finished-report retention: 30-day report window + 30-day
-   * companion window. Never the 2h execution TTL.
+   * Unit C — finished-report / authority personal-content retention while
+   * awaiting ACK: 7 days from completion (not the old 60-day window).
+   * Absolute in-flight ceiling is 14 days (see report-data-lifecycle.ts).
+   * Never the 2h execution TTL.
    */
-  DECISION_AUTHORITY_RETENTION: 60 * 60 * 24 * 60,
+  DECISION_AUTHORITY_RETENTION: 60 * 60 * 24 * 7,
+  /** Absolute personal-content / credential-binding ceiling for a report job. */
+  REPORT_JOB_ABSOLUTE: 60 * 60 * 24 * 14,
 } as const;

@@ -815,6 +815,22 @@ export async function handleDecisionReportAction(
     if (!job_id) return json(400, { ok: false, error: "job_id required" });
     const denied = await requireTaskCredential(body, session_id, job_id);
     if (denied) return denied;
+    const { loadReportLifecycle, isReportLifecycleContentExpired, purgeReportPersonalContent } =
+      await import("./report-data-lifecycle");
+    const life = await loadReportLifecycle(job_id);
+    if (life && isReportLifecycleContentExpired(life)) {
+      await purgeReportPersonalContent({
+        job_id,
+        session_id,
+        reason: life.content_expires_at && Date.parse(life.content_expires_at) <= Date.now() ? "ttl" : "absolute",
+      }).catch(() => undefined);
+      return json(410, {
+        ok: false,
+        code: "REPORT_CONTENT_EXPIRED",
+        error: "Report personal content expired and was purged",
+        retryable: false,
+      });
+    }
     // A refusal abort abandoned mid-way is finished here too (same job; no charge, no run).
     await resumeDecisionReportRefusalAbort(session_id).catch(() => undefined);
     return json(200, (await buildDecisionReportStatus({ job_id, session_id })) as unknown as Record<string, unknown>);

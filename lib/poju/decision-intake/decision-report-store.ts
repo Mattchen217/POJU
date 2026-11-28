@@ -33,7 +33,10 @@ import type { DecisionBlueprint } from "./types";
 
 /** In-flight execution artifacts: the xhigh job window. */
 const TTL = KV_TTL.POJU_XHIGH_JOB;
-/** Finished analysis / pages / report: product retention, not the execution TTL. */
+/**
+ * Finished analysis / pages / report personal content (Unit C):
+ * 7-day unacked window — not the 2h execution TTL, not the old 60d retention.
+ */
 const RETENTION = KV_TTL.DECISION_AUTHORITY_RETENTION;
 const textEncoder = new TextEncoder();
 
@@ -456,6 +459,19 @@ export async function commitCompletedReport(
     throw new DecisionReportStoreError("REPORT_PERSIST_UNCONFIRMED", "report record not readable after write");
   }
   if (set !== "OK" || back.record_hash !== candidate.record_hash) return reuse(back);
+  // Unit C — start the 7-day unacked content clock at first durable commit.
+  try {
+    const { markReportLifecycleCompleted, ensureReportLifecycleStarted } = await import(
+      "./report-data-lifecycle"
+    );
+    await ensureReportLifecycleStarted({
+      job_id: candidate.job_id,
+      session_id: candidate.session_id,
+    });
+    await markReportLifecycleCompleted({ job_id: candidate.job_id });
+  } catch {
+    // Lifecycle bookkeeping must not block the durable report commit.
+  }
   return { record: back, outcome: "written" };
 }
 
