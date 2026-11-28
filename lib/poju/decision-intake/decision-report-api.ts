@@ -866,6 +866,36 @@ export async function handleDecisionReportAction(
     });
   }
 
+  if (action === "ack") {
+    const job_id = str(body.job_id);
+    if (!job_id) return json(400, { ok: false, error: "job_id required" });
+    const { acknowledgeReportDelivery } = await import("./delivery-ack");
+    const ack = await acknowledgeReportDelivery({
+      session_id,
+      job_id,
+      browser_task_credential: credentialFromBody(body),
+      content_integrity: str(body.content_integrity),
+      local_persisted: body.local_persisted === true,
+    });
+    if (!ack.ok) {
+      return json(ack.status, {
+        ok: false,
+        code: ack.code,
+        error: ack.error,
+        retryable: ack.retryable,
+      });
+    }
+    return json(200, {
+      ok: true,
+      action: "ack",
+      job_id,
+      session_id,
+      outcome: ack.outcome,
+      acked_at: ack.acked_at,
+      purged: ack.purged,
+    });
+  }
+
   if (!(deps.modelConfigured ?? isOpenRouterConfigured)()) {
     return json(503, { ok: false, error: "OpenRouter is not configured (OPENROUTER_API_KEY)." });
   }

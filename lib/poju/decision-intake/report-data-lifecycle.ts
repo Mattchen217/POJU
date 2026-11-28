@@ -7,7 +7,6 @@
  */
 
 import { durableKv, kv, KV_TTL } from "@/lib/kv/client";
-import { browserTaskCredentialKey } from "./browser-task-credential";
 import {
   di2AnalysisKey,
   di2CompletedReportKey,
@@ -151,9 +150,10 @@ export async function purgeReportPersonalContent(input: {
 }): Promise<{ purged_keys: string[]; lifecycle: ReportLifecycleRecord | null }> {
   const keys: string[] = [
     di2CompletedReportKey(input.session_id, input.job_id),
-    browserTaskCredentialKey(input.job_id),
     di2DispatchKey(input.job_id),
   ];
+  // Browser task credential verifier (HMAC only) is retained until absolute TTL so
+  // idempotent ACK can still authenticate; it is not personal report content.
   for (const page_id of DECISION_PAGE_IDS) {
     keys.push(di2PageKey(input.job_id, page_id));
   }
