@@ -24,7 +24,11 @@ import {
   toAuthoritativeEnvelope,
 } from "../lib/poju/session-authority/lifecycle";
 import {
+  decisionBlueprintHasPrivateContent,
+  decisionContextHasPrivateContent,
+  hasMeaningfulValue,
   isServerSessionContentShell,
+  mainDeliveryHasPrivateContent,
   needsLegacySessionPrivacyMigration,
   redactSessionSnapshotForServerDurable,
   sessionHasLocalPrivateContent,
@@ -906,6 +910,142 @@ async function main() {
       assert.equal(mirror.revision, 4, `${c.name}: server revision applied`);
       c.assertKept(mirror.session!);
     }
+  });
+
+  await asyncTest("12. R2 defects: numbers are meaningful; DC/blueprint/delivery use schema emptiness", async () => {
+    assert.equal(hasMeaningfulValue(0), true, "zero is meaningful");
+    assert.equal(hasMeaningfulValue(42), true, "nonzero is meaningful");
+    assert.equal(hasMeaningfulValue(Number.NaN), false);
+    assert.equal(hasMeaningfulValue({ score: 0 }), true, "number-only private object is meaningful");
+    assert.equal(hasMeaningfulValue({}), false);
+    assert.equal(hasMeaningfulValue([]), false);
+
+    const base = emptySessionDefaults("r2_number_fail_closed");
+    // Structural number fields on the allowlist must not flip a fresh Session private.
+    assert.ok(!sessionHasLocalPrivateContent({ ...base, tokens_used: 99, session_revision: 7 }));
+
+    // Unknown top-level numeric field (including 0) must fail closed as private.
+    const unknownZero = { ...base, mystery_private_score: 0 } as POJUSessionState;
+    const unknownNonzero = { ...base, mystery_private_score: 17 } as POJUSessionState;
+    assert.equal(sessionHasLocalPrivateContent(unknownZero), true);
+    assert.equal(sessionHasLocalPrivateContent(unknownNonzero), true);
+
+    // Number-bearing private nested content must be detected.
+    const numberObjectLocal: POJUSessionState = {
+      ...base,
+      context_collected: { salary_band: 0 },
+    };
+    assert.equal(sessionHasLocalPrivateContent(numberObjectLocal), true);
+
+    // Empty / default stubs for the three schema-aware fields.
+    assert.equal(decisionContextHasPrivateContent(null), false);
+    assert.equal(decisionContextHasPrivateContent({}), false);
+    assert.equal(decisionContextHasPrivateContent({ version: 1, status: "draft" }), false);
+    assert.equal(decisionBlueprintHasPrivateContent(null), false);
+    assert.equal(decisionBlueprintHasPrivateContent({}), false);
+    assert.equal(decisionBlueprintHasPrivateContent({ schema_version: 1, blueprint_version: 1 }), false);
+    assert.equal(mainDeliveryHasPrivateContent(null), false);
+    assert.equal(mainDeliveryHasPrivateContent({}), false);
+    assert.equal(
+      mainDeliveryHasPrivateContent({ delivered_at: "", language: "", full_text: "" }),
+      false,
+    );
+
+    assert.ok(!sessionHasLocalPrivateContent({ ...base, decision_context: {} as never }));
+    assert.ok(!sessionHasLocalPrivateContent({ ...base, decision_blueprint: {} as never }));
+    assert.ok(
+      !sessionHasLocalPrivateContent({
+        ...base,
+        main_delivery: { delivered_at: "", language: "", full_text: "" },
+      }),
+    );
+
+    // Populated values must count as private and survive mirror against a shell.
+    const filledDc = minimalDraftDc("dc_r2_filled");
+    const filledBp = sealBlueprint("r2_bp_session", "dc_r2_filled");
+    const filledDelivery = {
+      delivered_at: SEAL_NOW,
+      language: "zh",
+      full_text: "private delivery body",
+    };
+
+    assert.equal(decisionContextHasPrivateContent(filledDc), true);
+    assert.equal(decisionBlueprintHasPrivateContent(filledBp), true);
+    assert.equal(mainDeliveryHasPrivateContent(filledDelivery), true);
+
+    for (const [name, patch] of [
+      ["decision_context", { decision_context: filledDc }],
+      ["decision_blueprint", { decision_blueprint: filledBp }],
+      ["main_delivery", { main_delivery: filledDelivery }],
+    ] as const) {
+      const local: POJUSessionState = { ...base, ...patch };
+      assert.equal(sessionHasLocalPrivateContent(local), true, `${name} filled must be private`);
+      const shell = redactSessionSnapshotForServerDurable(local);
+      assert.ok(isServerSessionContentShell(shell), `${name}: redacted shell must be shell`);
+      const mirror = decideAuthoritativeMirror({
+        local,
+        server: toAuthoritativeEnvelope({
+          v: 1,
+          session_id: local.session_id,
+          session_generation: 1,
+          revision: 9,
+          created_at: local.created_at,
+          updated_at: local.last_interaction_at,
+          expires_at: local.expires_at,
+          lifecycle_status: "active",
+          snapshot_hash: hashSessionSnapshot(shell),
+          session_snapshot: shell,
+          last_committed_turn_id: null,
+          content_policy: "local_private",
+          dc_ledger_head_hash: null,
+          dc_ledger_commit_version: null,
+          latest_freeze_receipt_id: null,
+          latest_freeze_id: null,
+        }),
+      });
+      assert.ok(mirror.session);
+      assert.equal(mirror.revision, 9);
+      if (name === "decision_context") {
+        assert.equal(mirror.session!.decision_context?.context_id, filledDc.context_id);
+      } else if (name === "decision_blueprint") {
+        assert.equal(mirror.session!.decision_blueprint?.blueprint_id, filledBp.blueprint_id);
+      } else {
+        assert.equal(mirror.session!.main_delivery?.full_text, "private delivery body");
+      }
+    }
+
+    // Unknown numeric-only object on Session must fail closed via mirror keep.
+    const mysteryLocal: POJUSessionState = {
+      ...base,
+      ...({ private_numeric_bag: { attempt: 0, score: 3 } } as object),
+    } as POJUSessionState;
+    assert.equal(sessionHasLocalPrivateContent(mysteryLocal), true);
+    const mysteryShell = redactSessionSnapshotForServerDurable(mysteryLocal);
+    const mysteryMirror = decideAuthoritativeMirror({
+      local: mysteryLocal,
+      server: toAuthoritativeEnvelope({
+        v: 1,
+        session_id: mysteryLocal.session_id,
+        session_generation: 1,
+        revision: 2,
+        created_at: mysteryLocal.created_at,
+        updated_at: mysteryLocal.last_interaction_at,
+        expires_at: mysteryLocal.expires_at,
+        lifecycle_status: "active",
+        snapshot_hash: hashSessionSnapshot(mysteryShell),
+        session_snapshot: mysteryShell,
+        last_committed_turn_id: null,
+        content_policy: "local_private",
+        dc_ledger_head_hash: null,
+        dc_ledger_commit_version: null,
+        latest_freeze_receipt_id: null,
+        latest_freeze_id: null,
+      }),
+    });
+    assert.deepEqual(
+      (mysteryMirror.session as { private_numeric_bag?: unknown } | null)?.private_numeric_bag,
+      { attempt: 0, score: 3 },
+    );
   });
 
   console.log("Unit A pre-report privacy boundary tests complete");

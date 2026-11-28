@@ -230,17 +230,104 @@ export function redactSessionSnapshotForServerDurable(
   };
 }
 
-/** True when empty arrays, objects, null, undefined, false, or "". */
+/**
+ * True when the value carries content that must not be ignored for privacy.
+ * Finite numbers (including 0) are meaningful — structural counters/versions
+ * must be allowlisted at the Session top level, not silently dropped here.
+ */
 export function hasMeaningfulValue(value: unknown): boolean {
   if (value == null || value === false) return false;
   if (typeof value === "string") return value.trim().length > 0;
-  if (typeof value === "number") return false;
+  if (typeof value === "number") return Number.isFinite(value);
   if (typeof value === "boolean") return value === true;
   if (Array.isArray(value)) return value.some((entry) => hasMeaningfulValue(entry));
   if (typeof value === "object") {
     return Object.values(value as Record<string, unknown>).some((entry) => hasMeaningfulValue(entry));
   }
   return true;
+}
+
+function hasMeaningfulString(value: unknown): boolean {
+  return typeof value === "string" && value.trim().length > 0;
+}
+
+function definitionHasPrivateContent(definition: unknown): boolean {
+  if (definition == null || typeof definition !== "object" || Array.isArray(definition)) return false;
+  const d = definition as Record<string, unknown>;
+  if (Object.keys(d).length === 0) return false;
+  for (const key of ["concrete_event", "stakes", "desired_outcome", "decision_question"] as const) {
+    if (hasMeaningfulString(d[key])) return true;
+  }
+  for (const key of ["goal_priorities", "unacceptable_outcomes"] as const) {
+    const arr = d[key];
+    if (Array.isArray(arr) && arr.some((entry) => hasMeaningfulString(entry))) return true;
+  }
+  return false;
+}
+
+/**
+ * Schema-aware: null / {} / version-only stubs are not private;
+ * populated Decision Context narrative or structure is.
+ */
+export function decisionContextHasPrivateContent(value: unknown): boolean {
+  if (value == null || typeof value !== "object" || Array.isArray(value)) return false;
+  const dc = value as Record<string, unknown>;
+  if (Object.keys(dc).length === 0) return false;
+  if (hasMeaningfulString(dc.context_id)) return true;
+  if (hasMeaningfulString(dc.content_hash)) return true;
+  if (definitionHasPrivateContent(dc.definition)) return true;
+  for (const key of [
+    "reality_facts",
+    "constraints",
+    "hypotheses",
+    "dirs",
+    "conflicts",
+    "information_boundaries",
+  ] as const) {
+    const arr = dc[key];
+    if (Array.isArray(arr) && arr.length > 0) return true;
+  }
+  return false;
+}
+
+/**
+ * Schema-aware: null / {} / numeric-version-only stubs are not private;
+ * ids, question text, definition snapshot, or direction lists are.
+ */
+export function decisionBlueprintHasPrivateContent(value: unknown): boolean {
+  if (value == null || typeof value !== "object" || Array.isArray(value)) return false;
+  const bp = value as Record<string, unknown>;
+  if (Object.keys(bp).length === 0) return false;
+  for (const key of [
+    "blueprint_id",
+    "session_id",
+    "context_id",
+    "decision_question",
+    "ddr_version",
+    "dir_catalog_version",
+  ] as const) {
+    if (hasMeaningfulString(bp[key])) return true;
+  }
+  if (definitionHasPrivateContent(bp.definition_snapshot)) return true;
+  for (const key of ["directions", "dir_ids", "ddr_ids", "topic_tags", "initial_seed_dir_ids"] as const) {
+    const arr = bp[key];
+    if (Array.isArray(arr) && arr.length > 0) return true;
+  }
+  return false;
+}
+
+/**
+ * Schema-aware: null / {} / blank-string stubs are not private;
+ * any non-empty delivery field is.
+ */
+export function mainDeliveryHasPrivateContent(value: unknown): boolean {
+  if (value == null || typeof value !== "object" || Array.isArray(value)) return false;
+  const d = value as Record<string, unknown>;
+  if (Object.keys(d).length === 0) return false;
+  for (const key of ["delivered_at", "language", "full_text"] as const) {
+    if (hasMeaningfulString(d[key])) return true;
+  }
+  return false;
 }
 
 function cycleCarriesPrivateContent(cycles: POJUSessionState["cycles"]): boolean {
@@ -279,9 +366,9 @@ function privateContentKeyHasValue(session: POJUSessionState, key: string): bool
   if (key === "dc_ledger") return dcLedgerMirrorIsPrivate(session.dc_ledger);
   if (key === "messages") return Array.isArray(session.messages) && session.messages.length > 0;
   if (value === undefined || value === null) return false;
-  if (key === "decision_context" || key === "decision_blueprint" || key === "main_delivery") {
-    return value != null;
-  }
+  if (key === "decision_context") return decisionContextHasPrivateContent(value);
+  if (key === "decision_blueprint") return decisionBlueprintHasPrivateContent(value);
+  if (key === "main_delivery") return mainDeliveryHasPrivateContent(value);
   if (
     key === "dyad_compat_summary" ||
     key === "dyad_matrix_pack" ||
